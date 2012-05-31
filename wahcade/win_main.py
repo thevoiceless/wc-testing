@@ -1475,7 +1475,7 @@ class WinMain(WahCade):
                     parent.show()
             #move & size
             if isinstance(widget, ScrollList):
-                widget.set_size_request(d['width'], (d['height']/2)+38)
+                widget.set_size_request(d['width'], (d['height']/2)+38) #test comment
             else:
                 widget.set_size_request(d['width'], d['height'])
             #position video widget
