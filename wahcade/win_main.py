@@ -1385,9 +1385,14 @@ class WinMain(WahCade):
         self.fixd.move(self.imgBackground, 0, 0)
         self.imgBackground.set_size_request(main_width, main_height)
         img_file = self.get_path(lines[4])
+        
+        #******************BACKBROUND IMAGE FILE********************************
+        
         if not os.path.dirname(img_file):
             img_file = os.path.join(self.layout_path, img_file)
         self.imgBackground.set_data('layout-image', img_file)
+        
+        
         #set options window
         self.options.winOptions.set_size_request(opt_width, opt_height)
         bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[296])))
@@ -1470,7 +1475,7 @@ class WinMain(WahCade):
                     parent.show()
             #move & size
             if isinstance(widget, ScrollList):
-                widget.set_size_request(d['width'], d['height']/2)
+                widget.set_size_request(d['width'], (d['height']/2)+38)
             else:
                 widget.set_size_request(d['width'], d['height'])
             #position video widget
