@@ -90,5 +90,3 @@ if __name__ == "__main__":          # http://stackoverflow.com/questions/419163/
     app = WinMain(options)              # class WinMain(WahCade)
     #and... go...
     gtk.main()
-
-# ~~~~
