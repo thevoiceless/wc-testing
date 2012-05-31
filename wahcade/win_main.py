@@ -1469,7 +1469,10 @@ class WinMain(WahCade):
                 if parent.get_ancestor(gtk.EventBox):
                     parent.show()
             #move & size
-            widget.set_size_request(d['width'], d['height'])
+            if isinstance(widget, ScrollList):
+                widget.set_size_request(d['width'], d['height']/2)
+            else:
+                widget.set_size_request(d['width'], d['height'])
             #position video widget
             if self.emu_ini.getint('movie_artwork_no') > 0:
                 self.video_artwork_widget = self._main_images[(self.emu_ini.getint('movie_artwork_no') - 1)]
