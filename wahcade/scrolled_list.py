@@ -121,7 +121,7 @@ class ScrollList:
 
     def modify_highlight_bg(self, gtk_state, hl_bg_col):
         """set list highlighted bar colour"""
-        self._hl_bg_col = hl_bg_col
+        self._hl_bg_col = hl_bg_col #gtk.gdk.Color('#ff5300')
         self.arwScrollTop.modify_bg(gtk_state, self._hl_bg_col)
         self.arwScrollBottom.modify_bg(gtk_state, self._hl_bg_col)
         for i in range(self.num_rows):
@@ -133,7 +133,7 @@ class ScrollList:
 
     def modify_fg(self, gtk_state, fg_col):
         """set list foreground colour"""
-        self._fg_col = fg_col
+        self._fg_col = fg_col   #color of title text
         self.arwScrollTop.modify_fg(gtk_state, self._fg_col)
         self.arwScrollBottom.modify_fg(gtk_state, self._fg_col)
         for i in range(self.num_rows):
@@ -158,6 +158,9 @@ class ScrollList:
 
     def set_size_request(self, width, height):
         """change size"""
+        print "width:",width,"height:",height
+        
+        #width, height = 408, 385/2
         self.width, self.height = width, height
         #set list container size
         self.fixd.set_size_request(width, height)
@@ -366,3 +369,4 @@ class ScrollList:
                 self._rows[i][1].set_text('')
             else:
                 self._rows[i][1].set_text(self.ls[top_ls_idx + i])
+
