@@ -1468,7 +1468,7 @@ class WinMain(WahCade):
                 widget.show()
                 if parent.get_ancestor(gtk.EventBox):
                     parent.show()
-            #move & size
+            #divide height of scroll list in half
             if isinstance(widget, ScrollList):
                 widget.set_size_request(d['width'], d['height']/2)
             else:
