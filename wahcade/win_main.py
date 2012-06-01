@@ -251,11 +251,11 @@ class WinMain(WahCade):
         
         #Temp for displaying high score data
         self.lblHighScoreTitle.set_markup('<span color="orange" size="15000">High Score!</span>')
-        self.fixd.put(self.lblHighScoreTitle, 190, 520)
+        self.fixd.put(self.lblHighScoreTitle, 200, 520)
         self.lblHighScoreTitle.show()
         
         self.lblHighScoreData.set_markup('<span color="orange" size="13000">1. \tName\t\t\tScore</span>')
-        self.fixd.put(self.lblHighScoreData, 120, 550)
+        self.fixd.put(self.lblHighScoreData, 130, 550)
         self.lblHighScoreData.show()
         
         self.fixd.show()
@@ -865,6 +865,9 @@ class WinMain(WahCade):
 
     def on_sclGames_changed(self, *args):
         """game selected"""
+        #formatting for the high score labels
+        highScoreDataMarkupHead = '<span color="orange" size="12000">'
+        highScoreDataMarkupTail = '</span>'
         #print "on_sclGames_changed: sel=", self.sclGames.get_selected()
         self.game_ini_file = None
         self.stop_video()
@@ -902,6 +905,13 @@ class WinMain(WahCade):
             game_info['colour_status'],
             game_info['sound_status']))
         self.lblCatVer.set_text(game_info['category'])
+        #get high score data and display it
+        scoreExample = "%s %s%30d" % ("1.", "Zach", 1337) #Temporary format testing
+        if '&' in game_info['game_name']:
+            markupString = game_info['game_name'].encode('ascii', 'ignore').replace('&', '&amp;')#temp game name
+            self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, scoreExample, highScoreDataMarkupTail))
+        else:
+            self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, game_info['game_name'], highScoreDataMarkupTail))
         #start video timer
         if self.scrsaver.movie_type not in ('intro', 'exit'):
             self.start_timer('video')
