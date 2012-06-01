@@ -158,9 +158,6 @@ class ScrollList:
 
     def set_size_request(self, width, height):
         """change size"""
-        print "width:",width,"height:",height
-        
-        #width, height = 408, 385/2
         self.width, self.height = width, height
         #set list container size
         self.fixd.set_size_request(width, height)
