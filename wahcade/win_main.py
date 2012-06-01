@@ -193,6 +193,8 @@ class WinMain(WahCade):
         self.lblControllerType = gtk.Label()
         self.lblDriverStatus = gtk.Label()
         self.lblCatVer = gtk.Label()
+        self.lblHighScoreTitle = gtk.Label()
+        self.lblHighScoreData = gtk.Label()
         # create scroll list widget
         self.sclGames = ScrollList()
         # image & label lists
@@ -241,11 +243,21 @@ class WinMain(WahCade):
             self.lblScreenType,
             self.lblControllerType,
             self.lblDriverStatus,
-            self.lblCatVer]
+            self.lblCatVer] 
         # add widgets to main window
         self.current_window = 'main'
         self.fixd.add(self.imgBackground)
         self.imgBackground.show()
+        
+        #Temp for displaying high score data
+        self.lblHighScoreTitle.set_markup('<span color="orange" size="15000">High Score!</span>')
+        self.fixd.put(self.lblHighScoreTitle, 190, 520)
+        self.lblHighScoreTitle.show()
+        
+        self.lblHighScoreData.set_markup('<span color="orange" size="13000">1. \tName\t\t\tScore</span>')
+        self.fixd.put(self.lblHighScoreData, 120, 550)
+        self.lblHighScoreData.show()
+        
         self.fixd.show()
         self.winMain.add(self.fixd)
         for line, widget in self._layout_items:
@@ -865,7 +877,7 @@ class WinMain(WahCade):
             return
         #set current game in ini file
         self.current_list_ini.set('current_game', self.sclGames.get_selected())
-        #get info
+        #get info to display in bottom right box
         game_info = filters.get_game_dict(self.lsGames[self.sclGames.get_selected()])
         #check for game ini file
         game_ini_file = os.path.join(CONFIG_DIR, 'ini', '%s' % self.current_emu, '%s' % game_info['rom_name'] + '.ini' )
@@ -1386,9 +1398,14 @@ class WinMain(WahCade):
         self.fixd.move(self.imgBackground, 0, 0)
         self.imgBackground.set_size_request(main_width, main_height)
         img_file = self.get_path(lines[4])
+        
+        #******************BACKBROUND IMAGE FILE********************************
+        
         if not os.path.dirname(img_file):
             img_file = os.path.join(self.layout_path, img_file)
         self.imgBackground.set_data('layout-image', img_file)
+        
+        
         #set options window
         self.options.winOptions.set_size_request(opt_width, opt_height)
         bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[296])))
@@ -1469,8 +1486,13 @@ class WinMain(WahCade):
                 widget.show()
                 if parent.get_ancestor(gtk.EventBox):
                     parent.show()
-            #move & size
-            widget.set_size_request(d['width'], d['height'])
+                    
+            #divide height of scroll list in half
+            if isinstance(widget, ScrollList):
+                widget.set_size_request(d['width'], (d['height']/2)+38)
+            else:
+                widget.set_size_request(d['width'], d['height'])
+                
             #position video widget
             if self.emu_ini.getint('movie_artwork_no') > 0:
                 self.video_artwork_widget = self._main_images[(self.emu_ini.getint('movie_artwork_no') - 1)]
