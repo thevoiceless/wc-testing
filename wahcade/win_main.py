@@ -1373,6 +1373,7 @@ class WinMain(WahCade):
         lines = open(self.layout_file, 'r').readlines()
         lines = [s.strip() for s in lines]
         lines.insert(0, '.')
+        print lines
         #window sizes
         main_width, main_height = int(lines[1].split(';')[0]), int(lines[2])
         opt_width, opt_height = int(lines[294].split(';')[0]), int(lines[295])
@@ -1380,7 +1381,7 @@ class WinMain(WahCade):
         #main window
         self.winMain.set_size_request(main_width, main_height)
         self.winMain.set_default_size(main_width, main_height)
-        bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[3])))
+        bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[3]))) #Converts an integer value (hex color code?) to a gtk color object
         self.winMain.modify_bg(gtk.STATE_NORMAL, bg_col)
         self.fixd.move(self.imgBackground, 0, 0)
         self.imgBackground.set_size_request(main_width, main_height)
@@ -1450,7 +1451,7 @@ class WinMain(WahCade):
                     parent.modify_bg(gtk.STATE_NORMAL, bg_col)
             #alignment
             if d['text-align'] == 2:
-                widget.set_property('xalign', 0.5)
+                widget.set_property('xalign', .5)
             else:
                 widget.set_property('xalign', d['text-align'])
             #rotation

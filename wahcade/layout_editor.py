@@ -264,10 +264,11 @@ class WinLayout(GladeSupport, WahCade):
             self.layouts = []
             layout_files = glob.glob(os.path.join(self.config_dir, 'layouts', wahcade_ini.get('layout'), '*.lay'))
             for layout_file in layout_files:
+                # Add a (layout-name, file-identifier) pair to layouts by parsing the filename a bit
                 self.layouts.append(
                     [os.path.splitext(os.path.basename(layout_file))[0],
                     layout_file])
-            self.layouts.sort()
+            self.layouts.sort() # Sort by?...layout name?
             #setup layout combo
             l = ['%s.lay' % (l[0]) for l in self.layouts]
             self.setup_combo_box(self.cboLayout, l)
@@ -277,11 +278,12 @@ class WinLayout(GladeSupport, WahCade):
                 layout_file = os.path.join(self.config_dir, 'layouts', wahcade_ini.get('layout'), 'mame.lay')
                 if not os.path.exists(layout_file):
                     try:
-                        layout_file = layout_files[0]
+                        layout_file = layout_files[0] # If the specified layout file does not exist attempt the first wild-card found file
                     except IndexError:
                         pass
                     if not os.path.exists(layout_file):
-                        layout_file = os.path.join(self.config_dir, 'layouts', 'classic_640x480', 'layout.lay')
+                        layout_file = os.path.join(self.config_dir, 'layouts', 'classic_640x480', 'layout.lay') # Fallback layout file
+            # Find the index of the layout file in our collection of possible files, such that it matches the layout we chose
             idx = [self.layouts.index(l) for l in self.layouts if l[1] == layout_file]
             if idx != []:
                 self.cboLayout.set_active(idx[0])
@@ -340,19 +342,21 @@ class WinLayout(GladeSupport, WahCade):
             #keyboard pressed, get gtk keyname
             keyname = gtk.gdk.keyval_name(event.keyval).lower()
             shift_key = event.state & gtk.gdk.SHIFT_MASK
+            alt_key = 5 if (event.state & gtk.gdk.MOD1_MASK) else 1 # Allow alt-key for faster keyboard resizing
+            ctrl_key = 0 if (event.state & gtk.gdk.CONTROL_MASK) else 1 # Ignore ctrl-key since it scrolls the window already (confusing to move/scroll)
             #widget
             for sel_widget in self.selected_widgets:
                 dx = 0
                 dy = 0
                 #which key pressed
                 if keyname == 'up':
-                    dy = -1
+                    dy = -1 * alt_key * ctrl_key
                 elif keyname == 'down':
-                    dy = +1
+                    dy = +1 * alt_key * ctrl_key
                 elif keyname == 'left':
-                    dx = -1
+                    dx = -1 * alt_key * ctrl_key
                 elif keyname == 'right':
-                    dx = +1
+                    dx = +1 * alt_key * ctrl_key
                 else:
                     return
                 #shift pressed?

@@ -58,6 +58,8 @@ class WahCade:
             os.path.join(APP_PATH, 'pixmaps', 'wahcade.png'))
 
         ### LOGFILE
+        # Verifies there is a CONFIG_DIR directory, then creates a log file in it
+        # and begins logging.
         if os.path.exists(CONFIG_DIR):
             self.log_filename = os.path.join(CONFIG_DIR, 'wahcade.log')
             f = open(self.log_filename, 'w')
@@ -67,17 +69,21 @@ class WahCade:
     def hide_mouse_cursor(self, win):
         """hide mouse cursor"""
         gtk_col = gtk.gdk.Color()
-        pixmap = gtk.gdk.Pixmap(None, 1, 1, 1)
+        pixmap = gtk.gdk.Pixmap(None, 2, 1, 1)
         invisible_cursor = gtk.gdk.Cursor(
             pixmap, pixmap, gtk_col, gtk_col, 0, 0)
         win.window.set_cursor(invisible_cursor)
 
     def get_layout_item_properties(self, lines, offset):
         """get properties for item in layout"""
+        # The properties of a layout component are in a well-defined,
+        # but not well-documented, order after the first item in
+        # _lines as identified by the offset param. Incrementing
+        # the offset allows access to the properties in order
         d={}
-        d['visible'] = (lines[offset].lower() == 'true')
+        d['visible'] = (lines[offset].lower() == 'true') # scrubs all chars to lowercase, generates bool on compare
         d['transparent'] = (lines[offset + 1] == '1')
-        d['background-col'] = self.get_colour(int(lines[offset + 2]))
+        d['background-col'] = self.get_colour(int(lines[offset + 2])) # from a number to a color obj
         d['text-col'] = self.get_colour(int(lines[offset + 3]))
         d['font'] = lines[offset + 4]
         d['font-bold'] = (lines[offset + 5].lower() == 'true')
@@ -93,6 +99,8 @@ class WahCade:
         d['width'] = int(lines[offset + 11])
         d['height'] = int(lines[offset + 12])
         #done
+        # d is essentially a hash-map from various properties to names
+        # to their corresponding values pulled from _lines
         return d
 
     def get_colorbutton_info(self, clr_widget):
