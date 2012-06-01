@@ -460,7 +460,7 @@ class WinLayout(GladeSupport, WahCade):
         self.load_layout_file(self.layouts[cbo.get_active()][1])
 
     def on_rbWindow_toggled(self, widget, *args):
-        """change window"""
+        """Changes active window and updates display to match"""
         #print "on_rbWindow_toggled: ",widget.get_name(), widget.get_active()
         if self.view_updating:
             return
@@ -517,6 +517,7 @@ class WinLayout(GladeSupport, WahCade):
             #set background image
             image_filename = self.get_path(self.dLayout[self.fixd]['image'])
             if not os.path.dirname(image_filename):
+                # Generate a file location for the bg image to be loaded based on the current fixed window
                 if self.fixd == self.fixdCpv:
                     img_path = os.path.dirname(self.cpviewer_filename)
                 elif self.fixd == self.fixdHist:
@@ -571,6 +572,7 @@ class WinLayout(GladeSupport, WahCade):
             self.select_widget(self.drag_widget)
             #set mode
             w, h = self.drag_widget.get_size_request()
+            # 8x8 pixel target for resizing
             if event.x >= (w - 8) and event.y >= (h - 8):
                 self.drag_mode = 'resize'
             else:
@@ -605,7 +607,9 @@ class WinLayout(GladeSupport, WahCade):
                 widget.window.get_colormap(),
                 0, 0, 0, 0,
                 width, height)
-            self.drag_widget.drag_source_set_icon_pixbuf(pixbuf)
+            # Use coordinates of the pointer relative to the widget to get the proper (negative) pixbuf position offset
+            context.set_icon_pixbuf(pixbuf, widget.get_pointer()[0], widget.get_pointer()[1])
+            self.grabstart = widget.window.get_pointer() # Store the initial grab location in widgetspace, since you can't re-access hotspots
 
     def on_evb_drag_data_get(self, widget, context, selection, target_type, event_time):
         """drag & drop start"""
@@ -635,9 +639,12 @@ class WinLayout(GladeSupport, WahCade):
                 self.dLayout[self.drag_widget]['height'] = y - self.dLayout[self.drag_widget]['y']
             else:
                 #move the widget
-                self.fixd.move(self.drag_widget, x, y)
-                self.dLayout[self.drag_widget]['x'] = x
-                self.dLayout[self.drag_widget]['y'] = y
+                #figure out where the widget needs to go based on its previous location and the movement of the pointer
+                new_x = self.drag_widget.get_allocation().x + (self.drag_widget.get_pointer()[0] - self.grabstart[0])
+                new_y = self.drag_widget.get_allocation().y + (self.drag_widget.get_pointer()[1] - self.grabstart[1])
+                self.fixd.move( self.drag_widget, new_x, new_y)
+                self.dLayout[self.drag_widget]['x'] = new_x
+                self.dLayout[self.drag_widget]['y'] = new_y
             #re-select moved / resized widget
             self.drag_widget.window.raise_()
             self.select_widget(self.drag_widget)
