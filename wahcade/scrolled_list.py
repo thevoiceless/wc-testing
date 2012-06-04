@@ -39,7 +39,7 @@ class ScrollList:
         """create custom scroll list control"""
         #properties
         self.ls = []
-        self.width, self.height = 100, 200
+        self.width, self.height = 100, 200  # Changing these doesn't seem to do anything
         self.angle = 0
         self.auto_update = False
         self.display_limiters = False
