@@ -74,15 +74,24 @@ from win_cpviewer import WinCPViewer    # Control panel viewer window
 import filters                          # filters.py, routines to read/write mamewah filters and lists
 from mamewah_ini import MameWahIni      # Reads mamewah-formatted ini file
 import joystick                         # joystick.py, joystick class, uses pygame package (SDL bindings for games in Python)
+import MySQLdb
 #set gettext function
 _ = gettext.gettext
 
+
+#connect to database
+db = MySQLdb.connect(host="localhost", user="root", passwd="password", db="wahcade")
+cursor = db.cursor()
 
 class WinMain(WahCade):
     """Wah!Cade Main Window"""          # This is the docstring belonging to the class, __doc__
 
     def __init__(self, config_opts):
         """initialise main Wah!Cade window"""   # Docstring for this method
+        
+        
+        
+        
         ### Set Global Variables
         global gst_media_imported, pygame_imported, old_keyb_events, debug_mode, log_filename
         self.init = True
@@ -868,6 +877,10 @@ class WinMain(WahCade):
         #formatting for the high score labels
         highScoreDataMarkupHead = '<span color="orange" size="12000">'
         highScoreDataMarkupTail = '</span>'
+        #query database for "high score"
+        highScoreInfo = self.get_score_string()
+        
+        
         #print "on_sclGames_changed: sel=", self.sclGames.get_selected()
         self.game_ini_file = None
         self.stop_video()
@@ -911,7 +924,7 @@ class WinMain(WahCade):
             markupString = game_info['game_name'].encode('ascii', 'ignore').replace('&', '&amp;')#temp game name
             self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, scoreExample, highScoreDataMarkupTail))
         else:
-            self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, game_info['game_name'], highScoreDataMarkupTail))
+            self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, highScoreInfo, highScoreDataMarkupTail))
         #start video timer
         if self.scrsaver.movie_type not in ('intro', 'exit'):
             self.start_timer('video')
@@ -924,6 +937,26 @@ class WinMain(WahCade):
                 self.current_emu,
                 (i + 1))
             self.display_scaled_image(img, img_filename, self.keep_aspect, img.get_data('text-rotation'))
+    
+    def get_score_string(self):
+        numberOfTopScores = 10
+        index = 1
+        string=''
+        cursor.execute("SELECT * FROM player")
+        numberOfTopScores -= int(cursor.rowcount)
+        for row in cursor.fetchall():
+            if len(row[2]) > 5:
+                string += str(str(index) + ". " + str(row[2][:5]) + "\t\t\t\t" + str(row[3])[:-3]) + "\n"
+            else:
+                string += str(str(index) + ". " + str(row[2]) + "\t\t" + str(row[3])) + "\n"
+            index += 1
+        while numberOfTopScores:
+            string += str(index)
+            string += ". -------\t\t\t\t------\n"
+            index += 1
+            numberOfTopScores -= 1
+        return string
+        
             
     def on_scrsave_timer(self):
         """timer event - check to see if we need to start video or screen saver"""
@@ -1395,7 +1428,6 @@ class WinMain(WahCade):
         lines = open(self.layout_file, 'r').readlines()
         lines = [s.strip() for s in lines]
         lines.insert(0, '.')
-        print lines
         #window sizes
         main_width, main_height = int(lines[1].split(';')[0]), int(lines[2])
         opt_width, opt_height = int(lines[294].split(';')[0]), int(lines[295])
