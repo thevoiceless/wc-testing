@@ -304,6 +304,7 @@ class WinLayout(GladeSupport, WahCade):
         self.view_updating = False
         self.mnuVMain.set_active(True)
         self.on_rbWindow_toggled(self.mnuVMain)
+        
 
     def on_winMain_delete_event(self, *args):
         """done, quit the application"""
@@ -585,7 +586,8 @@ class WinLayout(GladeSupport, WahCade):
                 self.deselect_widgets(leave_selected=self.drag_widget)
             #set properties
             self.dlg_props.set_properties(self.drag_widget, self.dLayout[self.drag_widget])
-            #self.do_events()
+            #We might be starting a drag/drop motion, so capture the mousedown coordinates just in case
+            self.grabstart = widget.get_pointer()
         elif event.button == 3:
             self.select_widget(self.drag_widget)
             self.dlg_props.set_properties(self.drag_widget, self.dLayout[self.drag_widget])
@@ -607,9 +609,11 @@ class WinLayout(GladeSupport, WahCade):
                 widget.window.get_colormap(),
                 0, 0, 0, 0,
                 width, height)
-            # Use coordinates of the pointer relative to the widget to get the proper (negative) pixbuf position offset
-            context.set_icon_pixbuf(pixbuf, widget.get_pointer()[0], widget.get_pointer()[1])
-            self.grabstart = widget.window.get_pointer() # Store the initial grab location in widgetspace, since you can't re-access hotspots
+            # Use the previously-captured point of mousedown to set the pixbuf offset correctly
+            context.set_icon_pixbuf(pixbuf, self.grabstart[0], self.grabstart[1])
+            print "Begin"
+            print self.grabstart
+            
 
     def on_evb_drag_data_get(self, widget, context, selection, target_type, event_time):
         """drag & drop start"""
@@ -625,7 +629,6 @@ class WinLayout(GladeSupport, WahCade):
                 x - self.dLayout[self.drag_widget]['x'],
                 y - self.dLayout[self.drag_widget]['y'])
         #ok to drop
-        return True
 
     def on_fixd_drag_data_received(self, widget, context, x, y, selection, target_type, time):
         """drag & drop done"""
