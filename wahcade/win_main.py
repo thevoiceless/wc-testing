@@ -30,6 +30,8 @@ import gc
 import re
 import imp
 import shlex
+import os
+import commands
 from operator import itemgetter
 import subprocess
 from subprocess import Popen
@@ -942,6 +944,7 @@ class WinMain(WahCade):
             self.display_scaled_image(img, img_filename, self.keep_aspect, img.get_data('text-rotation'))
     
     def get_score_string(self):
+        """Parse Scores from DB into display string"""
         numberOfTopScores = 10
         index = 1
         string=''
@@ -1104,6 +1107,15 @@ class WinMain(WahCade):
         if self.lsGames_len == 0:
             return
         rom = self.lsGames[self.sclGames.get_selected()][GL_ROM_NAME]
+        
+        #Rom = rom name
+        try:
+            open('/home/zmcgaughey/mame/hi/'+rom+'.hi') #if file exists
+            print 'running command'
+            print commands.getoutput('wine HiToText.exe -r ~/mame/hi/'+rom+'.hi 2>/dev/null')
+        except IOError as e:
+            print 'not found'
+        
         #show launch message
         self.message.display_message(
             _('Starting...'),
