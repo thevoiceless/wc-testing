@@ -94,6 +94,7 @@ class WinMain(WahCade):
                 props[val[0].strip()] = val[1].strip()  # Match each key with its value
         self.db = MySQLdb.connect(host=props["host"], user=props["user"], passwd=props["passwd"], db=props["db"])
         self.cursor = self.db.cursor()
+        self.db.autocommit(True) #Updates the DB results
         
         
         ### Set Global Variables
@@ -266,6 +267,9 @@ class WinMain(WahCade):
         self.lblHighScoreTitle.set_markup('<span color="orange" size="14000">High Score!</span>')
         self.fixd.put(self.lblHighScoreTitle, 200, 510)
         self.lblHighScoreTitle.show()
+        
+        #Mark mame directory
+        self.mame_dir =  self.emu_ini.get('emulator_executable')[:self.emu_ini.get('emulator_executable').rfind('/')+1]
         
         # Load list of games supported by HiToText
         self.supported_games = set()
@@ -889,8 +893,6 @@ class WinMain(WahCade):
         highScoreDataMarkupTail = '</span>'
         #query database for "high score"
         highScoreInfo = self.get_score_string()
-        
-        
         #print "on_sclGames_changed: sel=", self.sclGames.get_selected()
         self.game_ini_file = None
         self.stop_video()
@@ -932,7 +934,7 @@ class WinMain(WahCade):
         if game_info['rom_name'] in self.supported_games:
             self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, highScoreInfo, highScoreDataMarkupTail))
         else:
-            self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, "HIGH SCORE NOT SUPPORTED", highScoreDataMarkupTail))
+            self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, "  HIGH SCORE NOT SUPPORTED", highScoreDataMarkupTail))
         #start video timer
         if self.scrsaver.movie_type not in ('intro', 'exit'):
             self.start_timer('video')
@@ -1113,12 +1115,12 @@ class WinMain(WahCade):
         
         #Rom = rom name
         try:
-            open('/home/zmcgaughey/mame/hi/'+rom+'.hi') #if file exists
+            open(self.mame_dir + 'hi/'+rom+'.hi') #if file exists
             print 'running command'
             print commands.getoutput('wine HiToText.exe -r ~/mame/hi/'+rom+'.hi 2>/dev/null')
+            os.system('wine HiToText.exe -e ~/mame/hi/'+rom+'.hi 2>/dev/null')
         except IOError as e:
             print 'not found'
-        
         #show launch message
         self.message.display_message(
             _('Starting...'),

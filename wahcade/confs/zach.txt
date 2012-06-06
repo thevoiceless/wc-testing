@@ -1,4 +1,4 @@
-host=
-user=
-passwd=
-db=
+host=localhost
+user=root
+passwd=password
+db=wahcade
