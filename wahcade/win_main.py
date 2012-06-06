@@ -927,7 +927,7 @@ class WinMain(WahCade):
         if game_info['rom_name'] in self.supported_games:
             self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, highScoreInfo, highScoreDataMarkupTail))
         else:
-            self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, "GAME NOT SUPPORTED", highScoreDataMarkupTail))
+            self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, "HIGH SCORE NOT SUPPORTED", highScoreDataMarkupTail))
         #start video timer
         if self.scrsaver.movie_type not in ('intro', 'exit'):
             self.start_timer('video')
