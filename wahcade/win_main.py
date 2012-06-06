@@ -80,7 +80,7 @@ _ = gettext.gettext
 
 
 #connect to database
-db = MySQLdb.connect(host="localhost", user="root", passwd="password", db="wahcade")
+db = MySQLdb.connect(host="localhost", user="root", passwd="root", db="Rcade")
 cursor = db.cursor()
 
 class WinMain(WahCade):
