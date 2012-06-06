@@ -271,6 +271,9 @@ class WinMain(WahCade):
         #Mark mame directory
         self.mame_dir =  self.emu_ini.get('emulator_executable')[:self.emu_ini.get('emulator_executable').rfind('/')+1]
         
+        self.launched_game = False
+        self.current_rom = ''
+        
         # Load list of games supported by HiToText
         self.supported_games = set()
         self.supported_game_file = open('supported_games.lst')
@@ -510,6 +513,12 @@ class WinMain(WahCade):
 
     def on_winMain_focus_in(self, *args):
         """window received focus"""
+        if self.launched_game:
+            self.launched_game = False
+            #print os.path.isfile(self.mame_dir+"hi/airwolf.hi")
+            testString = commands.getoutput("wine HiToText.exe -r "+self.mame_dir+"hi/" + self.current_rom + ".hi 2>/dev/null")
+            print testString
+            
         self.pointer_grabbed = False
         if self.sclGames.use_mouse and not self.showcursor:
             #need to grab?
@@ -907,6 +916,7 @@ class WinMain(WahCade):
         self.current_list_ini.set('current_game', self.sclGames.get_selected())
         #get info to display in bottom right box
         game_info = filters.get_game_dict(self.lsGames[self.sclGames.get_selected()])
+        self.current_rom = game_info['rom_name']
         #check for game ini file
         game_ini_file = os.path.join(CONFIG_DIR, 'ini', '%s' % self.current_emu, '%s' % game_info['rom_name'] + '.ini' )
         if os.path.isfile(game_ini_file):
@@ -1113,14 +1123,13 @@ class WinMain(WahCade):
             return
         rom = self.lsGames[self.sclGames.get_selected()][GL_ROM_NAME]
         
-        #Rom = rom name
+        #Erase scores from hi score file of current game
         try:
             open(self.mame_dir + 'hi/'+rom+'.hi') #if file exists
-            print 'running command'
-            print commands.getoutput('wine HiToText.exe -r ~/mame/hi/'+rom+'.hi 2>/dev/null')
             os.system('wine HiToText.exe -e ~/mame/hi/'+rom+'.hi 2>/dev/null')
         except IOError as e:
-            print 'not found'
+            print rom,'high score file not found'
+            
         #show launch message
         self.message.display_message(
             _('Starting...'),
@@ -1217,6 +1226,9 @@ class WinMain(WahCade):
         else:
             p = Popen(cmd, shell=True)
         sts = p.wait()
+        
+        self.launched_game = True
+        
         self.log_msg("Child Process Returned: " + `sts`, "debug")
        #minimize wahcade
         if game_opts['minimize_wahcade']:
