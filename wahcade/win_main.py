@@ -94,8 +94,7 @@ class WinMain(WahCade):
                 props[val[0].strip()] = val[1].strip()  # Match each key with its value
         self.db = MySQLdb.connect(host=props["host"], user=props["user"], passwd=props["passwd"], db=props["db"])
         self.cursor = self.db.cursor()
-        self.db.autocommit(True) #Updates the DB results
-        
+        self.db.autocommit(True) #Updates the DB results        
         
         ### Set Global Variables
         global gst_media_imported, pygame_imported, old_keyb_events, debug_mode, log_filename
@@ -1122,7 +1121,7 @@ class WinMain(WahCade):
         if self.lsGames_len == 0:
             return
         rom = self.lsGames[self.sclGames.get_selected()][GL_ROM_NAME]
-        
+            
         #show launch message
         self.message.display_message(
             _('Starting...'),
@@ -1130,7 +1129,7 @@ class WinMain(WahCade):
         
         #Erase scores from hi score file of current game
         try:
-            open(self.mame_dir + 'hi/'+rom+'.hi') #if file exists
+            open(self.mame_dir + 'hi/' + rom + '.hi') #if file exists
             os.system('wine HiToText.exe -e ' + self.mame_dir + 'hi/' + rom + '.hi 2>/dev/null')
         except IOError as e:
             print rom, 'high score file not found'
