@@ -70,6 +70,12 @@ if __name__ == "__main__":          # http://stackoverflow.com/questions/419163/
                         dest="old_keyb_events",
                         default=False,
                         help=_('Set to revert to old keyboard event handling'))
+    parser.add_option("-c", "--config",
+                        action="store",
+                        type="string",
+                        dest="db_config_file",
+                        default="confs/default.txt",
+                        help=_('Database configuration for the environment'))
     #get options & arguments
     # parse_args() returns two values:
     #    1. options, an object containing values for all of your options—e.g. if --file takes a single string argument, then options.file will be the filename supplied by the user, or None if the user did not supply that option
