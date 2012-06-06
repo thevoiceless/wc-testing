@@ -92,6 +92,7 @@ class WinMain(WahCade):
                 props[val[0].strip()] = val[1].strip()  # Match each key with its value
         self.db = MySQLdb.connect(host=props["host"], user=props["user"], passwd=props["passwd"], db=props["db"])
         self.cursor = self.db.cursor()
+        self.db.autocommit(True)
         
         
         ### Set Global Variables
