@@ -1125,7 +1125,7 @@ class WinMain(WahCade):
         #Erase scores from hi score file of current game
         try:
             open(self.mame_dir + 'hi/'+rom+'.hi') #if file exists
-            os.system('wine HiToText.exe -e ~/mame/hi/'+rom+'.hi 2>/dev/null')
+            os.system('wine HiToText.exe -e ' + self.mame_dir + 'hi/' + rom + '.hi 2>/dev/null')
         except IOError as e:
             print rom,'high score file not found'
             
