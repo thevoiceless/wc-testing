@@ -28,6 +28,7 @@ from optparse import OptionParser   # http://docs.python.org/library/optparse.ht
                                     # Deprecated since version 2.7: The optparse module is deprecated and will not be developed further; development will continue with the argparse module.
 
 from constants import *             # constants.py, http://docs.python.org/library/constants.html
+
 import exception                    # exception.py, http://docs.python.org/library/exceptions.html
 _ = gettext.gettext                 # _ now does the same thing as using gettext.gettext("message")
 
