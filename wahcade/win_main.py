@@ -78,21 +78,20 @@ import MySQLdb
 #set gettext function
 _ = gettext.gettext
 
-
-#connect to database
-# Zach
-#db = MySQLdb.connect(host="localhost", user="root", passwd="password", db="wahcade")
-# Riley
-db = MySQLdb.connect(host="localhost", user="root", passwd="root", db="Rcade")
-cursor = db.cursor()
-
 class WinMain(WahCade):
     """Wah!Cade Main Window"""          # This is the docstring belonging to the class, __doc__
 
     def __init__(self, config_opts):
         """initialise main Wah!Cade window"""   # Docstring for this method
         
-        
+        # Open the config file and extract the database connection information
+        with open(config_opts.db_config_file, 'rt') as file:
+            props = {}  # Dictionary
+            for line in file.readlines():
+                val = line.split('=')
+                props[val[0].strip()] = val[1].strip()  # Match each key with its value
+        self.db = MySQLdb.connect(host=props["host"], user=props["user"], passwd=props["passwd"], db=props["db"])
+        self.cursor = self.db.cursor()
         
         
         ### Set Global Variables
@@ -949,10 +948,10 @@ class WinMain(WahCade):
         numberOfTopScores = 10
         index = 1
         string=''
-        cursor.execute("SELECT * FROM player")
+        self.cursor.execute("SELECT * FROM player")
         #determine the number of non-high score spots
-        numberOfTopScores -= int(cursor.rowcount)
-        for row in cursor.fetchall():
+        numberOfTopScores -= int(self.cursor.rowcount)
+        for row in self.cursor.fetchall():
             if index < 10:
                 string += "  "
             if len(row[2]) > 5:
