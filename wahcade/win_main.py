@@ -80,6 +80,9 @@ _ = gettext.gettext
 
 
 #connect to database
+# Zach
+#db = MySQLdb.connect(host="localhost", user="root", passwd="password", db="wahcade")
+# Riley
 db = MySQLdb.connect(host="localhost", user="root", passwd="root", db="Rcade")
 cursor = db.cursor()
 
@@ -263,6 +266,7 @@ class WinMain(WahCade):
         self.fixd.put(self.lblHighScoreTitle, 200, 510)
         self.lblHighScoreTitle.show()
         
+        # Load list of games supported by HiToText
         self.supported_games = set()
         self.supported_game_file = open('supported_games.lst')
         for line in self.supported_game_file:
