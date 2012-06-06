@@ -1123,17 +1123,18 @@ class WinMain(WahCade):
             return
         rom = self.lsGames[self.sclGames.get_selected()][GL_ROM_NAME]
         
-        #Erase scores from hi score file of current game
-        try:
-            open(self.mame_dir + 'hi/'+rom+'.hi') #if file exists
-            os.system('wine HiToText.exe -e ~/mame/hi/'+rom+'.hi 2>/dev/null')
-        except IOError as e:
-            print rom,'high score file not found'
-            
         #show launch message
         self.message.display_message(
             _('Starting...'),
             '%s: %s' % (rom, self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME]))
+        
+        #Erase scores from hi score file of current game
+        try:
+            open(self.mame_dir + 'hi/'+rom+'.hi') #if file exists
+            os.system('wine HiToText.exe -e ' + self.mame_dir + 'hi/' + rom + '.hi 2>/dev/null')
+        except IOError as e:
+            print rom, 'high score file not found'
+        
         #stop joystick poller
         if self.joy is not None:
             self.joy.joy_count('stop')
