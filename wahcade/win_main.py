@@ -1541,8 +1541,6 @@ class WinMain(WahCade):
         lines = open(self.layout_file, 'r').readlines()
         lines = [s.strip() for s in lines]
         lines.insert(0, '.')
-        print lines
-        print len(lines)
         #window sizes
         main_width, main_height = int(lines[1].split(';')[0]), int(lines[2])
         opt_width, opt_height = int(lines[294].split(';')[0]), int(lines[295])
@@ -1558,18 +1556,14 @@ class WinMain(WahCade):
         
         # Overlay scroll letter background
         bg_file = self.get_path(lines[552])
-        print bg_file
         if not os.path.dirname(bg_file):
-            print "a"
             bg_file = os.path.join(self.layout_path, bg_file)
-        print bg_file
         self.overlayBG.set_from_file(bg_file)
         self.fixd.put(self.overlayBG, 100, 100)
         
         # Display overlay letters on ROM list when scrolling quickly
         #self.lblOverlayScrollLetters.set_visible(False)
         self.lblOverlayScrollLetters.hide()
-        #self.fixd.put(self.lblOverlayScrollLetters, 250, 250) # Correct coords, but drawn under orange bar
         self.fixd.put(self.lblOverlayScrollLetters, 120, 118)
         
         #******************BACKBROUND IMAGE FILE********************************
