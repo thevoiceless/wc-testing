@@ -280,9 +280,10 @@ class WinMain(WahCade):
         self.lblHighScoreTitle.show()
         
         # Display overlay letter on ROM list when scrolling quickly
-        self.lblFastScrollLetter.set_visible(False)
-        #self.fixd.put(self.lblFastScrollLetter, 250, 250) #Correct coords, but drawn under orange bar
-        self.fixd.put(self.lblFastScrollLetter, 100, 100)
+        #self.lblFastScrollLetter.set_visible(False)
+        self.lblFastScrollLetter.hide()
+        self.fixd.put(self.lblFastScrollLetter, 250, 250) # Correct coords, but drawn under orange bar
+        #self.fixd.put(self.lblFastScrollLetter, 100, 100)
         # Formatting for the fast-scroll overlay letter
         self.overlayMarkupHead = '<span color="white" size="20000">'
         self.overlayMarkupTail = '</span>'
@@ -677,12 +678,13 @@ class WinMain(WahCade):
                         return
                     #get mamewah keyname
                     mw_keys = mamewah_keys[keyname]
-                    print keyname, "pressed,", mw_keys
+                    #print keyname, "pressed,", mw_keys
                     if mw_keys == []:
                         return
             elif event.type == gtk.gdk.KEY_RELEASE:
                 self.keypress_count = 0
-                self.lblFastScrollLetter.set_visible(False)
+                #self.lblFastScrollLetter.set_visible(False)
+                self.lblFastScrollLetter.hide()
                 #keyboard released, update labels, images, etc
                 if widget == self.winMain:
                     #only update if no further events pending
@@ -707,13 +709,14 @@ class WinMain(WahCade):
                     break
             for mw_func in mw_functions:
                 #which function?
-                print mw_func
+                #print mw_func
                 if current_window == 'main':
                     # Display first letter of selected game when scrolling quickly
                     if self.keypress_count > 10:
                         overlayLetter = self.lsGames[self.sclGames.get_selected()][0][0]
                         self.lblFastScrollLetter.set_markup(_('%s%s%s') % (self.overlayMarkupHead, overlayLetter, self.overlayMarkupTail))
-                        self.lblFastScrollLetter.set_visible(True)
+                        #self.lblFastScrollLetter.set_visible(True)
+                        self.lblFastScrollLetter.show()
                     #main form
                     if mw_func == 'UP_1_GAME':
                         print "keypresses:", self.keypress_count
