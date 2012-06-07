@@ -281,7 +281,7 @@ class WinMain(WahCade):
         
         # Display overlay letter on ROM list when scrolling quickly
         self.lblFastScrollLetter.set_visible(False)
-        #self.fixd.put(self.lblFastScrollLetter, 250, 250) Correct coords, but drawn under orange bar
+        #self.fixd.put(self.lblFastScrollLetter, 250, 250) #Correct coords, but drawn under orange bar
         self.fixd.put(self.lblFastScrollLetter, 100, 100)
         # Formatting for the fast-scroll overlay letter
         self.overlayMarkupHead = '<span color="white" size="20000">'
