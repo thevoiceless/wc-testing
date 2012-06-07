@@ -30,6 +30,8 @@ import gc
 import re
 import imp
 import shlex
+import os
+import commands
 from operator import itemgetter
 import subprocess
 from subprocess import Popen
@@ -75,6 +77,7 @@ import filters                          # filters.py, routines to read/write mam
 from mamewah_ini import MameWahIni      # Reads mamewah-formatted ini file
 import joystick                         # joystick.py, joystick class, uses pygame package (SDL bindings for games in Python)
 import MySQLdb
+from dummy_db import DummyDB
 #set gettext function
 _ = gettext.gettext
 
@@ -84,15 +87,23 @@ class WinMain(WahCade):
     def __init__(self, config_opts):
         """initialise main Wah!Cade window"""   # Docstring for this method
         
-        # Open the config file and extract the database connection information
-        with open(config_opts.db_config_file, 'rt') as file:
-            props = {}  # Dictionary
-            for line in file.readlines():
-                val = line.split('=')
-                props[val[0].strip()] = val[1].strip()  # Match each key with its value
-        self.db = MySQLdb.connect(host=props["host"], user=props["user"], passwd=props["passwd"], db=props["db"])
-        self.cursor = self.db.cursor()
-        
+        # Try connecting to a database, otherwise
+        try:
+            # Open the config file and extract the database connection information
+            with open(config_opts.db_config_file, 'rt') as f:
+                props = {}  # Dictionary
+                for line in f.readlines():
+                    val = line.split('=')
+                    props[val[0].strip()] = val[1].strip()  # Match each key with its value
+            self.db = MySQLdb.connect(host=props["host"], user=props["user"], passwd=props["passwd"], db=props["db"])
+            self.cursor = self.db.cursor()
+            self.db.autocommit(True) #Updates the DB results
+            self.db_connected = True
+        except:
+            self.db = DummyDB()
+            self.cursor = self.db.cursor()
+            self.db_connected = False
+            print "Could not connect to database"
         
         ### Set Global Variables
         global gst_media_imported, pygame_imported, old_keyb_events, debug_mode, log_filename
@@ -261,9 +272,15 @@ class WinMain(WahCade):
         self.imgBackground.show()
         
         #Temp for displaying high score data
-        self.lblHighScoreTitle.set_markup('<span color="orange" size="14000">High Score!</span>')
+        self.lblHighScoreTitle.set_markup('<span color="orange" size="14000">High Scores</span>')
         self.fixd.put(self.lblHighScoreTitle, 200, 510)
         self.lblHighScoreTitle.show()
+        
+        #Mark mame directory
+        self.mame_dir =  self.emu_ini.get('emulator_executable')[:self.emu_ini.get('emulator_executable').rfind('/')+1]
+        
+        self.launched_game = False
+        self.current_rom = ''
         
         # Load list of games supported by HiToText
         self.supported_games = set()
@@ -504,6 +521,12 @@ class WinMain(WahCade):
 
     def on_winMain_focus_in(self, *args):
         """window received focus"""
+        if self.launched_game:
+            self.launched_game = False
+            #print os.path.isfile(self.mame_dir+"hi/airwolf.hi")
+            testString = commands.getoutput("wine HiToText.exe -r "+self.mame_dir+"hi/" + self.current_rom + ".hi 2>/dev/null")
+            print testString
+            
         self.pointer_grabbed = False
         if self.sclGames.use_mouse and not self.showcursor:
             #need to grab?
@@ -887,8 +910,6 @@ class WinMain(WahCade):
         highScoreDataMarkupTail = '</span>'
         #query database for "high score"
         highScoreInfo = self.get_score_string()
-        
-        
         #print "on_sclGames_changed: sel=", self.sclGames.get_selected()
         self.game_ini_file = None
         self.stop_video()
@@ -903,6 +924,7 @@ class WinMain(WahCade):
         self.current_list_ini.set('current_game', self.sclGames.get_selected())
         #get info to display in bottom right box
         game_info = filters.get_game_dict(self.lsGames[self.sclGames.get_selected()])
+        self.current_rom = game_info['rom_name']
         #check for game ini file
         game_ini_file = os.path.join(CONFIG_DIR, 'ini', '%s' % self.current_emu, '%s' % game_info['rom_name'] + '.ini' )
         if os.path.isfile(game_ini_file):
@@ -927,10 +949,12 @@ class WinMain(WahCade):
             game_info['sound_status']))
         self.lblCatVer.set_text(game_info['category'])
         #get high score data and display it
-        if game_info['rom_name'] in self.supported_games:
+        if not self.db_connected:
+            self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, "  NOT CONNECTED TO A DATABASE", highScoreDataMarkupTail))
+        elif game_info['rom_name'] in self.supported_games:
             self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, highScoreInfo, highScoreDataMarkupTail))
         else:
-            self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, "HIGH SCORE NOT SUPPORTED", highScoreDataMarkupTail))
+            self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, "  HIGH SCORE NOT SUPPORTED", highScoreDataMarkupTail))
         #start video timer
         if self.scrsaver.movie_type not in ('intro', 'exit'):
             self.start_timer('video')
@@ -945,6 +969,7 @@ class WinMain(WahCade):
             self.display_scaled_image(img, img_filename, self.keep_aspect, img.get_data('text-rotation'))
     
     def get_score_string(self):
+        """Parse Scores from DB into display string"""
         numberOfTopScores = 10
         index = 1
         string=''
@@ -1107,10 +1132,19 @@ class WinMain(WahCade):
         if self.lsGames_len == 0:
             return
         rom = self.lsGames[self.sclGames.get_selected()][GL_ROM_NAME]
+            
         #show launch message
         self.message.display_message(
             _('Starting...'),
             '%s: %s' % (rom, self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME]))
+        
+        #Erase scores from hi score file of current game
+        try:
+            open(self.mame_dir + 'hi/' + rom + '.hi') #if file exists
+            os.system('wine HiToText.exe -e ' + self.mame_dir + 'hi/' + rom + '.hi 2>/dev/null')
+        except IOError as e:
+            print rom, 'high score file not found'
+        
         #stop joystick poller
         if self.joy is not None:
             self.joy.joy_count('stop')
@@ -1203,6 +1237,9 @@ class WinMain(WahCade):
         else:
             p = Popen(cmd, shell=True)
         sts = p.wait()
+        
+        self.launched_game = True
+        
         self.log_msg("Child Process Returned: " + `sts`, "debug")
        #minimize wahcade
         if game_opts['minimize_wahcade']:
