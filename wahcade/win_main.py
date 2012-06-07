@@ -280,16 +280,15 @@ class WinMain(WahCade):
         self.lblHighScoreTitle.show()
         
         # Display overlay letter on ROM list when scrolling quickly
-        self.lblFastScrollLetter.set_markup('<span color="white" size="20000">A</span>')
         self.lblFastScrollLetter.set_visible(False)
         #self.fixd.put(self.lblFastScrollLetter, 250, 250) Correct coords, but drawn under orange bar
         self.fixd.put(self.lblFastScrollLetter, 100, 100)
-        # Formatting for the scroll overlay letter
+        # Formatting for the fast-scroll overlay letter
         self.overlayMarkupHead = '<span color="white" size="20000">'
         self.overlayMarkupTail = '</span>'
         
         #Mark mame directory
-        self.mame_dir =  self.emu_ini.get('emulator_executable')[:self.emu_ini.get('emulator_executable').rfind('/')+1]
+        self.mame_dir = self.emu_ini.get('emulator_executable')[:self.emu_ini.get('emulator_executable').rfind('/') + 1]
         
         self.launched_game = False
         self.current_rom = ''
@@ -709,11 +708,12 @@ class WinMain(WahCade):
             for mw_func in mw_functions:
                 #which function?
                 print mw_func
-                if self.keypress_count > 10:
-                    overlayLetter = self.lsGames[self.sclGames.get_selected()][0][0]
-                    self.lblFastScrollLetter.set_markup(_('%s%s%s') % (self.overlayMarkupHead, overlayLetter, self.overlayMarkupTail))
-                    self.lblFastScrollLetter.set_visible(True)
                 if current_window == 'main':
+                    # Display first letter of selected game when scrolling quickly
+                    if self.keypress_count > 10:
+                        overlayLetter = self.lsGames[self.sclGames.get_selected()][0][0]
+                        self.lblFastScrollLetter.set_markup(_('%s%s%s') % (self.overlayMarkupHead, overlayLetter, self.overlayMarkupTail))
+                        self.lblFastScrollLetter.set_visible(True)
                     #main form
                     if mw_func == 'UP_1_GAME':
                         print "keypresses:", self.keypress_count
