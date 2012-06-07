@@ -644,6 +644,7 @@ class WinMain(WahCade):
                         return
                     #get mamewah keyname
                     mw_keys = mamewah_keys[keyname]
+                    print keyname, "pressed,", mw_keys
                     if mw_keys == []:
                         return
             elif event.type == gtk.gdk.KEY_RELEASE:
@@ -672,12 +673,15 @@ class WinMain(WahCade):
                     break
             for mw_func in mw_functions:
                 #which function?
+                print mw_func
                 if current_window == 'main':
                     #main form
                     if mw_func == 'UP_1_GAME':
+                        print "keypresses:", self.keypress_count
                         self.play_clip('UP_1_GAME')
                         self.sclGames.scroll((int(self.keypress_count / 20) * -1) - 1)
                     elif mw_func == 'DOWN_1_GAME':
+                        print "keypresses:", self.keypress_count
                         self.play_clip('DOWN_1_GAME')
                         self.sclGames.scroll(int(self.keypress_count / 20) + 1)
                     elif mw_func == 'UP_1_PAGE':
@@ -690,14 +694,15 @@ class WinMain(WahCade):
                         self.play_clip('UP_1_LETTER')
                         if self.lsGames_len == 0:
                             break
-                        cl = self.lsGames[self.sclGames.get_selected()][0][0]
+                        toLetter = self.lsGames[self.sclGames.get_selected()][0][0]
+                        print "to letter:", toLetter
                         games = [r[0] for r in self.lsGames]
                         games = games[:self.sclGames.get_selected()]
                         games.reverse()
                         i = 0
                         for row in games:
                             i += 1
-                            if row[0] != cl:
+                            if row[0] != toLetter:
                                 self.sclGames.scroll(-i)
                                 break
                             if i >= len(games):
@@ -706,13 +711,14 @@ class WinMain(WahCade):
                         self.play_clip('DOWN_1_LETTER')
                         if self.lsGames_len == 0:
                             break
-                        cl = self.lsGames[self.sclGames.get_selected()][0][0]
+                        toLetter = self.lsGames[self.sclGames.get_selected()][0][0]
+                        print "to letter:", toLetter
                         games = [r[0] for r in self.lsGames]
                         games = games[self.sclGames.get_selected():]
                         i = -1
                         for row in games:
                             i += 1
-                            if row[0] != cl:
+                            if row[0] != toLetter:
                                 self.sclGames.scroll(+i)
                                 break
                     elif mw_func == 'RANDOM_GAME':
@@ -941,6 +947,7 @@ class WinMain(WahCade):
             rom_name_desc = _('%s (Clone of %s)') % (game_info['rom_name'], game_info['clone_of'])
         else:
             rom_name_desc = game_info['rom_name']
+        # Set labels in the ROM info panel
         self.lblRomName.set_text(rom_name_desc)
         self.lblYearManufacturer.set_text('%s %s' % (game_info['year'], game_info['manufacturer']))
         self.lblScreenType.set_text('%s %s' % (game_info['screen_type'], game_info['display_type']))
