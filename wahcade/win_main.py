@@ -219,6 +219,7 @@ class WinMain(WahCade):
         self.lblCatVer = gtk.Label()
         self.lblHighScoreTitle = gtk.Label()
         self.lblHighScoreData = gtk.Label()
+        self.lblFastScrollLetter = gtk.Label()
         # create scroll list widget
         self.sclGames = ScrollList()
         # image & label lists
@@ -278,8 +279,16 @@ class WinMain(WahCade):
         self.fixd.put(self.lblHighScoreTitle, 200, 510)
         self.lblHighScoreTitle.show()
         
+        # Display overlay letter on ROM list when scrolling quickly
+        self.lblFastScrollLetter.set_visible(False)
+        #self.fixd.put(self.lblFastScrollLetter, 250, 250) #Correct coords, but drawn under orange bar
+        self.fixd.put(self.lblFastScrollLetter, 100, 100)
+        # Formatting for the fast-scroll overlay letter
+        self.overlayMarkupHead = '<span color="white" size="20000">'
+        self.overlayMarkupTail = '</span>'
+        
         #Mark mame directory
-        self.mame_dir =  self.emu_ini.get('emulator_executable')[:self.emu_ini.get('emulator_executable').rfind('/')+1]
+        self.mame_dir = self.emu_ini.get('emulator_executable')[:self.emu_ini.get('emulator_executable').rfind('/') + 1]
         
         self.launched_game = False
         self.current_rom = ''
@@ -677,10 +686,12 @@ class WinMain(WahCade):
                         return
                     #get mamewah keyname
                     mw_keys = mamewah_keys[keyname]
+                    print keyname, "pressed,", mw_keys
                     if mw_keys == []:
                         return
             elif event.type == gtk.gdk.KEY_RELEASE:
                 self.keypress_count = 0
+                self.lblFastScrollLetter.set_visible(False)
                 #keyboard released, update labels, images, etc
                 if widget == self.winMain:
                     #only update if no further events pending
@@ -705,12 +716,20 @@ class WinMain(WahCade):
                     break
             for mw_func in mw_functions:
                 #which function?
+                print mw_func
                 if current_window == 'main':
+                    # Display first letter of selected game when scrolling quickly
+                    if self.keypress_count > 10:
+                        overlayLetter = self.lsGames[self.sclGames.get_selected()][0][0]
+                        self.lblFastScrollLetter.set_markup(_('%s%s%s') % (self.overlayMarkupHead, overlayLetter, self.overlayMarkupTail))
+                        self.lblFastScrollLetter.set_visible(True)
                     #main form
                     if mw_func == 'UP_1_GAME':
+                        print "keypresses:", self.keypress_count
                         self.play_clip('UP_1_GAME')
                         self.sclGames.scroll((int(self.keypress_count / 20) * -1) - 1)
                     elif mw_func == 'DOWN_1_GAME':
+                        print "keypresses:", self.keypress_count
                         self.play_clip('DOWN_1_GAME')
                         self.sclGames.scroll(int(self.keypress_count / 20) + 1)
                     elif mw_func == 'UP_1_PAGE':
@@ -723,14 +742,15 @@ class WinMain(WahCade):
                         self.play_clip('UP_1_LETTER')
                         if self.lsGames_len == 0:
                             break
-                        cl = self.lsGames[self.sclGames.get_selected()][0][0]
+                        toLetter = self.lsGames[self.sclGames.get_selected()][0][0]
+                        print "to letter:", toLetter
                         games = [r[0] for r in self.lsGames]
                         games = games[:self.sclGames.get_selected()]
                         games.reverse()
                         i = 0
                         for row in games:
                             i += 1
-                            if row[0] != cl:
+                            if row[0] != toLetter:
                                 self.sclGames.scroll(-i)
                                 break
                             if i >= len(games):
@@ -739,13 +759,14 @@ class WinMain(WahCade):
                         self.play_clip('DOWN_1_LETTER')
                         if self.lsGames_len == 0:
                             break
-                        cl = self.lsGames[self.sclGames.get_selected()][0][0]
+                        toLetter = self.lsGames[self.sclGames.get_selected()][0][0]
+                        print "to letter:", toLetter
                         games = [r[0] for r in self.lsGames]
                         games = games[self.sclGames.get_selected():]
                         i = -1
                         for row in games:
                             i += 1
-                            if row[0] != cl:
+                            if row[0] != toLetter:
                                 self.sclGames.scroll(+i)
                                 break
                     elif mw_func == 'RANDOM_GAME':
@@ -974,6 +995,7 @@ class WinMain(WahCade):
             rom_name_desc = _('%s (Clone of %s)') % (game_info['rom_name'], game_info['clone_of'])
         else:
             rom_name_desc = game_info['rom_name']
+        # Set labels in the ROM info panel
         self.lblRomName.set_text(rom_name_desc)
         self.lblYearManufacturer.set_text('%s %s' % (game_info['year'], game_info['manufacturer']))
         self.lblScreenType.set_text('%s %s' % (game_info['screen_type'], game_info['display_type']))
@@ -989,7 +1011,7 @@ class WinMain(WahCade):
         elif game_info['rom_name'] in self.supported_games:
             self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, highScoreInfo, highScoreDataMarkupTail))
         else:
-            self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, "  HIGH SCORE NOT SUPPORTED", highScoreDataMarkupTail))
+            self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, "  HIGH SCORE NOT SUPPORTED", highScoreDataMarkupTail))        
         #start video timer
         if self.scrsaver.movie_type not in ('intro', 'exit'):
             self.start_timer('video')
