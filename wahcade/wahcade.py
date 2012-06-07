@@ -74,7 +74,8 @@ if __name__ == "__main__":          # http://stackoverflow.com/questions/419163/
                         action="store",
                         type="string",
                         dest="db_config_file",
-                        default="confs/default.txt",
+                        #default="confs/default.txt",
+                        default="default",
                         help=_('Set database configuration for the environment'))
     #get options & arguments
     # parse_args() returns two values:

@@ -88,9 +88,11 @@ class WinMain(WahCade):
         """initialise main Wah!Cade window"""   # Docstring for this method
         
         # Try connecting to a database, otherwise
+        self.db_file = "confs/" + config_opts.db_config_file + ".txt"
         try:
             # Open the config file and extract the database connection information
-            with open(config_opts.db_config_file, 'rt') as f:
+            #with open(config_opts.db_config_file, 'rt') as f:
+            with open(self.db_file, 'rt') as f:
                 props = {}  # Dictionary
                 for line in f.readlines():
                     val = line.split('=')
