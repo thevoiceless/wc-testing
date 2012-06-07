@@ -77,6 +77,7 @@ import filters                          # filters.py, routines to read/write mam
 from mamewah_ini import MameWahIni      # Reads mamewah-formatted ini file
 import joystick                         # joystick.py, joystick class, uses pygame package (SDL bindings for games in Python)
 import MySQLdb
+from dummy_db import DummyDB
 #set gettext function
 _ = gettext.gettext
 
@@ -86,15 +87,25 @@ class WinMain(WahCade):
     def __init__(self, config_opts):
         """initialise main Wah!Cade window"""   # Docstring for this method
         
-        # Open the config file and extract the database connection information
-        with open(config_opts.db_config_file, 'rt') as file:
-            props = {}  # Dictionary
-            for line in file.readlines():
-                val = line.split('=')
-                props[val[0].strip()] = val[1].strip()  # Match each key with its value
-        self.db = MySQLdb.connect(host=props["host"], user=props["user"], passwd=props["passwd"], db=props["db"])
-        self.cursor = self.db.cursor()
-        self.db.autocommit(True) #Updates the DB results        
+        # Try connecting to a database, otherwise
+        self.db_file = "confs/" + config_opts.db_config_file + ".txt"
+        try:
+            # Open the config file and extract the database connection information
+            #with open(config_opts.db_config_file, 'rt') as f:
+            with open(self.db_file, 'rt') as f:
+                props = {}  # Dictionary
+                for line in f.readlines():
+                    val = line.split('=')
+                    props[val[0].strip()] = val[1].strip()  # Match each key with its value
+            self.db = MySQLdb.connect(host=props["host"], user=props["user"], passwd=props["passwd"], db=props["db"])
+            self.cursor = self.db.cursor()
+            self.db.autocommit(True) #Updates the DB results
+            self.db_connected = True
+        except:
+            self.db = DummyDB()
+            self.cursor = self.db.cursor()
+            self.db_connected = False
+            print "Could not connect to database"
         
         ### Set Global Variables
         global gst_media_imported, pygame_imported, old_keyb_events, debug_mode, log_filename
@@ -263,7 +274,7 @@ class WinMain(WahCade):
         self.imgBackground.show()
         
         #Temp for displaying high score data
-        self.lblHighScoreTitle.set_markup('<span color="orange" size="14000">High Score!</span>')
+        self.lblHighScoreTitle.set_markup('<span color="orange" size="14000">High Scores</span>')
         self.fixd.put(self.lblHighScoreTitle, 200, 510)
         self.lblHighScoreTitle.show()
         
@@ -964,7 +975,9 @@ class WinMain(WahCade):
             game_info['sound_status']))
         self.lblCatVer.set_text(game_info['category'])
         #get high score data and display it
-        if game_info['rom_name'] in self.supported_games:
+        if not self.db_connected:
+            self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, "  NOT CONNECTED TO A DATABASE", highScoreDataMarkupTail))
+        elif game_info['rom_name'] in self.supported_games:
             self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, highScoreInfo, highScoreDataMarkupTail))
         else:
             self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, "  HIGH SCORE NOT SUPPORTED", highScoreDataMarkupTail))
