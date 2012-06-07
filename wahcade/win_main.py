@@ -210,6 +210,8 @@ class WinMain(WahCade):
         self.imgArtwork8 = gtk.Image()
         self.imgArtwork9 = gtk.Image()
         self.imgArtwork10 = gtk.Image()
+        # Background for overlay scroll letters
+        self.overlayBG = gtk.Image()
         self.lblGameDescription = gtk.Label()
         self.lblRomName = gtk.Label()
         self.lblYearManufacturer = gtk.Label()
@@ -279,11 +281,6 @@ class WinMain(WahCade):
         self.fixd.put(self.lblHighScoreTitle, 200, 510)
         self.lblHighScoreTitle.show()
         
-        # Display overlay letters on ROM list when scrolling quickly
-        #self.lblOverlayScrollLetters.set_visible(False)
-        self.lblOverlayScrollLetters.hide()
-        #self.fixd.put(self.lblOverlayScrollLetters, 250, 250) # Correct coords, but drawn under orange bar
-        self.fixd.put(self.lblOverlayScrollLetters, 100, 100)
         # Formatting for the overlay letters
         self.overlayMarkupHead = '<span color="white" size="20000">'
         self.overlayMarkupTail = '</span>'
@@ -694,6 +691,7 @@ class WinMain(WahCade):
                 self.keypress_count = 0
                 #self.lblOverlayScrollLetters.set_visible(False)
                 self.lblOverlayScrollLetters.hide()
+                self.overlayBG.hide()
                 #keyboard released, update labels, images, etc
                 if widget == self.winMain:
                     #only update if no further events pending
@@ -722,6 +720,7 @@ class WinMain(WahCade):
                 if current_window == 'main':
                     # Display first two letters of selected game when scrolling quickly
                     if self.keypress_count > 10:
+                        self.overlayBG.show()
                         overlayLetters = self.lsGames[self.sclGames.get_selected()][0][0:2]
                         self.lblOverlayScrollLetters.set_markup(_('%s%s%s') % (self.overlayMarkupHead, overlayLetters, self.overlayMarkupTail))
                         #self.lblOverlayScrollLetters.set_visible(True)
@@ -1542,6 +1541,8 @@ class WinMain(WahCade):
         lines = open(self.layout_file, 'r').readlines()
         lines = [s.strip() for s in lines]
         lines.insert(0, '.')
+        print lines
+        print len(lines)
         #window sizes
         main_width, main_height = int(lines[1].split(';')[0]), int(lines[2])
         opt_width, opt_height = int(lines[294].split(';')[0]), int(lines[295])
@@ -1554,6 +1555,22 @@ class WinMain(WahCade):
         self.fixd.move(self.imgBackground, 0, 0)
         self.imgBackground.set_size_request(main_width, main_height)
         img_file = self.get_path(lines[4])
+        
+        # Overlay scroll letter background
+        bg_file = self.get_path(lines[552])
+        print bg_file
+        if not os.path.dirname(bg_file):
+            print "a"
+            bg_file = os.path.join(self.layout_path, bg_file)
+        print bg_file
+        self.overlayBG.set_from_file(bg_file)
+        self.fixd.put(self.overlayBG, 100, 100)
+        
+        # Display overlay letters on ROM list when scrolling quickly
+        #self.lblOverlayScrollLetters.set_visible(False)
+        self.lblOverlayScrollLetters.hide()
+        #self.fixd.put(self.lblOverlayScrollLetters, 250, 250) # Correct coords, but drawn under orange bar
+        self.fixd.put(self.lblOverlayScrollLetters, 120, 118)
         
         #******************BACKBROUND IMAGE FILE********************************
         
