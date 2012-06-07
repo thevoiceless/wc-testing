@@ -219,6 +219,7 @@ class WinMain(WahCade):
         self.lblCatVer = gtk.Label()
         self.lblHighScoreTitle = gtk.Label()
         self.lblHighScoreData = gtk.Label()
+        self.lblFastScrollLetter = gtk.Label()
         # create scroll list widget
         self.sclGames = ScrollList()
         # image & label lists
@@ -277,6 +278,15 @@ class WinMain(WahCade):
         self.lblHighScoreTitle.set_markup('<span color="orange" size="14000">High Scores</span>')
         self.fixd.put(self.lblHighScoreTitle, 200, 510)
         self.lblHighScoreTitle.show()
+        
+        # Display overlay letter on ROM list when scrolling quickly
+        self.lblFastScrollLetter.set_markup('<span color="white" size="20000">A</span>')
+        self.lblFastScrollLetter.set_visible(False)
+        #self.fixd.put(self.lblFastScrollLetter, 250, 250) Correct coords, but drawn under orange bar
+        self.fixd.put(self.lblFastScrollLetter, 100, 100)
+        # Formatting for the scroll overlay letter
+        self.overlayMarkupHead = '<span color="white" size="20000">'
+        self.overlayMarkupTail = '</span>'
         
         #Mark mame directory
         self.mame_dir =  self.emu_ini.get('emulator_executable')[:self.emu_ini.get('emulator_executable').rfind('/')+1]
@@ -673,6 +683,7 @@ class WinMain(WahCade):
                         return
             elif event.type == gtk.gdk.KEY_RELEASE:
                 self.keypress_count = 0
+                self.lblFastScrollLetter.set_visible(False)
                 #keyboard released, update labels, images, etc
                 if widget == self.winMain:
                     #only update if no further events pending
@@ -698,6 +709,10 @@ class WinMain(WahCade):
             for mw_func in mw_functions:
                 #which function?
                 print mw_func
+                if self.keypress_count > 10:
+                    overlayLetter = self.lsGames[self.sclGames.get_selected()][0][0]
+                    self.lblFastScrollLetter.set_markup(_('%s%s%s') % (self.overlayMarkupHead, overlayLetter, self.overlayMarkupTail))
+                    self.lblFastScrollLetter.set_visible(True)
                 if current_window == 'main':
                     #main form
                     if mw_func == 'UP_1_GAME':
@@ -987,7 +1002,7 @@ class WinMain(WahCade):
         elif game_info['rom_name'] in self.supported_games:
             self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, highScoreInfo, highScoreDataMarkupTail))
         else:
-            self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, "  HIGH SCORE NOT SUPPORTED", highScoreDataMarkupTail))
+            self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, "  HIGH SCORE NOT SUPPORTED", highScoreDataMarkupTail))        
         #start video timer
         if self.scrsaver.movie_type not in ('intro', 'exit'):
             self.start_timer('video')
