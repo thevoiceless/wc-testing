@@ -523,11 +523,16 @@ class WinMain(WahCade):
 
     def on_winMain_focus_in(self, *args):
         """window received focus"""
+        #if returning from a game rather than something like ALT+Tab
         if self.launched_game:
             self.launched_game = False
-            #print os.path.isfile(self.mame_dir+"hi/airwolf.hi")
-            testString = commands.getoutput("wine HiToText.exe -r "+self.mame_dir+"hi/" + self.current_rom + ".hi 2>/dev/null")
-            self.parse_high_score_text(testString)
+            #if the game supports high scores run the HiToText executions
+            if self.current_rom in self.supported_games:
+                testString = commands.getoutput("wine HiToText.exe -r "+self.mame_dir+"hi/" + self.current_rom + ".hi 2>/dev/null")
+                if 'Error' in testString:
+                    testString = commands.getoutput("wine HiToText.exe -r "+self.mame_dir+"nvram/" + self.current_rom + ".nv 2>/dev/null")
+                if not 'Error' in testString:
+                    self.parse_high_score_text(testString.rstrip())
             
         self.pointer_grabbed = False
         if self.sclGames.use_mouse and not self.showcursor:
@@ -572,19 +577,23 @@ class WinMain(WahCade):
         #print 'Text String:\n', text_string
         props = {}
         index = 1
+        #go through each line of the the high score result
         for line in iter(text_string.splitlines()):
             line = line.split('|')
-            if len(line) != 1 and line[1] != '':
+            if line[0] != '':
+                #if it is the first line treat it as the format
                 if index == 1:
                     _format = line
                     index += 1
                     for column in line:
                         props[column] = '' #initialize dict values
                 else:
-                    for i in range(0, len(_format)):
+                    #Go to length of line rather than format because format can be wrong sometimes
+                    for i in range(0, len(line)):
                         props[_format[i]] = line[i]
                     #Add to DB if score not zero
                     if props['SCORE'] is not '0':
+                        #Implement!
                         print props
         
     def insert_into_db(self):
@@ -976,7 +985,7 @@ class WinMain(WahCade):
         self.lblCatVer.set_text(game_info['category'])
         #get high score data and display it
         if not self.db_connected:
-            self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, "  NOT CONNECTED TO A DATABASE", highScoreDataMarkupTail))
+            self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, " NOT CONNECTED TO A DATABASE", highScoreDataMarkupTail))
         elif game_info['rom_name'] in self.supported_games:
             self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, highScoreInfo, highScoreDataMarkupTail))
         else:
@@ -1165,12 +1174,15 @@ class WinMain(WahCade):
             '%s: %s' % (rom, self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME]))
         
         #Erase scores from hi score file of current game
-        try:
-            open(self.mame_dir + 'hi/' + rom + '.hi') #if file exists
-            os.system('wine HiToText.exe -e ' + self.mame_dir + 'hi/' + rom + '.hi 2>/dev/null')
-        except IOError as e:
-            print rom, 'high score file not found'
-        
+        if rom in self.supported_games:
+            if os.path.exists(self.mame_dir + 'hi/' + rom + '.hi'):
+                os.system('wine HiToText.exe -e ' + self.mame_dir + 'hi/' + rom + '.hi 2>/dev/null')
+            elif os.path.exists(self.mame_dir + 'nvram/' + rom + '.nv'):
+                os.system('wine HiToText.exe -e ' + self.mame_dir + 'nvram/' + rom + '.nv 2>/dev/null')
+            else:
+                print rom, 'high score file not found'
+            
+
         #stop joystick poller
         if self.joy is not None:
             self.joy.joy_count('stop')
