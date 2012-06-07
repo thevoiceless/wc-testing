@@ -516,7 +516,7 @@ class WinMain(WahCade):
             self.launched_game = False
             #print os.path.isfile(self.mame_dir+"hi/airwolf.hi")
             testString = commands.getoutput("wine HiToText.exe -r "+self.mame_dir+"hi/" + self.current_rom + ".hi 2>/dev/null")
-            print testString
+            self.parse_high_score_text(testString)
             
         self.pointer_grabbed = False
         if self.sclGames.use_mouse and not self.showcursor:
@@ -555,6 +555,30 @@ class WinMain(WahCade):
         """window lost focus"""
         self.pointer_grabbed = False
         gtk.gdk.pointer_ungrab()
+        
+    def parse_high_score_text(self, text_string):
+        """Parse the text file for high scores. 0 scores are not sent"""
+        #print 'Text String:\n', text_string
+        props = {}
+        index = 1
+        for line in iter(text_string.splitlines()):
+            line = line.split('|')
+            if len(line) != 1 and line[1] != '':
+                if index == 1:
+                    _format = line
+                    index += 1
+                    for column in line:
+                        props[column] = '' #initialize dict values
+                else:
+                    for i in range(0, len(_format)):
+                        props[_format[i]] = line[i]
+                    #Add to DB if score not zero
+                    if props['SCORE'] is not '0':
+                        print props
+        
+    def insert_into_db(self):
+        """May implement this, may not be needed"""
+        return
 
     def on_winMain_key_press(self, widget, event, *args):
         """key pressed - translate to mamewah setup"""
