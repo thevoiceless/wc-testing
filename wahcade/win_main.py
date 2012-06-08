@@ -542,9 +542,12 @@ class WinMain(WahCade):
             self.launched_game = False
             #if the game supports high scores run the HiToText executions
             if self.current_rom in self.supported_games:
-                testString = commands.getoutput("wine HiToText.exe -r "+self.mame_dir+"hi/" + self.current_rom + ".hi 2>/dev/null")
+                #testString = commands.getoutput("wine HiToText.exe -r " + self.mame_dir + "hi/" + self.current_rom + ".hi 2>/dev/null")
+                testString = commands.getoutput("mono HiToText.exe -r " + self.mame_dir + "hi/" + self.current_rom + ".hi")
+                print testString
                 if 'Error' in testString:
-                    testString = commands.getoutput("wine HiToText.exe -r "+self.mame_dir+"nvram/" + self.current_rom + ".nv 2>/dev/null")
+                    #testString = commands.getoutput("wine HiToText.exe -r " + self.mame_dir + "nvram/" + self.current_rom + ".nv 2>/dev/null")
+                    testString = commands.getoutput("mono HiToText.exe -r " + self.mame_dir + "nvram/" + self.current_rom + ".nv")
                 if not 'Error' in testString:
                     self.parse_high_score_text(testString.rstrip())
             
@@ -1204,9 +1207,11 @@ class WinMain(WahCade):
         #Erase scores from hi score file of current game
         if rom in self.supported_games:
             if os.path.exists(self.mame_dir + 'hi/' + rom + '.hi'):
-                os.system('wine HiToText.exe -e ' + self.mame_dir + 'hi/' + rom + '.hi 2>/dev/null')
+                #os.system('wine HiToText.exe -e ' + self.mame_dir + 'hi/' + rom + '.hi 2>/dev/null')
+                os.system('mono HiToText.exe -e ' + self.mame_dir + 'hi/' + rom + '.hi')
             elif os.path.exists(self.mame_dir + 'nvram/' + rom + '.nv'):
-                os.system('wine HiToText.exe -e ' + self.mame_dir + 'nvram/' + rom + '.nv 2>/dev/null')
+                #os.system('wine HiToText.exe -e ' + self.mame_dir + 'nvram/' + rom + '.nv 2>/dev/null')
+                os.system('mono HiToText.exe -e ' + self.mame_dir + 'nvram/' + rom + '.nv')
             else:
                 print rom, 'high score file not found'
             
@@ -1542,7 +1547,6 @@ class WinMain(WahCade):
             return
         self.layout_file = layout_file
         #read file & strip any crap
-        print self.layout_file
         lines = open(self.layout_file, 'r').readlines()
         lines = [s.strip() for s in lines]
         lines.insert(0, '.')
@@ -1560,8 +1564,6 @@ class WinMain(WahCade):
         img_file = self.get_path(lines[4])
         
         # Overlay scroll letter background
-        print lines
-        print len(lines)
         bg_file = self.get_path(lines[552])
         if not os.path.dirname(bg_file):
             bg_file = os.path.join(self.layout_path, bg_file)
