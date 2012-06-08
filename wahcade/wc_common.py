@@ -114,7 +114,7 @@ class WahCade:
 
     def get_colour(self, col):
         """convert decimal colour into format suitable for gtk colour"""
-        # Returns the hex value for the color, REVERSED
+        # Returns the hex value for the color, shuffled for some reason
         hex_col = hex(col)[2:].rjust(6, '0').upper()
         #re-arrange
         hex_col = '#%s%s%s' % (hex_col[4:6], hex_col[2:4], hex_col[0:2])

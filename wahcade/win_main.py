@@ -310,7 +310,7 @@ class WinMain(WahCade):
         self.fixd.show()
         self.winMain.add(self.fixd)
         for line, widget in self._layout_items:
-            print widget.get_name()
+            #print widget.get_name()
             if widget != self.sclGames:
                 self.fixd.add(self.make_evb_widget(widget))     # wc_common.py
             else:
@@ -1542,6 +1542,7 @@ class WinMain(WahCade):
             return
         self.layout_file = layout_file
         #read file & strip any crap
+        print self.layout_file
         lines = open(self.layout_file, 'r').readlines()
         lines = [s.strip() for s in lines]
         lines.insert(0, '.')
@@ -1559,6 +1560,8 @@ class WinMain(WahCade):
         img_file = self.get_path(lines[4])
         
         # Overlay scroll letter background
+        print lines
+        print len(lines)
         bg_file = self.get_path(lines[552])
         if not os.path.dirname(bg_file):
             bg_file = os.path.join(self.layout_path, bg_file)
