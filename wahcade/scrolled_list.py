@@ -369,3 +369,5 @@ class ScrollList:
             else:
                 self._rows[i][1].set_text(self.ls[top_ls_idx + i])
 
+    def get_name(self):
+        return "ScrolledList"
