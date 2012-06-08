@@ -80,28 +80,28 @@ class WahCade:
         # but not well-documented, order after the first item in
         # _lines as identified by the offset param. Incrementing
         # the offset allows access to the properties in order
-        d={}
-        d['visible'] = (lines[offset].lower() == 'true') # scrubs all chars to lowercase, generates bool on compare
-        d['transparent'] = (lines[offset + 1] == '1')
-        d['background-col'] = self.get_colour(int(lines[offset + 2])) # from a number to a color obj
-        d['text-col'] = self.get_colour(int(lines[offset + 3]))
-        d['font'] = lines[offset + 4]
-        d['font-bold'] = (lines[offset + 5].lower() == 'true')
-        d['font-italic'] = (lines[offset + 6].lower() == 'true')
-        d['font-size'] = float(lines[offset + 7])
+        data = {}
+        data['visible'] = (lines[offset].lower() == 'true') # scrubs all chars to lowercase, generates bool on compare
+        data['transparent'] = (lines[offset + 1] == '1')
+        data['background-col'] = self.get_colour(int(lines[offset + 2])) # from a number to a color obj
+        data['text-col'] = self.get_colour(int(lines[offset + 3]))
+        data['font'] = lines[offset + 4]
+        data['font-bold'] = (lines[offset + 5].lower() == 'true')
+        data['font-italic'] = (lines[offset + 6].lower() == 'true')
+        data['font-size'] = float(lines[offset + 7])
         align_rot = lines[offset + 8].split(';')
-        d['text-align'] = int(align_rot[0])
-        d['text-rotation'] = 0
+        data['text-align'] = int(align_rot[0])
+        data['text-rotation'] = 0
         if len(align_rot) > 1:
-            d['text-rotation'] = int(align_rot[1])
-        d['x'] = int(lines[offset + 9])
-        d['y'] = int(lines[offset + 10])
-        d['width'] = int(lines[offset + 11])
-        d['height'] = int(lines[offset + 12])
+            data['text-rotation'] = int(align_rot[1])
+        data['x'] = int(lines[offset + 9])
+        data['y'] = int(lines[offset + 10])
+        data['width'] = int(lines[offset + 11])
+        data['height'] = int(lines[offset + 12])
         #done
-        # d is essentially a hash-map from various properties to names
+        # data is essentially a hash-map from various properties to names
         # to their corresponding values pulled from _lines
-        return d
+        return data
 
     def get_colorbutton_info(self, clr_widget):
         """get gtk.ColorButton widgets current colour in gdk and hex format"""
@@ -114,6 +114,7 @@ class WahCade:
 
     def get_colour(self, col):
         """convert decimal colour into format suitable for gtk colour"""
+        # Returns the hex value for the color, shuffled for some reason
         hex_col = hex(col)[2:].rjust(6, '0').upper()
         #re-arrange
         hex_col = '#%s%s%s' % (hex_col[4:6], hex_col[2:4], hex_col[0:2])
