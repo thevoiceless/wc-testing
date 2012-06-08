@@ -278,7 +278,7 @@ class WinMain(WahCade):
         
         # Temp for displaying high score data
         # TODO: Finalize this
-        self.lblHighScoreTitle.set_markup('<span color="#00ffff" size="14000">High Scores</span>')
+        self.lblHighScoreTitle.set_markup('<span color="#0099cc" size="14000">High Scores</span>')
         self.fixd.put(self.lblHighScoreTitle, 200, 510)
         self.lblHighScoreTitle.show()
         
@@ -362,9 +362,9 @@ class WinMain(WahCade):
             (314, self.options.sclOptions),             # Options list
             (327, self.options.lblSettingHeading),      # "Current setting"
             (340, self.options.lblSettingValue),        # Value of current setting
-            (357, self.message.lblHeading),
-            (370, self.message.lblMessage),
-            (383, self.message.lblPrompt),
+            (357, self.message.lblHeading),             # Message window title
+            (370, self.message.lblMessage),             # Message displayed in message window
+            (383, self.message.lblPrompt),              
             (396, self.scrsaver.imgArtwork1),
             (409, self.scrsaver.imgArtwork2),
             (422, self.scrsaver.imgArtwork3),
