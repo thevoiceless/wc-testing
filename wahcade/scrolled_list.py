@@ -48,8 +48,8 @@ class ScrollList:
         self.num_rows = 10
         #internal properties
         self._hl_on_row = 0
-        self._ls_idx = 0
-        self._ls_idx_old = -1
+        self._selectedIndex = 0
+        self._oldIndex = -1
         self._pango_font_desc = pango.FontDescription('sans 10')
         self._row_height = self.height / self.num_rows
         self._rows = []
@@ -71,10 +71,10 @@ class ScrollList:
         self.set_size_request(self.width, self.height)
 
     def __setattr__(self, var_name, var_value):
-        """capture setting of attributes in order to reset _ls_idx_old"""
+        """capture setting of attributes in order to reset _oldIndex"""
         self.__dict__[var_name] = var_value
         if self.__dict__[var_name] == self.ls:
-            self._ls_idx_old = -1
+            self._oldIndex = -1
 
     def connect(self, signal_name, callback, *args):
         """connect callback functions to signals"""
@@ -85,16 +85,18 @@ class ScrollList:
 
     def scroll(self, scroll_by):
         """scroll list by given number of rows"""
-        self.set_selected(self._ls_idx + scroll_by)
+        self.set_selected(self._selectedIndex + scroll_by)
+        # Comment out the next line if updating while scrolling creates problems
+        self.update()
 
     def update(self):
         """has scroll list position changed"""
-        if self._ls_idx != self._ls_idx_old:
+        if self._selectedIndex != self._oldIndex:
             #list pos changed
-            self._ls_idx_old = self._ls_idx
+            self._oldIndex = self._selectedIndex
             #call update callback function
             if self.signals['update']:
-                self.signals['update'](self._ls_idx)
+                self.signals['update'](self._selectedIndex)
             return True
         else:
             #list pos not changed
@@ -110,7 +112,7 @@ class ScrollList:
 
     def get_selected(self):
         """return index of currently selected item"""
-        return self._ls_idx
+        return self._selectedIndex
 
     def modify_font(self, pango_font_desc):
         """set list font"""
@@ -257,12 +259,12 @@ class ScrollList:
             if event.type == gtk.gdk.BUTTON_PRESS:
                 if event.button == 1:
                     #left click
-                    top_ls_idx = self._ls_idx - self._hl_on_row
-                    if (top_ls_idx + idx) != self._ls_idx:
+                    top_ls_idx = self._selectedIndex - self._hl_on_row
+                    if (top_ls_idx + idx) != self._selectedIndex:
                         self.set_selected(top_ls_idx + idx)
                         #call click callback function
                         if self.signals['mouse-left-click']:
-                            self.signals['mouse-left-click'](self._ls_idx)
+                            self.signals['mouse-left-click'](self._selectedIndex)
                 elif event.button == 2:
                     #right click
                     if self.signals['mouse-right-click']:
@@ -337,22 +339,22 @@ class ScrollList:
             else:
                 idx_to_select = len_ls - 1
         #calc direction and gap
-        gap = idx_to_select - self._ls_idx
-        self._ls_idx = idx_to_select
-        if self._ls_idx != self._ls_idx_old:
+        gap = idx_to_select - self._selectedIndex
+        self._selectedIndex = idx_to_select
+        if self._selectedIndex != self._oldIndex:
             self._update_display()
             if self.auto_update:
                 self.update()
 
     def _update_display(self):
         """display the list in the correct position"""
-        top_ls_idx = self._ls_idx - self._hl_row
+        top_ls_idx = self._selectedIndex - self._hl_row
         len_ls = len(self.ls)
         #display scroll limiters?
         if self.display_limiters:
             self.arwScrollTop.set_property('visible', (top_ls_idx > 0))
             self.arwScrollBottom.set_property('visible', (top_ls_idx < (len_ls - self.num_rows)))
-            #if len_ls <= self.num_rows and ((top_ls_idx + self._ls_idx) > 0):
+            #if len_ls <= self.num_rows and ((top_ls_idx + self._selectedIndex) > 0):
             #    self.arwScrollBottom.set_property('visible', False)
             #    self.arwScrollTop.set_property('visible', False)
             #else:
@@ -360,7 +362,7 @@ class ScrollList:
             #    self.arwScrollTop.set_property('visible',
             #        (top_ls_idx > (len_ls - self.num_rows - 1)))
         #display items
-        #print "ls_idx=", self._ls_idx, "  top_ls_idx=", top_ls_idx, "  num_rows=", self.num_rows, "  len(ls)=",len_ls, "  hl_row=",self._hl_row
+        #print "ls_idx=", self._selectedIndex, "  top_ls_idx=", top_ls_idx, "  num_rows=", self.num_rows, "  len(ls)=",len_ls, "  hl_row=",self._hl_row
         for i in range(self.num_rows):
             if (top_ls_idx + i > (len_ls - 1)) or ((top_ls_idx + i) < 0):
                 self._rows[i][1].set_text('')

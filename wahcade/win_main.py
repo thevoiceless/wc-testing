@@ -210,6 +210,8 @@ class WinMain(WahCade):
         self.imgArtwork8 = gtk.Image()
         self.imgArtwork9 = gtk.Image()
         self.imgArtwork10 = gtk.Image()
+        # Background for overlay scroll letters
+        self.overlayBG = gtk.Image()
         self.lblGameDescription = gtk.Label()
         self.lblRomName = gtk.Label()
         self.lblYearManufacturer = gtk.Label()
@@ -219,6 +221,7 @@ class WinMain(WahCade):
         self.lblCatVer = gtk.Label()
         self.lblHighScoreTitle = gtk.Label()
         self.lblHighScoreData = gtk.Label()
+        self.lblOverlayScrollLetters = gtk.Label()
         # create scroll list widget
         self.sclGames = ScrollList()
         # image & label lists
@@ -278,8 +281,12 @@ class WinMain(WahCade):
         self.fixd.put(self.lblHighScoreTitle, 200, 510)
         self.lblHighScoreTitle.show()
         
+        # Formatting for the overlay letters
+        self.overlayMarkupHead = '<span color="white" size="20000">'
+        self.overlayMarkupTail = '</span>'
+        
         #Mark mame directory
-        self.mame_dir =  self.emu_ini.get('emulator_executable')[:self.emu_ini.get('emulator_executable').rfind('/')+1]
+        self.mame_dir = self.emu_ini.get('emulator_executable')[:self.emu_ini.get('emulator_executable').rfind('/') + 1]
         
         self.launched_game = False
         self.current_rom = ''
@@ -523,11 +530,16 @@ class WinMain(WahCade):
 
     def on_winMain_focus_in(self, *args):
         """window received focus"""
+        #if returning from a game rather than something like ALT+Tab
         if self.launched_game:
             self.launched_game = False
-            #print os.path.isfile(self.mame_dir+"hi/airwolf.hi")
-            testString = commands.getoutput("wine HiToText.exe -r "+self.mame_dir+"hi/" + self.current_rom + ".hi 2>/dev/null")
-            print testString
+            #if the game supports high scores run the HiToText executions
+            if self.current_rom in self.supported_games:
+                testString = commands.getoutput("wine HiToText.exe -r "+self.mame_dir+"hi/" + self.current_rom + ".hi 2>/dev/null")
+                if 'Error' in testString:
+                    testString = commands.getoutput("wine HiToText.exe -r "+self.mame_dir+"nvram/" + self.current_rom + ".nv 2>/dev/null")
+                if not 'Error' in testString:
+                    self.parse_high_score_text(testString.rstrip())
             
         self.pointer_grabbed = False
         if self.sclGames.use_mouse and not self.showcursor:
@@ -566,6 +578,34 @@ class WinMain(WahCade):
         """window lost focus"""
         self.pointer_grabbed = False
         gtk.gdk.pointer_ungrab()
+        
+    def parse_high_score_text(self, text_string):
+        """Parse the text file for high scores. 0 scores are not sent"""
+        #print 'Text String:\n', text_string
+        props = {}
+        index = 1
+        #go through each line of the the high score result
+        for line in iter(text_string.splitlines()):
+            line = line.split('|')
+            if line[0] != '':
+                #if it is the first line treat it as the format
+                if index == 1:
+                    _format = line
+                    index += 1
+                    for column in line:
+                        props[column] = '' #initialize dict values
+                else:
+                    #Go to length of line rather than format because format can be wrong sometimes
+                    for i in range(0, len(line)):
+                        props[_format[i]] = line[i]
+                    #Add to DB if score not zero
+                    if props['SCORE'] is not '0':
+                        #Implement!
+                        print props
+        
+    def insert_into_db(self):
+        """May implement this, may not be needed"""
+        return
 
     def on_winMain_key_press(self, widget, event, *args):
         """key pressed - translate to mamewah setup"""
@@ -644,10 +684,14 @@ class WinMain(WahCade):
                         return
                     #get mamewah keyname
                     mw_keys = mamewah_keys[keyname]
+                    #print keyname, "pressed,", mw_keys
                     if mw_keys == []:
                         return
             elif event.type == gtk.gdk.KEY_RELEASE:
                 self.keypress_count = 0
+                #self.lblOverlayScrollLetters.set_visible(False)
+                self.lblOverlayScrollLetters.hide()
+                self.overlayBG.hide()
                 #keyboard released, update labels, images, etc
                 if widget == self.winMain:
                     #only update if no further events pending
@@ -672,12 +716,22 @@ class WinMain(WahCade):
                     break
             for mw_func in mw_functions:
                 #which function?
+                #print mw_func
                 if current_window == 'main':
+                    # Display first two letters of selected game when scrolling quickly
+                    if self.keypress_count > 10:
+                        self.overlayBG.show()
+                        overlayLetters = self.lsGames[self.sclGames.get_selected()][0][0:2]
+                        self.lblOverlayScrollLetters.set_markup(_('%s%s%s') % (self.overlayMarkupHead, overlayLetters, self.overlayMarkupTail))
+                        #self.lblOverlayScrollLetters.set_visible(True)
+                        self.lblOverlayScrollLetters.show()
                     #main form
                     if mw_func == 'UP_1_GAME':
+                        #print "keypresses:", self.keypress_count
                         self.play_clip('UP_1_GAME')
                         self.sclGames.scroll((int(self.keypress_count / 20) * -1) - 1)
                     elif mw_func == 'DOWN_1_GAME':
+                        #print "keypresses:", self.keypress_count
                         self.play_clip('DOWN_1_GAME')
                         self.sclGames.scroll(int(self.keypress_count / 20) + 1)
                     elif mw_func == 'UP_1_PAGE':
@@ -690,14 +744,15 @@ class WinMain(WahCade):
                         self.play_clip('UP_1_LETTER')
                         if self.lsGames_len == 0:
                             break
-                        cl = self.lsGames[self.sclGames.get_selected()][0][0]
+                        toLetter = self.lsGames[self.sclGames.get_selected()][0][0]
+                        print "to letter:", toLetter
                         games = [r[0] for r in self.lsGames]
                         games = games[:self.sclGames.get_selected()]
                         games.reverse()
                         i = 0
                         for row in games:
                             i += 1
-                            if row[0] != cl:
+                            if row[0] != toLetter:
                                 self.sclGames.scroll(-i)
                                 break
                             if i >= len(games):
@@ -706,13 +761,14 @@ class WinMain(WahCade):
                         self.play_clip('DOWN_1_LETTER')
                         if self.lsGames_len == 0:
                             break
-                        cl = self.lsGames[self.sclGames.get_selected()][0][0]
+                        toLetter = self.lsGames[self.sclGames.get_selected()][0][0]
+                        print "to letter:", toLetter
                         games = [r[0] for r in self.lsGames]
                         games = games[self.sclGames.get_selected():]
                         i = -1
                         for row in games:
                             i += 1
-                            if row[0] != cl:
+                            if row[0] != toLetter:
                                 self.sclGames.scroll(+i)
                                 break
                     elif mw_func == 'RANDOM_GAME':
@@ -941,6 +997,7 @@ class WinMain(WahCade):
             rom_name_desc = _('%s (Clone of %s)') % (game_info['rom_name'], game_info['clone_of'])
         else:
             rom_name_desc = game_info['rom_name']
+        # Set labels in the ROM info panel
         self.lblRomName.set_text(rom_name_desc)
         self.lblYearManufacturer.set_text('%s %s' % (game_info['year'], game_info['manufacturer']))
         self.lblScreenType.set_text('%s %s' % (game_info['screen_type'], game_info['display_type']))
@@ -952,11 +1009,11 @@ class WinMain(WahCade):
         self.lblCatVer.set_text(game_info['category'])
         #get high score data and display it
         if not self.db_connected:
-            self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, "  NOT CONNECTED TO A DATABASE", highScoreDataMarkupTail))
+            self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, " NOT CONNECTED TO A DATABASE", highScoreDataMarkupTail))
         elif game_info['rom_name'] in self.supported_games:
             self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, highScoreInfo, highScoreDataMarkupTail))
         else:
-            self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, "  HIGH SCORE NOT SUPPORTED", highScoreDataMarkupTail))
+            self.lblHighScoreData.set_markup(_('%s%s%s') % (highScoreDataMarkupHead, "  HIGH SCORE NOT SUPPORTED", highScoreDataMarkupTail))        
         #start video timer
         if self.scrsaver.movie_type not in ('intro', 'exit'):
             self.start_timer('video')
@@ -1141,12 +1198,15 @@ class WinMain(WahCade):
             '%s: %s' % (rom, self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME]))
         
         #Erase scores from hi score file of current game
-        try:
-            open(self.mame_dir + 'hi/' + rom + '.hi') #if file exists
-            os.system('wine HiToText.exe -e ' + self.mame_dir + 'hi/' + rom + '.hi 2>/dev/null')
-        except IOError as e:
-            print rom, 'high score file not found'
-        
+        if rom in self.supported_games:
+            if os.path.exists(self.mame_dir + 'hi/' + rom + '.hi'):
+                os.system('wine HiToText.exe -e ' + self.mame_dir + 'hi/' + rom + '.hi 2>/dev/null')
+            elif os.path.exists(self.mame_dir + 'nvram/' + rom + '.nv'):
+                os.system('wine HiToText.exe -e ' + self.mame_dir + 'nvram/' + rom + '.nv 2>/dev/null')
+            else:
+                print rom, 'high score file not found'
+            
+
         #stop joystick poller
         if self.joy is not None:
             self.joy.joy_count('stop')
@@ -1493,6 +1553,18 @@ class WinMain(WahCade):
         self.fixd.move(self.imgBackground, 0, 0)
         self.imgBackground.set_size_request(main_width, main_height)
         img_file = self.get_path(lines[4])
+        
+        # Overlay scroll letter background
+        bg_file = self.get_path(lines[552])
+        if not os.path.dirname(bg_file):
+            bg_file = os.path.join(self.layout_path, bg_file)
+        self.overlayBG.set_from_file(bg_file)
+        self.fixd.put(self.overlayBG, 100, 100)
+        
+        # Display overlay letters on ROM list when scrolling quickly
+        #self.lblOverlayScrollLetters.set_visible(False)
+        self.lblOverlayScrollLetters.hide()
+        self.fixd.put(self.lblOverlayScrollLetters, 120, 118)
         
         #******************BACKBROUND IMAGE FILE********************************
         
