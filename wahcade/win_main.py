@@ -93,11 +93,11 @@ class WinMain(WahCade):
             # Open the config file and extract the database connection information
             #with open(config_opts.db_config_file, 'rt') as f:
             with open(self.db_file, 'rt') as f:
-                props = {}  # Dictionary
+                self.props = {}  # Dictionary
                 for line in f.readlines():
                     val = line.split('=')
-                    props[val[0].strip()] = val[1].strip()  # Match each key with its value
-            self.db = MySQLdb.connect(host=props["host"], user=props["user"], passwd=props["passwd"], db=props["db"])
+                    self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
+            self.db = MySQLdb.connect(host=self.props["host"], user=self.props["user"], passwd=self.props["passwd"], db=self.props["db"])
             self.cursor = self.db.cursor()
             self.db.autocommit(False) #Updates the DB results
             self.db_connected = True
@@ -312,7 +312,7 @@ class WinMain(WahCade):
                 self.cursor.execute(query)
                 #if game is not in database
                 if self.cursor.rowcount == 0:
-                    query = "INSERT INTO `wahcade`.`game` (`version`, `game_name`, `rom_name`) VALUES (0, '', '" + rom + "')"
+                    query = "INSERT INTO `" + self.props["db"] + "`.`game` (`version`, `game_name`, `rom_name`) VALUES (0, '', '" + rom + "')"
                     self.cursor.execute(query)
             self.db.autocommit(True)
             
@@ -629,9 +629,9 @@ class WinMain(WahCade):
                             #if player doesn't exist add to database
                             if self.cursor.rowcount == 0:
                                 randNum = random.randint(1, 5000)
-                                query = "INSERT INTO `wahcade`.`player` (`version`, `name`, `playerid`) VALUES (0, '" + props['NAME'] + "', '" + str(randNum) + "')"
+                                query = "INSERT INTO `" + self.props["db"] + "`.`player` (`version`, `name`, `playerid`) VALUES (0, '" + props['NAME'] + "', '" + str(randNum) + "')"
                                 self.cursor.execute(query)
-                            query = "INSERT INTO `wahcade`.`score` (`version`, `cabinetid`, `date_created`, `game_id`, `player_id`, `score`, `arcade_name`) SELECT 0, 0, NOW(), game.id, player.id, " + props['SCORE'] + ", '" + props['NAME'] + "' FROM player, game WHERE player.name = '" + props['NAME'] + "' AND game.rom_name = '" + self.current_rom + "'"
+                            query = "INSERT INTO `" + self.props["db"] + "`.`score` (`version`, `cabinetid`, `date_created`, `game_id`, `player_id`, `score`, `arcade_name`) SELECT 0, 0, NOW(), game.id, player.id, " + props['SCORE'] + ", '" + props['NAME'] + "' FROM player, game WHERE player.name = '" + props['NAME'] + "' AND game.rom_name = '" + self.current_rom + "'"
                             self.cursor.execute(query)
         
     def insert_into_db(self):
