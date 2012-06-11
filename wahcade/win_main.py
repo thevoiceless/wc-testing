@@ -1575,68 +1575,94 @@ class WinMain(WahCade):
             self.rebuild_visible_lists()
             return
         self.layout_file = layout_file
-        #read file & strip any crap
+        #read file & strip any whitespace
         lines = open(self.layout_file, 'r').readlines()
         lines = [s.strip() for s in lines]
         lines.insert(0, '.')
+        
+        # Specific lines from the layout file
+        at = {
+              'main_width':1,
+              'main_height':2,
+              'opt_width':294,
+              'opt_height':295,
+              'msg_width':353,
+              'msg_height':354,
+              'main_bg':3,
+              'scroll_img':552,
+              'scroll_img_x':553,
+              'scroll_img_y':554,
+              'scroll_let_x':555,
+              'scroll_let_y':556,
+              'main_img':4,
+              'opt_bg':296,
+              'opt_img':297,
+              'games_bg_col':6,
+              'games_fg_col':7,
+              'opt_bg_col':299,
+              'opt_fg_col':300,
+              'msg_bg':355,
+              'msg_img':356}
+        
         #window sizes
-        main_width, main_height = int(lines[1].split(';')[0]), int(lines[2])
-        opt_width, opt_height = int(lines[294].split(';')[0]), int(lines[295])
-        msg_width, msg_height = int(lines[353].split(';')[0]), int(lines[354])
+        main_width, main_height = int(lines[at['main_width']].split(';')[0]), int(lines[at['main_height']])
+        opt_width, opt_height = int(lines[at['opt_width']].split(';')[0]), int(lines[at['opt_height']])
+        msg_width, msg_height = int(lines[at['msg_width']].split(';')[0]), int(lines[at['msg_height']])
         #main window
         self.winMain.set_size_request(main_width, main_height)
         self.winMain.set_default_size(main_width, main_height)
-        bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[3]))) # Converts an integer value to a reversed hex value to a gtk color object
+        bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['main_bg']]))) # Converts an integer value to a reversed hex value to a gtk color object
         self.winMain.modify_bg(gtk.STATE_NORMAL, bg_col)
         self.fixd.move(self.imgBackground, 0, 0)
         self.imgBackground.set_size_request(main_width, main_height)
-        img_file = self.get_path(lines[4])
         
         # Overlay scroll letter background
-        bg_file = self.get_path(lines[552])
+        bg_file = self.get_path(lines[at['scroll_img']])
         if not os.path.dirname(bg_file):
             bg_file = os.path.join(self.layout_path, bg_file)
         self.overlayBG.set_from_file(bg_file)
-        self.fixd.put(self.overlayBG, 100, 100)
+        #self.fixd.put(self.overlayBG, 100, 100)
+        self.fixd.put(self.overlayBG, int(lines[at['scroll_img_x']]), int(lines[at['scroll_img_y']]))
         
         # Display overlay letters on ROM list when scrolling quickly
-        #self.lblOverlayScrollLetters.set_visible(False)
         self.lblOverlayScrollLetters.hide()
-        self.fixd.put(self.lblOverlayScrollLetters, 120, 118)
+        #self.fixd.put(self.lblOverlayScrollLetters, 120, 118)
+        self.fixd.put(self.lblOverlayScrollLetters, int(lines[at['scroll_let_x']]), int(lines[at['scroll_let_y']]))
         
-        # Background image file        
+        # Background image file
+        img_file = self.get_path(lines[at['main_img']])
         if not os.path.dirname(img_file):
             img_file = os.path.join(self.layout_path, img_file)
         self.imgBackground.set_data('layout-image', img_file)
         
         #set options window
         self.options.winOptions.set_size_request(opt_width, opt_height)
-        bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[296])))      # Color of box surrounding the options window
+        bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['opt_bg']]))) # Color of box surrounding the options window
         self.options.winOptions.modify_bg(gtk.STATE_NORMAL, bg_col)
         self.options.winOptions.move(self.options.imgBackground, 0, 0)
         self.options.imgBackground.set_size_request(opt_width, opt_height)
-        img_file = self.get_path(lines[297])
+        img_file = self.get_path(lines[at['opt_img']])
         if not os.path.dirname(img_file):
             img_file = os.path.join(self.layout_path, img_file)
         self.options.imgBackground.set_data('layout-image', img_file)
         self.fixd.move(self.options.winOptions, ((main_width - opt_width) / 2), ((main_height - opt_height) / 2))
         #games list highlight colours
-        hl_bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[6]))) # Colored bar
-        hl_fg_col = gtk.gdk.color_parse(self.get_colour(int(lines[7]))) # Text
+        hl_bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['games_bg_col']]))) # Colored bar
+        hl_fg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['games_fg_col']]))) # Text
         self.sclGames.modify_highlight_bg(gtk.STATE_NORMAL, hl_bg_col)
         self.sclGames.modify_highlight_fg(gtk.STATE_NORMAL, hl_fg_col)
         #options list highlight colours
-        hl_bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[299])))
-        hl_fg_col = gtk.gdk.color_parse(self.get_colour(int(lines[300])))
+        hl_bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['opt_bg_col']])))
+        hl_fg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['opt_fg_col']])))
         self.options.sclOptions.modify_highlight_bg(gtk.STATE_NORMAL, hl_bg_col)
         self.options.sclOptions.modify_highlight_fg(gtk.STATE_NORMAL, hl_fg_col)
         #set message window
         self.message.winMessage.set_size_request(msg_width, msg_height)
-        bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[355])))
+        bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['msg_bg']])))
         self.message.winMessage.modify_bg(gtk.STATE_NORMAL, bg_col)
         self.message.winMessage.move(self.message.imgBackground, 0, 0)
         self.message.imgBackground.set_size_request(msg_width, msg_height)
-        img_file = self.get_path(lines[356])
+        img_file = self.get_path(lines[at['msg_img']])
         if not os.path.dirname(img_file):
             img_file = os.path.join(self.layout_path, img_file)
         self.message.imgBackground.set_data('layout-image', img_file)
@@ -1647,9 +1673,11 @@ class WinMain(WahCade):
         self.scrsaver.winScrSaver.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('black'))
         self.scrsaver.drwVideo.set_size_request(main_width, main_height)
         #set all window items
+        print self._layout_items
         for offset, widget in self._layout_items:
             #get properties
             data = self.get_layout_item_properties(lines, offset)
+            print str(offset) + ",", widget.get_name(), ":", data
             #font
             fontData = data['font']
             if data['font-bold']:
@@ -1671,7 +1699,7 @@ class WinMain(WahCade):
                     parent.modify_bg(gtk.STATE_NORMAL, bg_col)
             #alignment
             if data['text-align'] == 2:
-                widget.set_property('xalign', .5)
+                widget.set_property('xalign', .5)   # 0.5 -> Center alignment
             else:
                 widget.set_property('xalign', data['text-align'])
             #rotation
@@ -1690,9 +1718,9 @@ class WinMain(WahCade):
                 if parent.get_ancestor(gtk.EventBox):
                     parent.show()
                     
-            #divide height of scroll list in half
+            # Divide height of scroll list in half
             if isinstance(widget, ScrollList):
-                widget.set_size_request(data['width'], (data['height']/2)+38)
+                widget.set_size_request(data['width'], (data['height']/2) + 38) # 38 is a magic number to make it look nice
             else:
                 widget.set_size_request(data['width'], data['height'])
                 
