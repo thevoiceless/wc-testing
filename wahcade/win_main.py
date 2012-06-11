@@ -720,6 +720,17 @@ class WinMain(WahCade):
                         return
             elif event.type == gtk.gdk.KEY_RELEASE:
                 self.keypress_count = 0
+                # Updates ROM image after scrolling stops
+                game_info = filters.get_game_dict(self.lsGames[self.sclGames.get_selected()])
+                for i, img in enumerate(self.visible_img_list):
+                    if self.keypress_count < 50:
+                        img_filename = self.get_artwork_image(
+                            self.visible_img_paths[i],
+                            self.layout_path,
+                            game_info,
+                            self.current_emu,
+                            (i + 1))
+                        self.display_scaled_image(img, img_filename, self.keep_aspect, img.get_data('text-rotation'))
                 #self.lblOverlayScrollLetters.set_visible(False)
                 self.lblOverlayScrollLetters.hide()
                 self.overlayBG.hide()
@@ -1049,15 +1060,18 @@ class WinMain(WahCade):
         #start video timer
         if self.scrsaver.movie_type not in ('intro', 'exit'):
             self.start_timer('video')
-        #set layout images
+        #set layout images (at low scroll speeds)
         for i, img in enumerate(self.visible_img_list):
-            img_filename = self.get_artwork_image(
-                self.visible_img_paths[i],
-                self.layout_path,
-                game_info,
-                self.current_emu,
-                (i + 1))
-            self.display_scaled_image(img, img_filename, self.keep_aspect, img.get_data('text-rotation'))
+            if self.keypress_count < 50:
+                img_filename = self.get_artwork_image(
+                    self.visible_img_paths[i],
+                    self.layout_path,
+                    game_info,
+                    self.current_emu,
+                    (i + 1))
+                self.display_scaled_image(img, img_filename, self.keep_aspect, img.get_data('text-rotation'))
+            elif self.keypress_count == 50:
+                img.set_from_file(None)        # Make image screen go black
     
     def get_score_string(self):
         """Parse Scores from DB into display string"""
