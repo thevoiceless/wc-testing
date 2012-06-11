@@ -718,7 +718,7 @@ class WinMain(WahCade):
                 # Updates ROM image after scrolling stops
                 game_info = filters.get_game_dict(self.lsGames[self.sclGames.get_selected()])
                 for i, img in enumerate(self.visible_img_list):
-                    if self.keypress_count < 50:
+                    if self.keypress_count == 0:
                         img_filename = self.get_artwork_image(
                             self.visible_img_paths[i],
                             self.layout_path,
@@ -1052,7 +1052,9 @@ class WinMain(WahCade):
             self.start_timer('video')
         # Set layout images (at low scroll speeds)
         for i, img in enumerate(self.visible_img_list):
-            if self.keypress_count < 50:
+            if self.keypress_count >= 6:
+                img.set_from_file(None)     # Don't display an image if starting to scroll quickly
+            else:
                 img_filename = self.get_artwork_image(
                     self.visible_img_paths[i],
                     self.layout_path,
@@ -1060,8 +1062,6 @@ class WinMain(WahCade):
                     self.current_emu,
                     (i + 1))
                 self.display_scaled_image(img, img_filename, self.keep_aspect, img.get_data('text-rotation'))
-            elif self.keypress_count == 50:
-                img.set_from_file(None)        # Make image screen go black
     
     def get_score_string(self):
         """Parse Scores from DB into display string"""
