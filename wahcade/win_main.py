@@ -769,11 +769,11 @@ class WinMain(WahCade):
                         self.lblOverlayScrollLetters.show()
                     #main form
                     if mw_func == 'UP_1_GAME':
-                        print "keypresses:", self.keypress_count
+                        #print "keypresses:", self.keypress_count
                         self.play_clip('UP_1_GAME')
                         self.sclGames.scroll((int(self.keypress_count / 20) * -1) - 1)
                     elif mw_func == 'DOWN_1_GAME':
-                        print "keypresses:", self.keypress_count
+                        #print "keypresses:", self.keypress_count
                         self.play_clip('DOWN_1_GAME')
                         self.sclGames.scroll(int(self.keypress_count / 20) + 1)
                     elif mw_func == 'UP_1_PAGE':
