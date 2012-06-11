@@ -1683,11 +1683,11 @@ class WinMain(WahCade):
         self.scrsaver.drwVideo.set_size_request(main_width, main_height)
         
         # Set all window items
-        print self._layout_items
+        #print self._layout_items
         for offset, widget in self._layout_items:
             # Get properties
             data = self.get_layout_item_properties(lines, offset)
-            print str(offset) + ",", widget.get_name(), ":", data
+            #print str(offset) + ",", widget.get_name(), ":", data
             # Font
             fontData = data['font']
             if data['font-bold']:
