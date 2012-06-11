@@ -1618,12 +1618,10 @@ class WinMain(WahCade):
         self.lblOverlayScrollLetters.hide()
         self.fixd.put(self.lblOverlayScrollLetters, 120, 118)
         
-        #******************BACKBROUND IMAGE FILE********************************
-        
+        # Background image file        
         if not os.path.dirname(img_file):
             img_file = os.path.join(self.layout_path, img_file)
         self.imgBackground.set_data('layout-image', img_file)
-        
         
         #set options window
         self.options.winOptions.set_size_request(opt_width, opt_height)
@@ -1637,8 +1635,8 @@ class WinMain(WahCade):
         self.options.imgBackground.set_data('layout-image', img_file)
         self.fixd.move(self.options.winOptions, ((main_width - opt_width) / 2), ((main_height - opt_height) / 2))
         #games list highlight colours
-        hl_bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[6])))
-        hl_fg_col = gtk.gdk.color_parse(self.get_colour(int(lines[7])))
+        hl_bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[6]))) # Colored bar
+        hl_fg_col = gtk.gdk.color_parse(self.get_colour(int(lines[7]))) # Text
         self.sclGames.modify_highlight_bg(gtk.STATE_NORMAL, hl_bg_col)
         self.sclGames.modify_highlight_fg(gtk.STATE_NORMAL, hl_fg_col)
         #options list highlight colours

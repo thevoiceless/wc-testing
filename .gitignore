@@ -1,3 +1,7 @@
 # Compiled Python Code #
 ########################
 *.pyc
+
+# Eclipse preferences  #
+########################
+*.prefs
