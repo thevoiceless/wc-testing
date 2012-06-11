@@ -99,13 +99,14 @@ class WinMain(WahCade):
                     props[val[0].strip()] = val[1].strip()  # Match each key with its value
             self.db = MySQLdb.connect(host=props["host"], user=props["user"], passwd=props["passwd"], db=props["db"])
             self.cursor = self.db.cursor()
-            self.db.autocommit(True) #Updates the DB results
+            self.db.autocommit(False) #Updates the DB results
             self.db_connected = True
         except:
             self.db = DummyDB()
             self.cursor = self.db.cursor()
             self.db_connected = False
             print "Could not connect to database"
+            
         
         ### Set Global Variables
         global gst_media_imported, pygame_imported, old_keyb_events, debug_mode, log_filename
@@ -303,6 +304,19 @@ class WinMain(WahCade):
         
         # Temporary high score stuff
         # TODO: finalize this
+        self.lblHighScoreData.set_markup('<span color="white" size="13000">1. \tName\t\t\tScore</span>')
+        #Initial building of the database for games
+        if self.db_connected:
+            for rom in self.supported_games:
+                query = "SELECT * FROM game WHERE game.rom_name = '" + rom + "'"
+                self.cursor.execute(query)
+                #if game is not in database
+                if self.cursor.rowcount == 0:
+                    query = "INSERT INTO `wahcade`.`game` (`version`, `game_name`, `rom_name`) VALUES (0, '', '" + rom + "')"
+                    self.cursor.execute(query)
+            self.db.autocommit(True)
+            
+        
         self.lblHighScoreData.set_markup('<span color="white" size="13000">1. \tName\t\t\tScore</span>')
         self.fixd.put(self.lblHighScoreData, 120, 540)
         self.lblHighScoreData.show()
@@ -542,9 +556,12 @@ class WinMain(WahCade):
             self.launched_game = False
             #if the game supports high scores run the HiToText executions
             if self.current_rom in self.supported_games:
-                testString = commands.getoutput("wine HiToText.exe -r "+self.mame_dir+"hi/" + self.current_rom + ".hi 2>/dev/null")
+                #testString = commands.getoutput("wine HiToText.exe -r " + self.mame_dir + "hi/" + self.current_rom + ".hi 2>/dev/null")
+                testString = commands.getoutput("mono HiToText.exe -r " + self.mame_dir + "hi/" + self.current_rom + ".hi")
+                print testString
                 if 'Error' in testString:
-                    testString = commands.getoutput("wine HiToText.exe -r "+self.mame_dir+"nvram/" + self.current_rom + ".nv 2>/dev/null")
+                    #testString = commands.getoutput("wine HiToText.exe -r " + self.mame_dir + "nvram/" + self.current_rom + ".nv 2>/dev/null")
+                    testString = commands.getoutput("mono HiToText.exe -r " + self.mame_dir + "nvram/" + self.current_rom + ".nv")
                 if not 'Error' in testString:
                     self.parse_high_score_text(testString.rstrip())
             
@@ -588,7 +605,6 @@ class WinMain(WahCade):
         
     def parse_high_score_text(self, text_string):
         """Parse the text file for high scores. 0 scores are not sent"""
-        #print 'Text String:\n', text_string
         props = {}
         index = 1
         #go through each line of the the high score result
@@ -604,11 +620,19 @@ class WinMain(WahCade):
                 else:
                     #Go to length of line rather than format because format can be wrong sometimes
                     for i in range(0, len(line)):
-                        props[_format[i]] = line[i]
+                        props[_format[i]] = line[i].rstrip()
                     #Add to DB if score not zero
-                    if props['SCORE'] is not '0':
-                        #Implement!
-                        print props
+                    if 'NAME' in props and 'SCORE' in props:
+                        if props['SCORE'] is not '0':
+                            query = "SELECT * FROM player WHERE player.name = '" + props['NAME'] + "'"
+                            self.cursor.execute(query)
+                            #if player doesn't exist add to database
+                            if self.cursor.rowcount == 0:
+                                randNum = random.randint(1, 5000)
+                                query = "INSERT INTO `wahcade`.`player` (`version`, `name`, `playerid`) VALUES (0, '" + props['NAME'] + "', '" + str(randNum) + "')"
+                                self.cursor.execute(query)
+                            query = "INSERT INTO `wahcade`.`score` (`version`, `cabinetid`, `date_created`, `game_id`, `player_id`, `score`, `arcade_name`) SELECT 0, 0, NOW(), game.id, player.id, " + props['SCORE'] + ", '" + props['NAME'] + "' FROM player, game WHERE player.name = '" + props['NAME'] + "' AND game.rom_name = '" + self.current_rom + "'"
+                            self.cursor.execute(query)
         
     def insert_into_db(self):
         """May implement this, may not be needed"""
@@ -970,8 +994,10 @@ class WinMain(WahCade):
 
     def on_sclGames_changed(self, *args):
         """game selected"""
-        #query database for "high score"
-        highScoreInfo = self.get_score_string()
+        #formatting for the high score labels
+        #highScoreDataMarkupHead = '<span color="orange" size="12000">'
+        #highScoreDataMarkupTail = '</span>'
+
         #print "on_sclGames_changed: sel=", self.sclGames.get_selected()
         self.game_ini_file = None
         self.stop_video()
@@ -1011,10 +1037,12 @@ class WinMain(WahCade):
             game_info['colour_status'],
             game_info['sound_status']))
         self.lblCatVer.set_text(game_info['category'])
-        # Get high score data and display it
+
+        #get high score data and display it
         if not self.db_connected:
             self.lblHighScoreData.set_markup(_('%s%s%s') % (self.highScoreDataMarkupHead, " NOT CONNECTED TO A DATABASE", self.highScoreDataMarkupTail))
         elif game_info['rom_name'] in self.supported_games:
+            highScoreInfo = self.get_score_string()
             self.lblHighScoreData.set_markup(_('%s%s%s') % (self.highScoreDataMarkupHead, highScoreInfo, self.highScoreDataMarkupTail))
         else:
             self.lblHighScoreData.set_markup(_('%s%s%s') % (self.highScoreDataMarkupHead, "  HIGH SCORE NOT SUPPORTED", self.highScoreDataMarkupTail))        
@@ -1033,24 +1061,28 @@ class WinMain(WahCade):
     
     def get_score_string(self):
         """Parse Scores from DB into display string"""
+        query = "SELECT player.name, score.score FROM player, score, game WHERE game.rom_name = '" + self.current_rom + "' AND player.id = score.player_id AND game.id = score.game_id ORDER BY score.score LIMIT 10"
+        self.cursor.execute(query)
         numberOfTopScores = 10
         index = 1
         string=''
-        self.cursor.execute("SELECT * FROM player")
         #determine the number of non-high score spots
         numberOfTopScores -= int(self.cursor.rowcount)
         for row in self.cursor.fetchall():
             if index < 10:
                 string += "  "
-            if len(row[2]) > 5:
-                if str(row[3])[-3:] == ".00":
-                    string += str(str(index) + ". " + str(row[2][:5]) + "\t\t\t\t" + str(row[3])[:-3]) + "\n"
+            if len(row[0]) > 5:
+                if str(row[1])[-3:] == ".00":
+                    string += str(str(index) + ". " + str(row[0][:5]) + "\t\t\t" + str(row[1])[:-3]) + "\n"
                 else:
-                    string += str(str(index) + ". " + str(row[2][:5]) + "\t\t\t\t" + str(row[3])) + "\n"
+                    string += str(str(index) + ". " + str(row[0][:5]) + "\t\t\t" + str(row[1])) + "\n"
             else:
-                string += str(str(index) + ". " + str(row[2]) + "\t\t" + str(row[3])) + "\n"
+                if str(row[1])[-3:] == ".00":
+                    string += str(str(index) + ". " + str(row[0]) + "\t\t\t\t" + str(row[1])[:-3]) + "\n"
+                else:
+                    string += str(str(index) + ". " + str(row[0]) + "\t\t" + str(row[1])) + "\n"
             index += 1
-        while numberOfTopScores:
+        while numberOfTopScores > 0:
             if index < 10:
                 string += "  "
             string += str(index)
@@ -1204,9 +1236,11 @@ class WinMain(WahCade):
         #Erase scores from hi score file of current game
         if rom in self.supported_games:
             if os.path.exists(self.mame_dir + 'hi/' + rom + '.hi'):
-                os.system('wine HiToText.exe -e ' + self.mame_dir + 'hi/' + rom + '.hi 2>/dev/null')
+                #os.system('wine HiToText.exe -e ' + self.mame_dir + 'hi/' + rom + '.hi 2>/dev/null')
+                os.system('mono HiToText.exe -e ' + self.mame_dir + 'hi/' + rom + '.hi')
             elif os.path.exists(self.mame_dir + 'nvram/' + rom + '.nv'):
-                os.system('wine HiToText.exe -e ' + self.mame_dir + 'nvram/' + rom + '.nv 2>/dev/null')
+                #os.system('wine HiToText.exe -e ' + self.mame_dir + 'nvram/' + rom + '.nv 2>/dev/null')
+                os.system('mono HiToText.exe -e ' + self.mame_dir + 'nvram/' + rom + '.nv')
             else:
                 print rom, 'high score file not found'
             
@@ -1542,7 +1576,6 @@ class WinMain(WahCade):
             return
         self.layout_file = layout_file
         #read file & strip any crap
-        print self.layout_file
         lines = open(self.layout_file, 'r').readlines()
         lines = [s.strip() for s in lines]
         lines.insert(0, '.')
@@ -1560,8 +1593,6 @@ class WinMain(WahCade):
         img_file = self.get_path(lines[4])
         
         # Overlay scroll letter background
-        print lines
-        print len(lines)
         bg_file = self.get_path(lines[552])
         if not os.path.dirname(bg_file):
             bg_file = os.path.join(self.layout_path, bg_file)
