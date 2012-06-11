@@ -32,7 +32,7 @@ import gobject
 gobject.threads_init()
 import pango
 
-class ScrollList:
+class ScrollList(object):
     """custom scroll list control"""
 
     def __init__(self):
@@ -144,6 +144,9 @@ class ScrollList:
     def get_parent(self):
         """return the parent of the scrolled list"""
         return self.fixd.get_parent()
+    
+    def reparent(self, parent):
+        self.fixd.reparent(parent)
 
     def set_property(self, property_name, property_value):
         """set property"""

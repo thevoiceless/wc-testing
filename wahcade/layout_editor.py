@@ -26,6 +26,7 @@ import os
 import sys
 import shutil
 import glob
+import yaml
 #thanks to Trent Mick (http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/475126)
 try:
     import xml.etree.cElementTree as ET # python >=2.5 C module
@@ -182,55 +183,55 @@ class WinLayout(GladeSupport, WahCade):
         #layout stuff
         self.dLayout= {}
         self._layout_windows = [
-            (1, self.fixdMain),
-            (294, self.fixdOpt),
-            (353, self.fixdMsg),
-            (-1, self.fixdScr)]
+            (1, self.fixdMain, "fixdMain"),
+            (294, self.fixdOpt, "fixdOpt"),
+            (353, self.fixdMsg, "fixdMsg"),
+            (-1, self.fixdScr, "fixdScr")]
         self._layout_items = [
-            (8, main_widgets['Main Logo']),
-            (21, main_widgets['Game List Indicator']),
-            (34, main_widgets['Emulator Name']),
-            (47, main_widgets['Games List']),
-            (60, main_widgets['Game Selected']),
-            (73, main_widgets['Artwork1']),
-            (86, main_widgets['Artwork2']),
-            (99, main_widgets['Artwork3']),
-            (112, main_widgets['Artwork4']),
-            (125, main_widgets['Artwork5']),
-            (138, main_widgets['Artwork6']),
-            (151, main_widgets['Artwork7']),
-            (164, main_widgets['Artwork8']),
-            (177, main_widgets['Artwork9']),
-            (190, main_widgets['Artwork10']),
-            (203, main_widgets['Game Description']),
-            (216, main_widgets['Rom Name']),
-            (229, main_widgets['Year Manufacturer']),
-            (242, main_widgets['Screen Type']),
-            (255, main_widgets['Controller Type']),
-            (268, main_widgets['Driver Status']),
-            (281, main_widgets['Cat Ver']),
-            (301, opt_widgets['Heading']),
-            (314, opt_widgets['Options List']),
-            (327, opt_widgets['Setting Heading']),
-            (340, opt_widgets['Setting Value']),
-            (357, msg_widgets['Heading']),
-            (370, msg_widgets['Message']),
-            (383, msg_widgets['Prompt']),
-            (396, scr_widgets['Artwork1']),
-            (409, scr_widgets['Artwork2']),
-            (422, scr_widgets['Artwork3']),
-            (435, scr_widgets['Artwork4']),
-            (448, scr_widgets['Artwork5']),
-            (461, scr_widgets['Artwork6']),
-            (474, scr_widgets['Artwork7']),
-            (487, scr_widgets['Artwork8']),
-            (500, scr_widgets['Artwork9']),
-            (513, scr_widgets['Artwork10']),
-            (526, scr_widgets['Game Description']),
-            (539, scr_widgets['MP3 Name'])]
+            (8, main_widgets['Main Logo'], "MainLogo"),
+            (21, main_widgets['Game List Indicator'], "GameListIndicator"),
+            (34, main_widgets['Emulator Name'], "EmulatorName"),
+            (47, main_widgets['Games List'], "GameList"),
+            (60, main_widgets['Game Selected'], "GameSelected"),
+            (73, main_widgets['Artwork1'], "MainArtwork1"),
+            (86, main_widgets['Artwork2'], "MainArtwork2"),
+            (99, main_widgets['Artwork3'], "MainArtwork3"),
+            (112, main_widgets['Artwork4'], "MainArtwork4"),
+            (125, main_widgets['Artwork5'], "MainArtwork5"),
+            (138, main_widgets['Artwork6'], "MainArtwork6"),
+            (151, main_widgets['Artwork7'], "MainArtwork7"),
+            (164, main_widgets['Artwork8'], "MainArtwork8"),
+            (177, main_widgets['Artwork9'], "MainArtwork9"),
+            (190, main_widgets['Artwork10'], "MainArtwork10"),
+            (203, main_widgets['Game Description'], "GameDescription"),
+            (216, main_widgets['Rom Name'], "RomName"),
+            (229, main_widgets['Year Manufacturer'], "YearManufacturer"),
+            (242, main_widgets['Screen Type'], "ScreenType"),
+            (255, main_widgets['Controller Type'], "ControllerType"),
+            (268, main_widgets['Driver Status'], "DriverStatus"),
+            (281, main_widgets['Cat Ver'], "CatVer"),
+            (301, opt_widgets['Heading'], "OptHeading"),
+            (314, opt_widgets['Options List'], "OptionsList"),
+            (327, opt_widgets['Setting Heading'], "SettingHeading"),
+            (340, opt_widgets['Setting Value'], "SettingValue"),
+            (357, msg_widgets['Heading'], "MsgHeading"),
+            (370, msg_widgets['Message'], "Message"),
+            (383, msg_widgets['Prompt'], "Prompt"),
+            (396, scr_widgets['Artwork1'], "ScrArtwork1"),
+            (409, scr_widgets['Artwork2'], "ScrArtwork2"),
+            (422, scr_widgets['Artwork3'], "ScrArtwork3"),
+            (435, scr_widgets['Artwork4'], "ScrArtwork4"),
+            (448, scr_widgets['Artwork5'], "ScrArtwork5"),
+            (461, scr_widgets['Artwork6'], "ScrArtwork6"),
+            (474, scr_widgets['Artwork7'], "ScrArtwork7"),
+            (487, scr_widgets['Artwork8'], "ScrArtwork8"),
+            (500, scr_widgets['Artwork9'], "ScrArtwork9"),
+            (513, scr_widgets['Artwork10'], "ScrArtwork10"),
+            (526, scr_widgets['Game Description'], "GameDescription"),
+            (539, scr_widgets['MP3 Name'], "MP3Name")]
         self._histview_items = [
-            (8, hist_widgets['Heading']),
-            (21, hist_widgets['Game History'])]
+            (8, hist_widgets['Heading'], "Heading"),
+            (21, hist_widgets['Game History'], "GameHistory")]
         self.main_widgets = main_widgets
         self.opt_widgets = opt_widgets
         self.msg_widgets = msg_widgets
@@ -611,8 +612,6 @@ class WinLayout(GladeSupport, WahCade):
                 width, height)
             # Use the previously-captured point of mousedown to set the pixbuf offset correctly
             context.set_icon_pixbuf(pixbuf, self.grabstart[0], self.grabstart[1])
-            print "Begin"
-            print self.grabstart
             
 
     def on_evb_drag_data_get(self, widget, context, selection, target_type, event_time):
@@ -854,7 +853,7 @@ class WinLayout(GladeSupport, WahCade):
         self.dLayout[self.fixdScr]['image'] = ''
         self.dLayout[self.fixdScr]['use_image'] = False
         #set all window items
-        for offset, widget in self._layout_items:
+        for offset, widget, name in self._layout_items:
             #get properties
             d = self.get_layout_item_properties(lines, offset)
             self.dLayout[widget] = d
@@ -925,8 +924,18 @@ class WinLayout(GladeSupport, WahCade):
             self.layout_filename = layout_filename
         #setup empty layout
         lines = [''] * 552
+        # YAML
+        ylines = {}
+        main = {}
+        options = {}
+        message = {}
+        screensaver = {}
+        ylines['main'] = main
+        ylines['options'] = options
+        ylines['message'] = message
+        ylines['screensaver'] = screensaver
         #window widgets
-        for offset, widget in self._layout_windows:
+        for offset, widget, name in self._layout_windows:
             if offset < 0:
                 break
             d = self.dLayout[widget]
@@ -941,8 +950,23 @@ class WinLayout(GladeSupport, WahCade):
             else:
                 lines[offset + 3] = ' '
             lines[offset + 4] = ' 1'
+            # YAML
+            dic = {}
+            dic['width'] = d['width']
+            dic['height'] = d['height']
+            dic['background-col'] = d['background-col']
+            dic['use_image'] = os.path.basename(self.get_path(d['image']))
+            dic['unknown'] = 1
+            if offset < 293:
+                main[name] = dic
+            elif offset < 353:
+                options[name] = dic
+            elif offset < 396:
+                message[name] = dic
+            else:
+                screensaver[name] = dic
         #item widgets
-        for offset, widget in self._layout_items:
+        for offset, widget, name in self._layout_items:
             d = self.dLayout[widget]
             lines[offset] = str(d['visible'])
             lines[offset + 1] = ' %s' % int(d['transparent'])
@@ -967,10 +991,37 @@ class WinLayout(GladeSupport, WahCade):
             elif widget.get_name() == 'Options List':
                 lines[299] = ' %s' % self.reverse_get_colour(d['bar-col'])
                 lines[300] = ' %s' % self.reverse_get_colour(d['selected-col'])
+            # YAML
+            dic = {}
+            dic['visible'] = d['visible']
+            dic['transparent'] = d['transparent']
+            dic['background-col'] = d['background-col']
+            dic['text-col'] = d['text-col']
+            dic['font'] = d['font']
+            dic['font-bold'] = str(d['font-bold'])
+            dic['font-italic'] = str(d['font-italic'])
+            dic['font-size'] = d['font-size']
+            dic['text-align'] = .5 if (d['text-align'] == 2) else d['text-align']
+            dic['text-rotation'] = d['text-rotation']
+            dic['x'] = d['x']
+            dic['y'] = d['y']
+            dic['width'] = d['width']
+            dic['height'] = d['height']
+            if offset < 293:
+                main[name] = dic
+            elif offset < 353:
+                options[name] = dic
+            elif offset < 396:
+                message[name] = dic
+            else:
+                screensaver[name] = dic
         #write file
         lines = ['%s\n' % (l) for l in lines]
         fname = os.path.join(self.layout_filename)
         open(fname, 'w').writelines(lines[1:])
+        #YAML
+        yfile = open(fname+"_y", 'w')
+        yaml.dump(ylines, yfile, default_flow_style=False)
         #reset altered flag
         self.layout_altered = False
 
@@ -987,7 +1038,7 @@ class WinLayout(GladeSupport, WahCade):
             d['text-col'] = '#FF0000'
             d['background-col'] = '#FFFFFF'
             d['visible'] = False
-            d['text-align'] = 2
+            d['text-align'] = 2 # TODO: Change to .5 default?
             d['width'] = 100
             d['height'] = 20
             d['x'] = 0
@@ -1191,7 +1242,7 @@ class WinLayout(GladeSupport, WahCade):
         #set window size
         self.fixdHist.set_size_request(hist_width, hist_height)
         #set all window items
-        for offset, widget in self._histview_items:
+        for offset, widget, name in self._histview_items:
             #get properties
             d = self.get_layout_item_properties(lines, offset)
             self.dLayout[widget] = d
@@ -1253,7 +1304,7 @@ class WinLayout(GladeSupport, WahCade):
             lines[4] = ' '
         lines[5] = ' 1'
         #item widgets
-        for offset, widget in self._histview_items:
+        for offset, widget, name in self._histview_items:
             d = self.dLayout[widget]
             lines[offset] = str(d['visible'])
             lines[offset + 1] = ' %s' % int(d['transparent'])

@@ -35,6 +35,7 @@ import commands
 from operator import itemgetter
 import subprocess
 from subprocess import Popen
+import yaml
 
 
 ## GTK Modules
@@ -224,31 +225,7 @@ class WinMain(WahCade):
         self.lblHighScoreData = gtk.Label()
         self.lblOverlayScrollLetters = gtk.Label()
         # create scroll list widget
-        self.sclGames = ScrollList()
-        # image & label lists
-        self._layout_items = [
-            (8, self.imgMainLogo),              # Weird gray area at top of window
-            (21, self.lblGameListIndicator),    # Label above games list
-            (34, self.lblEmulatorName),         # Label above artwork
-            (60, self.lblGameSelected),         # Label displaying selected game number out of the total
-            (73, self.imgArtwork1),             # Large game image in top right
-            (86, self.imgArtwork2),             # Smaller game image in the lower right
-            (99, self.imgArtwork3),             # Large game image in top center
-            (112, self.imgArtwork4),            # Large game image in top center
-            (125, self.imgArtwork5),            # Large game image in top center
-            (138, self.imgArtwork6),            # Large game image in top center with background
-            (151, self.imgArtwork7),            # Large game image in top center
-            (164, self.imgArtwork8),            # Large game image in top center
-            (177, self.imgArtwork9),            # Large game image in top center
-            (190, self.imgArtwork10),           # Large game image in top center
-            (47, self.sclGames),                # Game list
-            (203, self.lblGameDescription),     # Which game is selected
-            (216, self.lblRomName),             # Rom name
-            (229, self.lblYearManufacturer),    # Year
-            (242, self.lblScreenType),          # Screen
-            (255, self.lblControllerType),      # Controller
-            (268, self.lblDriverStatus),        # Driver
-            (281, self.lblCatVer)]              
+        self.sclGames = ScrollList()                  
         self._main_images = [
             self.imgArtwork1,
             self.imgArtwork2,
@@ -321,15 +298,6 @@ class WinMain(WahCade):
         self.fixd.put(self.lblHighScoreData, 120, 540)
         self.lblHighScoreData.show()
         
-        self.fixd.show()
-        self.winMain.add(self.fixd)
-        for line, widget in self._layout_items:
-            #print widget.get_name()
-            if widget != self.sclGames:
-                self.fixd.add(self.make_evb_widget(widget))     # wc_common.py
-            else:
-                self.fixd.add(widget.fixd)
-        
         # video widget
         self.video_playing = False
         self.video_enabled = False
@@ -370,28 +338,6 @@ class WinMain(WahCade):
         self.cpviewer = WinCPViewer(self)
         self.hide_window()
         
-        # add options, message & screen saver widgets to _layout_items
-        self._layout_items += [
-            (301, self.options.lblHeading),             # Options window title
-            (314, self.options.sclOptions),             # Options list
-            (327, self.options.lblSettingHeading),      # "Current setting"
-            (340, self.options.lblSettingValue),        # Value of current setting
-            (357, self.message.lblHeading),             # Message window title
-            (370, self.message.lblMessage),             # Message displayed in message window
-            (383, self.message.lblPrompt),              
-            (396, self.scrsaver.imgArtwork1),
-            (409, self.scrsaver.imgArtwork2),
-            (422, self.scrsaver.imgArtwork3),
-            (435, self.scrsaver.imgArtwork4),
-            (448, self.scrsaver.imgArtwork5),
-            (461, self.scrsaver.imgArtwork6),
-            (474, self.scrsaver.imgArtwork7),
-            (487, self.scrsaver.imgArtwork8),
-            (500, self.scrsaver.imgArtwork9),
-            (513, self.scrsaver.imgArtwork10),
-            (526, self.scrsaver.lblGameDescription),
-            (539, self.scrsaver.lblMP3Name)]
-        
         
         ### build list of emulators
         self.emu_lists = self.buildemulist()            # wc_common.py
@@ -402,6 +348,68 @@ class WinMain(WahCade):
             #...no, switch to one that does
             self.current_emu = el[0]
             self.wahcade_ini.set('current_emulator', self.current_emu)  # mamewah_ini.py
+        
+        # Collect all image & label lists
+        self._main_items = [
+            (8, self.imgMainLogo, "MainLogo"),              # Weird gray area at top of window
+            (21, self.lblGameListIndicator, "GameListIndicator"),    # Label above games list
+            (34, self.lblEmulatorName, "EmulatorName"),         # Label above artwork
+            (60, self.lblGameSelected, "GameSelected"),         # Label displaying selected game number out of the total
+            (73, self.imgArtwork1, "MainArtwork1"),             # Large game image in top right
+            (86, self.imgArtwork2, "MainArtwork2"),             # Smaller game image in the lower right
+            (99, self.imgArtwork3, "MainArtwork3"),             # Large game image in top center
+            (112, self.imgArtwork4, "MainArtwork4"),            # Large game image in top center
+            (125, self.imgArtwork5, "MainArtwork5"),            # Large game image in top center
+            (138, self.imgArtwork6, "MainArtwork6"),            # Large game image in top center with background
+            (151, self.imgArtwork7, "MainArtwork7"),            # Large game image in top center
+            (164, self.imgArtwork8, "MainArtwork8"),            # Large game image in top center
+            (177, self.imgArtwork9, "MainArtwork9"),            # Large game image in top center
+            (190, self.imgArtwork10, "MainArtwork10"),           # Large game image in top center
+            (47, self.sclGames, "GameList"),                # Game list
+            (203, self.lblGameDescription, "GameDescription"),     # Which game is selected
+            (216, self.lblRomName, "RomName"),             # Rom name
+            (229, self.lblYearManufacturer, "YearManufacturer"),    # Year
+            (242, self.lblScreenType, "ScreenType"),          # Screen
+            (255, self.lblControllerType, "ControllerType"),      # Controller
+            (268, self.lblDriverStatus, "DriverStatus"),        # Driver
+            (281, self.lblCatVer, "CatVer")]  
+        self._options_items = [
+            (301, self.options.lblHeading, "OptHeading"),             # Options window title
+            (314, self.options.sclOptions, "OptionsList"),             # Options list
+            (327, self.options.lblSettingHeading, "SettingHeading"),      # "Current setting"
+            (340, self.options.lblSettingValue, "SettingValue")]  # Value of current setting
+        self._message_items = [      
+            (357, self.message.lblHeading, "MsgHeading"),             # Message window title
+            (370, self.message.lblMessage, "Message"),             # Message displayed in message window
+            (383, self.message.lblPrompt, "Prompt")]
+        self._screensaver_items = [              
+            (396, self.scrsaver.imgArtwork1, "ScrArtwork1"),
+            (409, self.scrsaver.imgArtwork2, "ScrArtwork2"),
+            (422, self.scrsaver.imgArtwork3, "ScrArtwork3"),
+            (435, self.scrsaver.imgArtwork4, "ScrArtwork4"),
+            (448, self.scrsaver.imgArtwork5, "ScrArtwork5"),
+            (461, self.scrsaver.imgArtwork6, "ScrArtwork6"),
+            (474, self.scrsaver.imgArtwork7, "ScrArtwork7"),
+            (487, self.scrsaver.imgArtwork8, "ScrArtwork8"),
+            (500, self.scrsaver.imgArtwork9, "ScrArtwork9"),
+            (513, self.scrsaver.imgArtwork10, "ScrArtwork10"),
+            (526, self.scrsaver.lblGameDescription, "GameDescription"),
+            (539, self.scrsaver.lblMP3Name, "MP3Name")]
+        self._layout_items = {'main': self._main_items, 'options': self._options_items,
+                              'message': self._message_items, 'screensaver': self._screensaver_items}
+          
+        # Initialize and show primary Fixd containers, and populate approrpriately
+        self.fixd.show()
+        self.winMain.add(self.fixd)
+        # Add everything to the main Fixd object, wrapping in an EVB as appropriate
+        for w_set_name in self._layout_items:
+            for offset, widget, name in self._layout_items[w_set_name]:
+                if widget.get_parent():
+                    pass
+                elif not (type(widget) is ScrollList):
+                    self.fixd.add(self.make_evb_widget(widget))     # wc_common.py
+                else:
+                    self.fixd.add(widget.fixd)
             
         ### load list
         self.current_list_ini = None
@@ -491,7 +499,7 @@ class WinMain(WahCade):
             self.start_timer('joystick')
     
         self.on_sclGames_changed()
-               
+        
         ### __INIT__ Complete
         self.init = False
 
@@ -1564,6 +1572,158 @@ class WinMain(WahCade):
         return layout_files[0]
 
     def load_layout_file(self, layout_file):
+        # Retrieve filepath to layout file
+        layout_path = os.path.join(CONFIG_DIR, 'layouts', self.layout)
+        # Store to member variable
+        self.layout_path = layout_path
+        
+        # Layout has not changed, but emulator has. Rebuild visibility for artwork, etc
+        if layout_file == self.layout_file:
+            self.rebuild_visible_lists()
+            return
+        
+        # Okay to setup
+        self.layout_file = layout_file
+        layout_info = yaml.load(open(self.layout_file, 'r'))
+        
+        # Set up main Fixd window
+        main = self.winMain
+        main_lay = layout_info['main']['fixdMain']
+        main.set_size_request(main_lay['width'], main_lay['height'])
+        main.set_default_size(main_lay['width'], main_lay['height'])
+        main.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(main_lay['background-col']))
+        self.fixd.move(self.imgBackground, 0, 0)
+        self.imgBackground.set_size_request(main_lay['width'], main_lay['height'])
+        main_img = main_lay['use_image']
+        # If there is not dirname on the image file (i.e., a relative path was provided)
+        # append it to the end of the dirpath to the layouts file
+        if not os.path.dirname(main_img):
+            main_img = os.path.join(self.layout_path, main_img)
+        self.imgBackground.set_data('layout-image', main_img)    
+                
+        # Set up options Fixd window
+        opt = self.options
+        opt_lay = layout_info['options']['fixdOpt']
+        opt.winOptions.set_size_request(opt_lay['width'], opt_lay['height'])
+        opt.winOptions.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(opt_lay['background-col']))
+        opt.winOptions.move(opt.imgBackground, 0, 0)
+        opt.imgBackground.set_size_request(opt_lay['width'], opt_lay['height'])
+        opt_img = opt_lay['use_image']
+        # If there is not dirname on the image file (i.e., a relative path was provided)
+        # append it to the end of the dirpath to the layouts file
+        if not os.path.dirname(opt_img):
+            opt_img = os.path.join(self.layout_path, opt_img)
+        opt.imgBackground.set_data('layout-image', opt_img)
+        self.fixd.move(opt.winOptions,
+                       (( main_lay['width'] - opt_lay['width'] ) / 2),
+                       (( main_lay['height'] - opt_lay['height'] ) / 2))
+         #other stuff
+        opt.lblHeading.set_text(_('Options'))
+        opt.lblSettingHeading.set_text(_('Current Setting:'))
+        opt.lblSettingValue.set_text('')
+        
+        # Set up message Fixd window
+        msg = self.message
+        msg_lay = layout_info['message']['fixdMsg']
+        msg.winMessage.set_size_request(msg_lay['width'], msg_lay['height'])
+        msg.winMessage.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(opt_lay['background-col']))
+        msg.winMessage.move(self.message.imgBackground, 0, 0)
+        msg.imgBackground.set_size_request(msg_lay['width'], msg_lay['height'])
+        msg_img = msg_lay['use_image']
+        # If there is not dirname on the image file (i.e., a relative path was provided)
+        # append it to the end of the dirpath to the layouts file
+        if not os.path.dirname(msg_img):
+            msg_img = os.path.join(self.layout_path, msg_img)
+        msg.imgBackground.set_data('layout-image', msg_img)
+        
+        # Set up ScreenSaver Fixd window
+        scr = self.scrsaver
+        self.fixd.move(scr.winScrSaver, 0, 0)
+        scr.winScrSaver.set_size_request(main_lay['width'], main_lay['height']) # Match main window
+        scr.winScrSaver.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('black'))
+        scr.drwVideo.set_size_request(main_lay['width'], main_lay['height'])
+        
+        
+        # Set up all Widgets
+        for w_set_name in self._layout_items.keys():
+            wset_layout_info = layout_info[w_set_name]
+            for offset, widget, name in self._layout_items[w_set_name]:
+                w_lay = wset_layout_info[name]
+                # font
+                fontData = w_lay['font']
+                if w_lay['font-bold']:
+                    fontData += ' Bold'
+                fontData += ' %s' % (w_lay['font-size'])
+                fontDesc = pango.FontDescription(fontData)
+                # text color
+                textColor = w_lay['text-col']
+                # apply
+                widget.modify_font(fontDesc)
+                widget.modify_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse(textColor))
+                # bg color, transparency as appropriate
+                bgColor = w_lay['background-col']
+                parent = widget.get_parent()
+                if parent.get_ancestor(gtk.EventBox): # Check if we have an EventBox ancester
+                    if w_lay['transparent'] == True:
+                        parent.set_visible_window(False)
+                    else:
+                        parent.set_visible_window(True)
+                        parent.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(bgColor))
+                # highlight colors (only for scroll lists)
+                if type(widget) is ScrollList:
+                    widget.modify_highlight_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(w_lay['text-bg-high']))
+                    widget.modify_highlight_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse(w_lay['text-fg-high']))
+                # alignment of text
+                # Legacy 2 -> .5?
+                widget.set_property('xalign', w_lay['text-align'])
+                # rotation
+                widget.set_data('text-rotation', w_lay['text-rotation'])
+                if widget is gtk.Label:
+                    widget.set_angle(w_lay['text-rotation'])
+                # visibility
+                if not w_lay['visible']: # Hide self and parents if not visible
+                    widget.hide()
+                    if parent.get_ancestor(gtk.EventBox):
+                        parent.hide()
+                else:                    # Show self and parents if visible
+                    widget.show()
+                    if parent.get_ancestor(gtk.EventBox):
+                        parent.show()
+                # size
+                widget.set_size_request(w_lay['width'], w_lay['height'])
+                # position the video widget
+                if self.emu_ini.getint('movie_artwork_no') > 0:
+                    self.video_artwork_widget = self._main_images[(self.emu_ini.getint('movie_artwork_no') - 1)]
+                    if widget == self.video_artwork_widget:
+                        self.fixd.move(self.drwVideo, w_lay['x'], w_lay['y'])
+                        self.drwVideo.set_size_request(w_lay['width'], w_lay['height'])
+                # modify widget for lists
+                if widget == self.sclGames:
+                    widget = self.sclGames.fixd
+                elif widget == self.options.sclOptions:
+                    widget = self.options.sclOptions.fixd
+                elif parent.get_ancestor(gtk.EventBox):
+                    widget = widget.get_parent()
+                # add to fixed layout on correct window <--(what?)
+                if w_set_name == "main":
+                    self.fixd.move(widget, w_lay['x'], w_lay['y'])
+                elif w_set_name == "options":
+                    self.options.winOptions.move(widget, w_lay['x'], w_lay['y'])
+                elif w_set_name == "message":
+                    self.message.winMessage.move(widget, w_lay['x'], w_lay['y'])
+                elif w_set_name == "screensaver":
+                    self.scrsaver.winScrSaver.move(widget, w_lay['x'], w_lay['y'])
+                else:
+                    print "Orphaned widget detected. Did not belong to one of [main/options/message/screensaver]"
+       
+        #load histview and cpviewer layouts
+        # Still in use?
+        self.histview.load_layout(self.histview.layout_filename)
+        self.cpviewer.load_layout(self.cpviewer.layout_filename)
+        #build visible lists for displaying artwork images
+        self.rebuild_visible_lists()
+ 
+    def load_legacy_layout_file(self, layout_file):
         """load layout file"""
         layout_path = os.path.join(CONFIG_DIR, 'layouts', self.layout)
         #if layout_file == '':
@@ -1575,6 +1735,13 @@ class WinMain(WahCade):
             self.rebuild_visible_lists()
             return
         self.layout_file = layout_file
+        #
+        #
+        #
+        #
+        #
+        # TODO: YAML call
+        #
         #read file & strip any crap
         lines = open(self.layout_file, 'r').readlines()
         lines = [s.strip() for s in lines]
@@ -1739,7 +1906,7 @@ class WinMain(WahCade):
         self.visible_img_list = [img for img in self._main_images if img.get_property('visible')]
         self.visible_img_paths = [self.emu_ini.get('artwork_%s_image_path' % (i + 1)) for i, img in enumerate(self.visible_img_list)]
         #self.buildartlist(self.visible_img_paths[0])
-        #check background images
+        #check background images   
         bg_files = (
             [self.imgBackground,
             [os.path.split(os.path.splitext(self.imgBackground.get_data('layout-image'))[0]),
@@ -2086,6 +2253,7 @@ class WinMain(WahCade):
             #print "switched to:", new_angle
             self.layout_orientation = new_angle
             if os.path.isfile(layout_files[0]):
+                #self.load_legacy_layout_file(layout_files[0])
                 self.load_layout_file(layout_files[0])
             if os.path.isfile(layout_files[1]):
                 self.histview.load_layout(layout_files[1])
