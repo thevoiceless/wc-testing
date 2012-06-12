@@ -315,6 +315,22 @@ class WinMain(WahCade):
         # TODO: finalize this
         self.lblHighScoreData.set_markup('<span color="white" size="13000">1. \tName\t\t\tScore</span>')
         # Initial building of the database for games
+        '''
+        import urllib2
+        import requests
+        url = "http://localhost:9090/RcadeServer/rest/game/"
+        for rom in self.supported_games:
+            try:
+                data = requests.get(url+rom)
+                if data.text == 'null':
+                    post_data = {"romName":rom, "gameName":''}
+                    r = requests.post(url, post_data)
+                    print r.status_code, rom
+            except urllib2.HTTPError, e:
+                print "HTTP error: %d" % e.code
+            except urllib2.URLError, e:
+                print "Network error:"
+        '''
         if self.db_connected:
             for rom in self.supported_games:
                 query = "SELECT * FROM game WHERE game.rom_name = '" + rom + "'"
@@ -324,7 +340,7 @@ class WinMain(WahCade):
                     query = "INSERT INTO `" + self.props["db"] + "`.`game` (`version`, `game_name`, `rom_name`) VALUES (0, '', '" + rom + "')"
                     self.cursor.execute(query)
             self.db.autocommit(True)
-            
+       
         
         self.lblHighScoreData.set_markup('<span color="white" size="13000">1. \tName\t\t\tScore</span>')
         self.fixd.put(self.lblHighScoreData, 120, 540)
