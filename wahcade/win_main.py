@@ -771,6 +771,7 @@ class WinMain(WahCade):
             for mw_func in mw_functions:
                 # Which function?
                 #print mw_func
+                #print current_window
                 if current_window == 'main':
                     # Display first two letters of selected game when scrolling quickly
                     if self.keypress_count > self.showOverlayThresh:
