@@ -121,6 +121,8 @@ class WinMain(WahCade):
         pygame_imported = True
         old_keyb_events = False
         debug_mode = False
+        self.showOverlayThresh = 10
+        self.showImgThresh = 6
         
         ### USER PROFILE
         self.userpath = os.path.expanduser(CONFIG_DIR)  # CONFIG_DIR comes from constants.py
@@ -771,7 +773,7 @@ class WinMain(WahCade):
                 #print mw_func
                 if current_window == 'main':
                     # Display first two letters of selected game when scrolling quickly
-                    if self.keypress_count > 10:
+                    if self.keypress_count > self.showOverlayThresh:
                         self.overlayBG.show()
                         overlayLetters = self.lsGames[self.sclGames.get_selected()][0][0:2]
                         self.lblOverlayScrollLetters.set_markup(_('%s%s%s') % (self.overlayMarkupHead, overlayLetters, self.overlayMarkupTail))
@@ -1067,7 +1069,7 @@ class WinMain(WahCade):
             self.start_timer('video')
         # Set layout images (at low scroll speeds)
         for i, img in enumerate(self.visible_img_list):
-            if self.keypress_count >= 6:
+            if self.keypress_count >= self.showImgThresh:
                 img.set_from_file(None)     # Don't display an image if starting to scroll quickly
             else:
                 img_filename = self.get_artwork_image(
