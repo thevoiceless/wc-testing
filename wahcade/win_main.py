@@ -40,12 +40,17 @@ from subprocess import Popen
 ## GTK Modules
 # GTK
 import pygtk                        # http://www.pygtk.org/
-if sys.platform != 'win32':
+onWindows = True
+if not sys.platform.startswith('win'):
     pygtk.require('2.0')            # Require GTKv2 (standard, as GTKv3 is still new)
+    onWindows = False
 import gtk
 import gobject                      # https://live.gnome.org/PyGObject
 gobject.threads_init()              # Initializes the the use of Python threading in the gobject module
 import pango                        # Library for rendering internationalized texts in high quality, http://zetcode.com/tutorials/pygtktutorial/pango/
+
+# Get system path separator
+sep = os.sep
 
 # dbus
 dbus_imported = False
@@ -88,7 +93,7 @@ class WinMain(WahCade):
         """initialise main Wah!Cade window"""   # Docstring for this method
         
         # Try connecting to a database, otherwise
-        self.db_file = "confs/" + config_opts.db_config_file + ".txt"
+        self.db_file = "confs" + sep + config_opts.db_config_file + ".txt"
         try:
             # Open the config file and extract the database connection information
             with open(self.db_file, 'rt') as f:
@@ -161,7 +166,7 @@ class WinMain(WahCade):
  
         ### SETUP EMULATOR INI FILE       
         self.current_emu = self.wahcade_ini.get('current_emulator')
-        self.emu_ini = MameWahIni(os.path.join(CONFIG_DIR, 'ini/' + self.current_emu + '.ini'))
+        self.emu_ini = MameWahIni(os.path.join(CONFIG_DIR, 'ini' + sep + self.current_emu + '.ini'))
         ## read in options emulator.ini,        
         self.emumovieprevpath = self.emu_ini.get('movie_preview_path')
         self.emumovieartworkno = self.emu_ini.getint('movie_artwork_no')
@@ -290,7 +295,12 @@ class WinMain(WahCade):
         self.overlayMarkupTail = '</span>'
         
         # Mark mame directory
-        self.mame_dir = self.emu_ini.get('emulator_executable')[:self.emu_ini.get('emulator_executable').rfind('/') + 1]
+        self.mame_dir = self.emu_ini.get('emulator_executable')[:self.emu_ini.get('emulator_executable').rfind(sep) + 1]
+        
+        # Set initial HiToText "read" command
+        self.htt_read = "HiToText.exe -r " + self.mame_dir
+        # Set initial HiToText "erase" command
+        self.htt_erase = "HiToText.exe -e " + self.mame_dir
         
         self.launched_game = False
         self.current_rom = ''
@@ -555,12 +565,17 @@ class WinMain(WahCade):
             self.launched_game = False
             # If the game supports high scores run the HiToText executions
             if self.current_rom in self.supported_games:
-                #testString = commands.getoutput("wine HiToText.exe -r " + self.mame_dir + "hi/" + self.current_rom + ".hi 2>/dev/null")
-                testString = commands.getoutput("mono HiToText.exe -r " + self.mame_dir + "hi/" + self.current_rom + ".hi")
+                htt_command = self.htt_read
+                if not onWindows:
+                    htt_command = "mono " + self.htt_read
+                #testString = commands.getoutput("wine HiToText.exe -r " + self.mame_dir + "hi" + sep + self.current_rom + ".hi 2>/dev/null")
+                #testString = commands.getoutput("mono HiToText.exe -r " + self.mame_dir + "hi" + sep + self.current_rom + ".hi")
+                testString = commands.getoutput(htt_command + "hi" + sep + self.current_rom + ".hi")
                 print testString
                 if 'Error' in testString:
-                    #testString = commands.getoutput("wine HiToText.exe -r " + self.mame_dir + "nvram/" + self.current_rom + ".nv 2>/dev/null")
-                    testString = commands.getoutput("mono HiToText.exe -r " + self.mame_dir + "nvram/" + self.current_rom + ".nv")
+                    #testString = commands.getoutput("wine HiToText.exe -r " + self.mame_dir + "nvram" + sep + self.current_rom + ".nv 2>/dev/null")
+                    #testString = commands.getoutput("mono HiToText.exe -r " + self.mame_dir + "nvram" + sep + self.current_rom + ".nv")
+                    testString = commands.getoutput(htt_command + "nvram" + sep + self.current_rom + ".nv")
                 if not 'Error' in testString:
                     self.parse_high_score_text(testString.rstrip())
             
@@ -957,7 +972,7 @@ class WinMain(WahCade):
                     # Screensaver
                     if mw_func == 'SS_FIND_N_SELECT_GAME':
                         self.sclGames.set_selected(self.scrsaver.game_idx)
-                    # Stop into / exit movie playing if any key is pressed
+                    # Stop intro / exit movie playing if any key is pressed
                     if self.scrsaver.movie_type in ('intro', 'exit'):
                         self.scrsaver.video_player.stop()
                 # History viewer
@@ -1240,12 +1255,17 @@ class WinMain(WahCade):
         # Erase scores from hi score file of current game
         # Executable must be in same directory
         if rom in self.supported_games:
-            if os.path.exists(self.mame_dir + 'hi/' + rom + '.hi'):
-                #os.system('wine HiToText.exe -e ' + self.mame_dir + 'hi/' + rom + '.hi 2>/dev/null')
-                os.system('mono HiToText.exe -e ' + self.mame_dir + 'hi/' + rom + '.hi')
-            elif os.path.exists(self.mame_dir + 'nvram/' + rom + '.nv'):
-                #os.system('wine HiToText.exe -e ' + self.mame_dir + 'nvram/' + rom + '.nv 2>/dev/null')
-                os.system('mono HiToText.exe -e ' + self.mame_dir + 'nvram/' + rom + '.nv')
+            htt_command = self.htt_erase
+            if not onWindows:
+                    htt_command = "mono " + self.htt_erase
+            if os.path.exists(self.mame_dir + 'hi' + sep + rom + '.hi'):
+                #os.system('wine HiToText.exe -e ' + self.mame_dir + 'hi' + sep + rom + '.hi 2>/dev/null')
+                #os.system('mono HiToText.exe -e ' + self.mame_dir + 'hi' + sep + rom + '.hi')
+                os.system(htt_command + 'hi' + sep + rom + '.hi')
+            elif os.path.exists(self.mame_dir + 'nvram' + sep + rom + '.nv'):
+                #os.system('wine HiToText.exe -e ' + self.mame_dir + 'nvram' + sep + rom + '.nv 2>/dev/null')
+                #os.system('mono HiToText.exe -e ' + self.mame_dir + 'nvram' + sep + rom + '.nv')
+                os.system(htt_command + 'nvram' + sep + rom + '.nv')
             else:
                 print rom, 'high score file not found'
             
