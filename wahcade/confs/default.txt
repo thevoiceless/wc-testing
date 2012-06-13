@@ -2,3 +2,4 @@ host=localhost
 user=root
 passwd=password
 db=test
+port=8080

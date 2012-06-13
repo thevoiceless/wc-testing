@@ -83,6 +83,8 @@ import filters                          # filters.py, routines to read/write mam
 from mamewah_ini import MameWahIni      # Reads mamewah-formatted ini file
 import joystick                         # joystick.py, joystick class, uses pygame package (SDL bindings for games in Python)
 import MySQLdb
+import requests
+from xml.etree.ElementTree import fromstring
 from dummy_db import DummyDB
 # Set gettext function
 _ = gettext.gettext
@@ -96,22 +98,15 @@ class WinMain(WahCade):
         # Try connecting to a database, otherwise
         self.db_file = "confs" + sep + config_opts.db_config_file + ".txt"
         try:
-            # Open the config file and extract the database connection information
-            with open(self.db_file, 'rt') as f:
+            with open(self.db_file, 'rt') as f: # Open the config file and extract the database connection information
                 self.props = {}  # Dictionary
                 for line in f.readlines():
                     val = line.split('=')
                     self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
-            self.db = MySQLdb.connect(host=self.props["host"], user=self.props["user"], passwd=self.props["passwd"], db=self.props["db"])
-            self.cursor = self.db.cursor()
-            self.db.autocommit(False) # Updates the DB results
-            self.db_connected = True
-        except:
-            self.db = DummyDB()
-            self.cursor = self.db.cursor()
-            self.db_connected = False
-            print "Could not connect to database"
-            
+                requests.get("http://localhost:" + self.props['port'] + "/RcadeServer") #attempt to make connection to server
+                self.connected = True
+        except: #any exeption would mean some sort of failed server connection
+            self.connected = False
         
         ### Set Global Variables
         global gst_media_imported, pygame_imported, old_keyb_events, debug_mode, log_filename
@@ -227,7 +222,7 @@ class WinMain(WahCade):
         self.lblControllerType = gtk.Label()
         self.lblDriverStatus = gtk.Label()
         self.lblCatVer = gtk.Label()
-        self.lblHighScoreTitle = gtk.Label()
+        self.lblHighScoreHeading = gtk.Label()
         self.lblHighScoreData = gtk.Label()
         self.lblOverlayScrollLetters = gtk.Label()
 
@@ -261,19 +256,6 @@ class WinMain(WahCade):
         self.fixd.add(self.imgBackground)
         self.imgBackground.show()
         
-        # Temp for displaying high score data
-        # TODO: Finalize this
-        self.lblHighScoreTitle.set_markup('<span color="#0099cc" size="14000">High Scores</span>')
-        self.fixd.put(self.lblHighScoreTitle, 200, 510)
-        self.lblHighScoreTitle.show()
-        
-        # Formatting for the high score labels
-        self.highScoreDataMarkupHead = '<span color="white" size="12000">'
-        self.highScoreDataMarkupTail = '</span>'
-        # Formatting for the overlay letters
-        self.overlayMarkupHead = '<span color="white" size="20000">'
-        self.overlayMarkupTail = '</span>'
-        
         # Mark mame directory
         self.mame_dir = self.emu_ini.get('emulator_executable')[:self.emu_ini.get('emulator_executable').rfind(sep) + 1]
         
@@ -284,34 +266,8 @@ class WinMain(WahCade):
         
         self.launched_game = False
         self.current_rom = ''
-        
-        # Load list of games supported by HiToText
-        self.supported_games = set()
-        self.supported_game_file = open('supported_games.lst')
-        for line in self.supported_game_file:
-            self.supported_games.add(line[:-2])
-        
-        # Temporary high score stuff
-        # TODO: finalize this
-        self.lblHighScoreData.set_markup('<span color="white" size="13000">1. \tName\t\t\tScore</span>')
-        # Initial building of the database for games
-        if self.db_connected:
-            for rom in self.supported_games:
-                query = "SELECT * FROM game WHERE game.rom_name = '" + rom + "'"
-                self.cursor.execute(query)
-                # If game is not in database
-                if self.cursor.rowcount == 0:
-                    query = "INSERT INTO `" + self.props["db"] + "`.`game` (`version`, `game_name`, `rom_name`) VALUES (0, '', '" + rom + "')"
-                    self.cursor.execute(query)
-            self.db.autocommit(True)
-            
-        
-        self.lblHighScoreData.set_markup('<span color="white" size="13000">1. \tName\t\t\tScore</span>')
-        self.fixd.put(self.lblHighScoreData, 120, 540)
-        self.lblHighScoreData.show()
-        
-
-        # video widget
+               
+        # Video widget
         self.video_playing = False
         self.video_enabled = False
         self.video_timer = None
@@ -321,7 +277,7 @@ class WinMain(WahCade):
 
         # List
         self.sclGames.auto_update = False
-        self.sclGames.display_limiters = False
+        self.sclGames.display_limiters = self.display_limiters
         # Set window properties
         self.winMain.set_position(gtk.WIN_POS_NONE)
         self.winMain.set_type_hint(gtk.gdk.WINDOW_TYPE_HINT_NORMAL)
@@ -363,38 +319,40 @@ class WinMain(WahCade):
         
         # Collect all image & label lists
         self._main_items = [
-            (8, self.imgMainLogo, "MainLogo"),              # Weird gray area at top of window
-            (21, self.lblGameListIndicator, "GameListIndicator"),    # Label above games list
-            (34, self.lblEmulatorName, "EmulatorName"),         # Label above artwork
-            (60, self.lblGameSelected, "GameSelected"),         # Label displaying selected game number out of the total
-            (73, self.imgArtwork1, "MainArtwork1"),             # Large game image in top right
-            (86, self.imgArtwork2, "MainArtwork2"),             # Smaller game image in the lower right
-            (99, self.imgArtwork3, "MainArtwork3"),             # Large game image in top center
-            (112, self.imgArtwork4, "MainArtwork4"),            # Large game image in top center
-            (125, self.imgArtwork5, "MainArtwork5"),            # Large game image in top center
-            (138, self.imgArtwork6, "MainArtwork6"),            # Large game image in top center with background
-            (151, self.imgArtwork7, "MainArtwork7"),            # Large game image in top center
-            (164, self.imgArtwork8, "MainArtwork8"),            # Large game image in top center
-            (177, self.imgArtwork9, "MainArtwork9"),            # Large game image in top center
-            (190, self.imgArtwork10, "MainArtwork10"),           # Large game image in top center
-            (47, self.sclGames, "GameList"),                # Game list
-            (203, self.lblGameDescription, "GameDescription"),     # Which game is selected
-            (216, self.lblRomName, "RomName"),             # Rom name
-            (229, self.lblYearManufacturer, "YearManufacturer"),    # Year
-            (242, self.lblScreenType, "ScreenType"),          # Screen
-            (255, self.lblControllerType, "ControllerType"),      # Controller
-            (268, self.lblDriverStatus, "DriverStatus"),        # Driver
+            (8, self.imgMainLogo, "MainLogo"),                          # Weird gray area at top of window
+            (21, self.lblGameListIndicator, "GameListIndicator"),       # Label above games list
+            (34, self.lblEmulatorName, "EmulatorName"),                 # Label above artwork
+            (60, self.lblGameSelected, "GameSelected"),                 # Label displaying selected game number out of the total
+            (73, self.imgArtwork1, "MainArtwork1"),                     # Large game image in top right
+            (86, self.imgArtwork2, "MainArtwork2"),                     # Smaller game image in the lower right
+            (99, self.imgArtwork3, "MainArtwork3"),                     # Large game image in top center
+            (112, self.imgArtwork4, "MainArtwork4"),                    # Large game image in top center
+            (125, self.imgArtwork5, "MainArtwork5"),                    # Large game image in top center
+            (138, self.imgArtwork6, "MainArtwork6"),                    # Large game image in top center with background
+            (151, self.imgArtwork7, "MainArtwork7"),                    # Large game image in top center
+            (164, self.imgArtwork8, "MainArtwork8"),                    # Large game image in top center
+            (177, self.imgArtwork9, "MainArtwork9"),                    # Large game image in top center
+            (190, self.imgArtwork10, "MainArtwork10"),                  # Large game image in top center
+            (47, self.sclGames, "GameList"),                            # Game list
+            (203, self.lblGameDescription, "GameDescription"),          # Which game is selected
+            (216, self.lblRomName, "RomName"),                          # Rom name
+            (229, self.lblYearManufacturer, "YearManufacturer"),        # Year
+            (242, self.lblScreenType, "ScreenType"),                    # Screen
+            (255, self.lblControllerType, "ControllerType"),            # Controller
+            (268, self.lblDriverStatus, "DriverStatus"),                # Driver
             (281, self.lblCatVer, "CatVer"),
-            (552, self.overlayBG, "OverlayBG"),
-            (552, self.lblOverlayScrollLetters, "OverlayScrollLetters")]  
+            (552, self.overlayBG, "OverlayBG"),                         # Overlay scroll letter background image
+            (552, self.lblOverlayScrollLetters, "OverlayScrollLetters"),# Overlay scroll letters
+            (-1, self.lblHighScoreHeading, "HighScoreHeading"),         # High score heading
+            (-1, self.lblHighScoreData, "HighScoreData")]               # High score data
         self._options_items = [
-            (301, self.options.lblHeading, "OptHeading"),             # Options window title
-            (314, self.options.sclOptions, "OptionsList"),             # Options list
-            (327, self.options.lblSettingHeading, "SettingHeading"),      # "Current setting"
-            (340, self.options.lblSettingValue, "SettingValue")]  # Value of current setting
+            (301, self.options.lblHeading, "OptHeading"),               # Options window title
+            (314, self.options.sclOptions, "OptionsList"),              # Options list
+            (327, self.options.lblSettingHeading, "SettingHeading"),    # "Current setting"
+            (340, self.options.lblSettingValue, "SettingValue")]        # Value of current setting
         self._message_items = [      
-            (357, self.message.lblHeading, "MsgHeading"),             # Message window title
-            (370, self.message.lblMessage, "Message"),             # Message displayed in message window
+            (357, self.message.lblHeading, "MsgHeading"),               # Message window title
+            (370, self.message.lblMessage, "Message"),                  # Message displayed in message window
             (383, self.message.lblPrompt, "Prompt")]
         self._screensaver_items = [              
             (396, self.scrsaver.imgArtwork1, "ScrArtwork1"),
@@ -433,6 +391,39 @@ class WinMain(WahCade):
         self.layout_file = ''
         self.load_emulator()
         
+                # Load list of games supported by HiToText
+        self.supported_games = set()
+        self.supported_game_file = open('supported_games.lst')
+        for line in self.supported_game_file:
+            self.supported_games.add(line[:-2])
+        
+        # Temporary high score stuff
+        # TODO: finalize this
+        self.lblHighScoreData.set_markup('<span color="white" size="13000">1. \tName\t\t\tScore</span>')
+        self.lblHighScoreData.show()
+        
+        #Get a list of games already on the server
+        if self.connected:
+            url = "http://localhost:" + self.props['port'] + "/RcadeServer/rest/game/"
+            data = requests.get(url)
+        
+            #map rom name to associated game name
+            romToName = {}
+            for sublist in self.lsGames: 
+                romToName[sublist[1]] = sublist[0]
+            
+            #Get a list of games already on the server
+            data = fromstring(data.text)
+            games_on_server = []
+            for game in data.getiterator('game'):
+                games_on_server.append(game.find('romName').text)
+    
+            #add games to the server if not on the server
+            for rom in self.supported_games:
+                if rom not in games_on_server and rom in romToName:
+                    post_data = {"romName":rom, "gameName":romToName[rom]}
+                    requests.post(url, post_data)
+
         self.check_music_settings()
         
         self.winMain.show()
@@ -586,13 +577,20 @@ class WinMain(WahCade):
                 #testString = commands.getoutput("wine HiToText.exe -r " + self.mame_dir + "hi" + sep + self.current_rom + ".hi 2>/dev/null")
                 #testString = commands.getoutput("mono HiToText.exe -r " + self.mame_dir + "hi" + sep + self.current_rom + ".hi")
                 testString = commands.getoutput(htt_command + "hi" + sep + self.current_rom + ".hi")
-                print testString
                 if 'Error' in testString:
                     #testString = commands.getoutput("wine HiToText.exe -r " + self.mame_dir + "nvram" + sep + self.current_rom + ".nv 2>/dev/null")
                     #testString = commands.getoutput("mono HiToText.exe -r " + self.mame_dir + "nvram" + sep + self.current_rom + ".nv")
                     testString = commands.getoutput(htt_command + "nvram" + sep + self.current_rom + ".nv")
                 if not 'Error' in testString:
-                    self.parse_high_score_text(testString.rstrip())
+                    valid_string = ''
+                    for i in testString:
+                        if (ord(i)<128 and ord(i)>31) or ord(i) == 13 or ord(i) == 10:
+                            valid_string += i
+                        else:
+                            valid_string += '?'
+                    testString = valid_string
+                    if self.connected:
+                        self.parse_high_score_text(testString)
             
         self.pointer_grabbed = False
         if self.sclGames.use_mouse and not self.showcursor:
@@ -634,34 +632,35 @@ class WinMain(WahCade):
         
     def parse_high_score_text(self, text_string):
         """Parse the text file for high scores. 0 scores are not sent"""
-        props = {}
+        high_score_table = {}
         index = 1
         # Go through each line of the the high score result
         for line in iter(text_string.splitlines()):
             line = line.split('|')
+            
             if line[0] != '':
-                # If it is the first line treat it as the format
-                if index == 1:
+                if index == 1: # If it is the first line treat it as the format
                     _format = line
                     index += 1
                     for column in line:
-                        props[column] = '' # Initialize dictionary values
+                        high_score_table[column] = '' # Initialize dictionary values
                 else:
-                    # Go to length of line rather than format because format can be wrong sometimes
-                    for i in range(0, len(line)):
-                        props[_format[i]] = line[i].rstrip()
-                    # Add to DB if score not zero
-                    if 'NAME' in props and 'SCORE' in props:
-                        if props['SCORE'] is not '0':
-                            query = "SELECT * FROM player WHERE player.name = '" + props['NAME'] + "'"
-                            self.cursor.execute(query)
-                            # If player doesn't exist add to database
-                            if self.cursor.rowcount == 0:
-                                randNum = random.randint(1, 5000)
-                                query = "INSERT INTO `" + self.props["db"] + "`.`player` (`version`, `name`, `playerid`) VALUES (0, '" + props['NAME'] + "', '" + str(randNum) + "')"
-                                self.cursor.execute(query)
-                            query = "INSERT INTO `" + self.props["db"] + "`.`score` (`version`, `cabinetid`, `date_created`, `game_id`, `player_id`, `score`, `arcade_name`) SELECT 0, 0, NOW(), game.id, player.id, " + props['SCORE'] + ", '" + props['NAME'] + "' FROM player, game WHERE player.name = '" + props['NAME'] + "' AND game.rom_name = '" + self.current_rom + "'"
-                            self.cursor.execute(query)
+                    for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
+                        high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
+                    
+                    if 'NAME' in high_score_table and 'SCORE' in high_score_table: # Add to DB if score not zero
+                        if high_score_table['SCORE'] is not '0':
+                            url = "http://localhost:" + self.props['port'] + "/RcadeServer/rest/player/"
+                            r = requests.get(url + high_score_table['NAME'])
+                            if r.text == 'null': #check if player exists and add them if they don't
+                                randNum = random.randint(1, 5000) #TODO: replacing RFID for now
+                                post_data = {"name":high_score_table['NAME'], "playerID":randNum}
+                                r = requests.post(url, post_data)
+                            url = "http://localhost:" + self.props['port'] + "/RcadeServer/rest/score/"
+                            post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": '0', "game":self.current_rom, "player":high_score_table['NAME']}                         
+                            r = requests.post(url, post_data)
+
+
 
     def on_winMain_key_press(self, widget, event, *args):
         """key pressed - translate to mamewah setup"""
@@ -688,7 +687,6 @@ class WinMain(WahCade):
                 x, y = event.get_coords()
                 dx = x - self.old_mouse[0]
                 dy = y - self.old_mouse[1]
-                #print "x,y=", x,y, "    ox=,oy=",self.old_mouse[0],self.old_mouse[1], "    dx=,dy=",dx,dy
                 if abs(dx) >= abs(dy):
                     # X-axis
                     mm = dx
@@ -704,7 +702,6 @@ class WinMain(WahCade):
                     elif mm > 3.0:
                         mw_keys = ['MOUSE_DOWN']
                 self.keypress_count += int(abs(mm) / 10) + 1
-                #print "mm=",mm, "    keyp=",self.keypress_count
                 if not mw_keys:
                     self.keypress_count = 0
                     if widget == self.winMain:
@@ -740,7 +737,6 @@ class WinMain(WahCade):
                         return
                     # Get mamewah keyname
                     mw_keys = mamewah_keys[keyname]
-                    #print keyname, "pressed,", mw_keys
                     if mw_keys == []:
                         return
             elif event.type == gtk.gdk.KEY_RELEASE:
@@ -783,8 +779,6 @@ class WinMain(WahCade):
                     break
             for mw_func in mw_functions:
                 # Which function?
-                #print mw_func
-                #print current_window
                 if current_window == 'main':
                     # Display first two letters of selected game when scrolling quickly
                     if self.keypress_count > self.showOverlayThresh:
@@ -795,11 +789,9 @@ class WinMain(WahCade):
                         self.lblOverlayScrollLetters.show()
                     # Main form
                     if mw_func == 'UP_1_GAME':
-                        #print "keypresses:", self.keypress_count
                         self.play_clip('UP_1_GAME')
                         self.sclGames.scroll((int(self.keypress_count / 20) * -1) - 1)
                     elif mw_func == 'DOWN_1_GAME':
-                        #print "keypresses:", self.keypress_count
                         self.play_clip('DOWN_1_GAME')
                         self.sclGames.scroll(int(self.keypress_count / 20) + 1)
                     elif mw_func == 'UP_1_PAGE':
@@ -813,7 +805,6 @@ class WinMain(WahCade):
                         if self.lsGames_len == 0:
                             break
                         toLetter = self.lsGames[self.sclGames.get_selected()][0][0]
-                        print "to letter:", toLetter
                         games = [r[0] for r in self.lsGames]
                         games = games[:self.sclGames.get_selected()]
                         games.reverse()
@@ -830,7 +821,6 @@ class WinMain(WahCade):
                         if self.lsGames_len == 0:
                             break
                         toLetter = self.lsGames[self.sclGames.get_selected()][0][0]
-                        print "to letter:", toLetter
                         games = [r[0] for r in self.lsGames]
                         games = games[self.sclGames.get_selected():]
                         i = -1
@@ -1070,8 +1060,8 @@ class WinMain(WahCade):
             game_info['sound_status']))
         self.lblCatVer.set_text(game_info['category'])
 
-        # Get high score data and display it
-        if not self.db_connected:
+        # Get high score data and display it        
+        if not self.connected:
             self.lblHighScoreData.set_markup(_('%s%s%s') % (self.highScoreDataMarkupHead, " NOT CONNECTED TO A DATABASE", self.highScoreDataMarkupTail))
         elif game_info['rom_name'] in self.supported_games:
             highScoreInfo = self.get_score_string()
@@ -1096,36 +1086,48 @@ class WinMain(WahCade):
     
     def get_score_string(self):
         """Parse Scores from DB into display string"""
-        query = "SELECT player.name, score.score FROM player, score, game WHERE game.rom_name = '" + self.current_rom + "' AND player.id = score.player_id AND game.id = score.game_id ORDER BY score.score LIMIT 10"
-        self.cursor.execute(query)
-        numberOfTopScores = 10
+        url = "http://localhost:" + self.props['port'] + "/RcadeServer/rest/game/"
+        r = requests.get(url+self.current_rom+"/highscore")
+        score_string = r.text #string returned from server containing high scores
         index = 1
-        string=''
-        # Determine the number of non-high score spots
-        numberOfTopScores -= int(self.cursor.rowcount)
-        for row in self.cursor.fetchall():
-            if index < 10:
-                string += "  "
-            if len(row[0]) > 5:
-                if str(row[1])[-3:] == ".00":
-                    string += str(str(index) + ". " + str(row[0][:5]) + "\t\t\t" + str(row[1])[:-3]) + "\n"
-                else:
-                    string += str(str(index) + ". " + str(row[0][:5]) + "\t\t\t" + str(row[1])) + "\n"
-            else:
-                if str(row[1])[-3:] == ".00":
-                    string += str(str(index) + ". " + str(row[0]) + "\t\t\t\t" + str(row[1])[:-3]) + "\n"
-                else:
-                    string += str(str(index) + ". " + str(row[0]) + "\t\t" + str(row[1])) + "\n"
-            index += 1
-        while numberOfTopScores > 0:
-            if index < 10:
-                string += "  "
-            string += str(index)
-            string += ". -------\t\t\t\t--------\n"
-            index += 1
-            numberOfTopScores -= 1
-        return string
         
+        if score_string != '[]':
+            score_string = score_string[1:-1] #trim leading and trailing [] from string
+            score_list = score_string.split(",")
+            name, score = zip(*(s.split(":") for s in score_list)) #split the list into name's and scores
+            score_list[:]=[]
+            score_string = ''
+            
+            for pair in range(len(name)): #take each name and score and tuple them together
+                paring = (name[pair].encode('utf8').strip(), score[pair].encode('utf8'))
+                score_list.append(paring)
+            
+            score_list = sorted(score_list, key=lambda score: score[1], reverse=True)            
+            
+            for name, score in score_list: #42 chars in a line
+                if index < 10: #format for leading spaces by numbers. Makes 1. match up with 10.
+                    score_string += "  "
+                if len(name) > 7:
+                    score_string += str(index) + ". " + name[:6] + ".\t" + " "*(24-len(score)) + score + "\n"
+                elif len(name) <= 3:
+                    score_string += str(index) + ". " + name + " "*(9-len(name)) + "\t" + " "*(24-len(score)) + score + "\n"
+                else:
+                    score_string += str(index) + ". " + name + " "*(7-len(name)) + "\t" + " "*(24-len(score)) + score + "\n"
+                index += 1
+            while index <= 10: #fill in un-used score spots
+                if index < 10:
+                    score_string += "  "
+                score_string += str(index) + ". " + "-"*12 + "\t" + " "*(24-6) + "-"*9 + "\n"
+                index += 1
+        else: #no high scores recorded
+            score_string = ''
+            while index <= 10:
+                if index < 10:
+                    score_string += "  "
+                score_string += str(index) + ". " + "-"*12 + "\t" + " "*(24-6) + "-"*9 + "\n"
+                index += 1
+            
+        return score_string
             
     def on_scrsave_timer(self):
         """timer event - check to see if we need to start video or screen saver"""
@@ -1619,6 +1621,22 @@ class WinMain(WahCade):
         self.layout_file = layout_file
         layout_info = yaml.load(open(self.layout_file, 'r'))
         
+        # Temp for displaying high score data
+        # TODO: Finalize this
+        hs_heading_lay = layout_info['main']['HighScoreHeading']
+        self.lblHighScoreHeading.set_markup('<span color="%s" size="%s">High Scores</span>' % (hs_heading_lay['text-col'], hs_heading_lay['font-size']))
+        #self.fixd.put(self.lblHighScoreHeading, 200, 510)
+        self.lblHighScoreHeading.show()
+        
+        # Formatting for the high score labels
+        hs_data_lay = layout_info['main']['HighScoreData']
+        self.highScoreDataMarkupHead = ('<span color="%s" size="%s">' % (hs_data_lay['text-col'], hs_data_lay['font-size']))
+        self.highScoreDataMarkupTail = '</span>'
+        # Formatting for the overlay letters
+        overlay_lay = layout_info['main']['OverlayScrollLetters']
+        self.overlayMarkupHead = ('<span color="%s" size="%s">' % (overlay_lay['text-col'], overlay_lay['font-size']))
+        self.overlayMarkupTail = '</span>'
+        
         # Set up main Fixd window
         main = self.winMain
         main_lay = layout_info['main']['fixdMain']
@@ -1650,7 +1668,7 @@ class WinMain(WahCade):
         self.fixd.move(opt.winOptions,
                        (( main_lay['width'] - opt_lay['width'] ) / 2),
                        (( main_lay['height'] - opt_lay['height'] ) / 2))
-         #other stuff
+        # Other stuff
         opt.lblHeading.set_text(_('Options'))
         opt.lblSettingHeading.set_text(_('Current Setting:'))
         opt.lblSettingValue.set_text('')
@@ -1685,7 +1703,7 @@ class WinMain(WahCade):
             wset_layout_info = layout_info[w_set_name]
             for offset, widget, name in self._layout_items[w_set_name]:
                 w_lay = wset_layout_info[name]
-                # overlay stuff
+                # Overlay stuff
                 if 'bg-image' in w_lay:
                     bg_file = self.get_path(w_lay['bg-image'])
                     if not os.path.dirname(bg_file):
@@ -1693,18 +1711,18 @@ class WinMain(WahCade):
                     widget.set_from_file(bg_file)
                 if 'show-count' in w_lay:
                     widget.charShowCount = w_lay['show-count']
-                # font
+                # Font
                 fontData = w_lay['font']
                 if w_lay['font-bold']:
                     fontData += ' Bold'
                 fontData += ' %s' % (w_lay['font-size'])
                 fontDesc = pango.FontDescription(fontData)
-                # text color
+                # Text color
                 textColor = w_lay['text-col']
-                # apply
+                # Apply
                 widget.modify_font(fontDesc)
                 widget.modify_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse(textColor))
-                # bg color, transparency as appropriate
+                # BG color, transparency as appropriate
                 bgColor = w_lay['background-col']
                 parent = widget.get_parent()
                 if parent.get_ancestor(gtk.EventBox): # Check if we have an EventBox ancester
@@ -1713,18 +1731,17 @@ class WinMain(WahCade):
                     else:
                         parent.set_visible_window(True)
                         parent.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(bgColor))
-                # highlight colors (only for scroll lists)
+                # Highlight colors (only for scroll lists)
                 if type(widget) is ScrollList:
                     widget.modify_highlight_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(w_lay['text-bg-high']))
                     widget.modify_highlight_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse(w_lay['text-fg-high']))
-                # alignment of text
-                # Legacy 2 -> .5?
+                # Alignment of text
                 widget.set_property('xalign', w_lay['text-align'])
-                # rotation
+                # Rotation
                 widget.set_data('text-rotation', w_lay['text-rotation'])
                 if widget is gtk.Label:
                     widget.set_angle(w_lay['text-rotation'])
-                # visibility
+                # Visibility
                 if not w_lay['visible']: # Hide self and parents if not visible
                     widget.hide()
                     if parent.get_ancestor(gtk.EventBox):
@@ -1733,22 +1750,22 @@ class WinMain(WahCade):
                     widget.show()
                     if parent.get_ancestor(gtk.EventBox):
                         parent.show()
-                # size
+                # Size
                 widget.set_size_request(w_lay['width'], w_lay['height'])
-                # position the video widget
+                # Position the video widget
                 if self.emu_ini.getint('movie_artwork_no') > 0:
                     self.video_artwork_widget = self._main_images[(self.emu_ini.getint('movie_artwork_no') - 1)]
                     if widget == self.video_artwork_widget:
                         self.fixd.move(self.drwVideo, w_lay['x'], w_lay['y'])
                         self.drwVideo.set_size_request(w_lay['width'], w_lay['height'])
-                # modify widget reference for lists
+                # Modify widget reference for lists
                 if widget == self.sclGames:
                     widget = self.sclGames.fixd
                 elif widget == self.options.sclOptions:
                     widget = self.options.sclOptions.fixd
                 elif parent.get_ancestor(gtk.EventBox):
                     widget = widget.get_parent()
-                # add to fixed layout on correct window <--(what?)
+                # Add to fixed layout on correct window
                 if w_set_name == "main":
                     self.fixd.move(widget, w_lay['x'], w_lay['y'])
                 elif w_set_name == "options":
@@ -1760,11 +1777,11 @@ class WinMain(WahCade):
                 else:
                     print "Orphaned widget detected. Did not belong to one of [main/options/message/screensaver]"
        
-        #load histview and cpviewer layouts
+        # Load histview and cpviewer layouts
         # Still in use?
         self.histview.load_layout(self.histview.layout_filename)
         self.cpviewer.load_layout(self.cpviewer.layout_filename)
-        #build visible lists for displaying artwork images
+        # Build visible lists for displaying artwork images
         self.rebuild_visible_lists()
  
     def load_legacy_layout_file(self, layout_file):
