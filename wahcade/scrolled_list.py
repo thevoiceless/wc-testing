@@ -205,7 +205,7 @@ class ScrollList(object):
         font_size = int(self._pango_font_desc.get_size() / pango.SCALE)
         #calc number of rows that will fit (depends on labels font size) and set list_row size
         if self.display_limiters:
-            height_modifier = -30
+            height_modifier = -15
             self._row_height = (h + height_modifier) / self.num_rows
         else:
             height_modifier = 0

@@ -14,6 +14,38 @@ main:
     width: 381
     x: 573
     y: 652
+  OverlayBG:
+    background-col: '#000000'
+    bg-image: scroll-overlay-70.png
+    font: SF Atarian System Extended
+    font-bold: false
+    font-italic: false
+    font-size: 9.0
+    height: 70
+    text-align: 0.5
+    text-col: '#FF5300'
+    text-rotation: 0
+    transparent: false
+    visible: false
+    width: 70
+    x: 100
+    y: 100
+  OverlayScrollLetters:
+    background-col: '#000000'
+    show-count: 1
+    font: SF Atarian System Extended
+    font-bold: false
+    font-italic: false
+    font-size: 20.0
+    height: 54
+    text-align: .5
+    text-col: '#C5C5C5'
+    text-rotation: 0
+    transparent: false
+    visible: false
+    width: 54
+    x: 108
+    y: 108
   ControllerType:
     background-col: '#000000'
     font: SF Atarian System Extended
@@ -411,7 +443,7 @@ options:
     font-bold: false
     font-italic: false
     font-size: 12.0
-    height: 198
+    height: 175
     text-align: 0.5
     text-col: '#ABFF7C'
     text-rotation: 0
