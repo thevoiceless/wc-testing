@@ -76,10 +76,10 @@ class WahCade:
 
     def get_layout_item_properties(self, lines, offset):
         """get properties for item in layout"""
-        # The properties of a layout component are in a well-defined,
-        # but not well-documented, order after the first item in
-        # _lines as identified by the offset param. Incrementing
-        # the offset allows access to the properties in order
+        # The layout file is essentially divided into 13-line blocks, with each line
+        # containing the value for a certain attribute. The attributes are accessed
+        # in order by adding to the given offset, which is the line number of the
+        # first attribute. This is repeated for everything in the list of layout items
         data = {}
         data['visible'] = (lines[offset].lower() == 'true') # scrubs all chars to lowercase, generates bool on compare
         data['transparent'] = (lines[offset + 1] == '1')
@@ -98,7 +98,7 @@ class WahCade:
         data['y'] = int(lines[offset + 10])
         data['width'] = int(lines[offset + 11])
         data['height'] = int(lines[offset + 12])
-        #done
+        # done
         # data is essentially a hash-map from various properties to names
         # to their corresponding values pulled from _lines
         return data

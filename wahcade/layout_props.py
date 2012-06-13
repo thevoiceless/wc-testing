@@ -24,6 +24,7 @@
 #
 from constants import *
 from glade2 import *
+from scrolled_list import ScrollList
 
 
 class DlgProps(GladeSupport):
@@ -250,7 +251,7 @@ class DlgProps(GladeSupport):
             self.rbTextAlignC.set_active(True)
         self.spnRotation.set_value(widget_props['text-rotation'])
         #list widget?
-        if widget.get_name() in ['Games List', 'Options List', 'Game History']:
+        if type(widget) is ScrollList:
             self.lblBar.set_sensitive(True)
             self.clrBar.set_sensitive(True)
             self.lblSelected.set_sensitive(True)

@@ -35,19 +35,25 @@ import commands
 from operator import itemgetter
 import subprocess
 from subprocess import Popen
+import yaml
 
 
 ## GTK Modules
-#gtk
+# GTK
 import pygtk                        # http://www.pygtk.org/
-if sys.platform != 'win32':
+onWindows = True
+if not sys.platform.startswith('win'):
     pygtk.require('2.0')            # Require GTKv2 (standard, as GTKv3 is still new)
+    onWindows = False
 import gtk
 import gobject                      # https://live.gnome.org/PyGObject
 gobject.threads_init()              # Initializes the the use of Python threading in the gobject module
 import pango                        # Library for rendering internationalized texts in high quality, http://zetcode.com/tutorials/pygtktutorial/pango/
 
-#dbus
+# Get system path separator
+sep = os.sep
+
+# dbus
 dbus_imported = False
 try:
     import dbus                     # Messaging library used by various desktop environments for interprocess communication, http://dbus.freedesktop.org/doc/dbus-python/doc/tutorial.html
@@ -77,8 +83,10 @@ import filters                          # filters.py, routines to read/write mam
 from mamewah_ini import MameWahIni      # Reads mamewah-formatted ini file
 import joystick                         # joystick.py, joystick class, uses pygame package (SDL bindings for games in Python)
 import MySQLdb
+import requests
+from xml.etree.ElementTree import fromstring
 from dummy_db import DummyDB
-#set gettext function
+# Set gettext function
 _ = gettext.gettext
 
 class WinMain(WahCade):
@@ -88,25 +96,17 @@ class WinMain(WahCade):
         """initialise main Wah!Cade window"""   # Docstring for this method
         
         # Try connecting to a database, otherwise
-        self.db_file = "confs/" + config_opts.db_config_file + ".txt"
+        self.db_file = "confs" + sep + config_opts.db_config_file + ".txt"
         try:
-            # Open the config file and extract the database connection information
-            #with open(config_opts.db_config_file, 'rt') as f:
-            with open(self.db_file, 'rt') as f:
+            with open(self.db_file, 'rt') as f: # Open the config file and extract the database connection information
                 self.props = {}  # Dictionary
                 for line in f.readlines():
                     val = line.split('=')
                     self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
-            self.db = MySQLdb.connect(host=self.props["host"], user=self.props["user"], passwd=self.props["passwd"], db=self.props["db"])
-            self.cursor = self.db.cursor()
-            self.db.autocommit(False) #Updates the DB results
-            self.db_connected = True
-        except:
-            self.db = DummyDB()
-            self.cursor = self.db.cursor()
-            self.db_connected = False
-            print "Could not connect to database"
-            
+                requests.get("http://localhost:" + self.props['port'] + "/RcadeServer") #attempt to make connection to server
+                self.connected = True
+        except: #any exeption would mean some sort of failed server connection
+            self.connected = False
         
         ### Set Global Variables
         global gst_media_imported, pygame_imported, old_keyb_events, debug_mode, log_filename
@@ -117,25 +117,27 @@ class WinMain(WahCade):
         pygame_imported = True
         old_keyb_events = False
         debug_mode = False
+        self.showOverlayThresh = 10
+        self.showImgThresh = 6
         
         ### USER PROFILE
         self.userpath = os.path.expanduser(CONFIG_DIR)  # CONFIG_DIR comes from constants.py
         if not os.path.exists(CONFIG_DIR):
-            # copy over ALL config files
+            # Copy over ALL config files
             self.copy_user_config('all')                # copy_user_config comes from wc_common.py
-            # now we've copied stuff, quit and tell the user
+            # Now we've copied stuff, quit and tell the user
             self.log_msg("First run, Wah!Cade setting user config profile in: "+ self.userpath,0)   # log_msg comes from wc_common.py
             self.log_msg("Restart after configuring (run wahcade-setup or see the README file).",0)
             sys.exit(0)
         else:
-            #update current config
+            # Update current config
             self.copy_user_config()
-            # now we've copied stuff, quit and tell the user
+            # Now we've copied stuff, quit and tell the user
             self.log_msg("Wah!Cade updating user config files in: "+ self.userpath)
 
         ### SETUP WAHCADE INI FILE
         self.wahcade_ini = MameWahIni(os.path.join(CONFIG_DIR, 'wahcade.ini'))
-        ## read in options wahcade.ini, 
+        ## Read in options wahcade.ini, 
         self.lck_time = self.wahcade_ini.getint('lock_time')        # getint comes from mamewah_ini.py
         self.keep_aspect = self.wahcade_ini.getint('keep_image_aspect')
         self.scrsave_delay = self.wahcade_ini.getint('delay')
@@ -162,7 +164,7 @@ class WinMain(WahCade):
  
         ### SETUP EMULATOR INI FILE       
         self.current_emu = self.wahcade_ini.get('current_emulator')
-        self.emu_ini = MameWahIni(os.path.join(CONFIG_DIR, 'ini/' + self.current_emu + '.ini'))
+        self.emu_ini = MameWahIni(os.path.join(CONFIG_DIR, 'ini' + sep + self.current_emu + '.ini'))
         ## read in options emulator.ini,        
         self.emumovieprevpath = self.emu_ini.get('movie_preview_path')
         self.emumovieartworkno = self.emu_ini.getint('movie_artwork_no')
@@ -187,7 +189,7 @@ class WinMain(WahCade):
                 self.log_msg('Lock File removed successfully')
 
         ### WINDOW SETUP            
-        #build the main window
+        # Build the main window
         self.winMain = gtk.Window()                 # http://www.pygtk.org/docs/pygtk/class-gtkwindow.html
         self.fixd = gtk.Fixed()                     # http://www.pygtk.org/docs/pygtk/class-gtkfixed.html
         self.imgBackground = gtk.Image()            # http://www.pygtk.org/docs/pygtk/class-gtkimage.html
@@ -220,35 +222,12 @@ class WinMain(WahCade):
         self.lblControllerType = gtk.Label()
         self.lblDriverStatus = gtk.Label()
         self.lblCatVer = gtk.Label()
-        self.lblHighScoreTitle = gtk.Label()
+        self.lblHighScoreHeading = gtk.Label()
         self.lblHighScoreData = gtk.Label()
         self.lblOverlayScrollLetters = gtk.Label()
+
         # create scroll list widget
-        self.sclGames = ScrollList()
-        # image & label lists
-        self._layout_items = [
-            (8, self.imgMainLogo),              # Weird gray area at top of window
-            (21, self.lblGameListIndicator),    # Label above games list
-            (34, self.lblEmulatorName),         # Label above artwork
-            (60, self.lblGameSelected),         # Label displaying selected game number out of the total
-            (73, self.imgArtwork1),             # Large game image in top right
-            (86, self.imgArtwork2),             # Smaller game image in the lower right
-            (99, self.imgArtwork3),             # Large game image in top center
-            (112, self.imgArtwork4),            # Large game image in top center
-            (125, self.imgArtwork5),            # Large game image in top center
-            (138, self.imgArtwork6),            # Large game image in top center with background
-            (151, self.imgArtwork7),            # Large game image in top center
-            (164, self.imgArtwork8),            # Large game image in top center
-            (177, self.imgArtwork9),            # Large game image in top center
-            (190, self.imgArtwork10),           # Large game image in top center
-            (47, self.sclGames),                # Game list
-            (203, self.lblGameDescription),     # Which game is selected
-            (216, self.lblRomName),             # Rom name
-            (229, self.lblYearManufacturer),    # Year
-            (242, self.lblScreenType),          # Screen
-            (255, self.lblControllerType),      # Controller
-            (268, self.lblDriverStatus),        # Driver
-            (281, self.lblCatVer)]              
+        self.sclGames = ScrollList() 
         self._main_images = [
             self.imgArtwork1,
             self.imgArtwork2,
@@ -272,31 +251,147 @@ class WinMain(WahCade):
             self.lblControllerType,
             self.lblDriverStatus,
             self.lblCatVer] 
-        # add widgets to main window
+        # Add widgets to main window
         self.current_window = 'main'
         self.fixd.add(self.imgBackground)
         self.imgBackground.show()
         
-        # Temp for displaying high score data
-        # TODO: Finalize this
-        self.lblHighScoreTitle.set_markup('<span color="#0099cc" size="14000">High Scores</span>')
-        self.fixd.put(self.lblHighScoreTitle, 200, 510)
-        self.lblHighScoreTitle.show()
-        
-        # Formatting for the high score labels
-        self.highScoreDataMarkupHead = '<span color="white" size="12000">'
-        self.highScoreDataMarkupTail = '</span>'
-        # Formatting for the overlay letters
-        self.overlayMarkupHead = '<span color="white" size="20000">'
-        self.overlayMarkupTail = '</span>'
-        
         # Mark mame directory
-        self.mame_dir = self.emu_ini.get('emulator_executable')[:self.emu_ini.get('emulator_executable').rfind('/') + 1]
+        self.mame_dir = self.emu_ini.get('emulator_executable')[:self.emu_ini.get('emulator_executable').rfind(sep) + 1]
+        
+        # Set initial HiToText "read" command
+        self.htt_read = "HiToText.exe -r " + self.mame_dir
+        # Set initial HiToText "erase" command
+        self.htt_erase = "HiToText.exe -e " + self.mame_dir
         
         self.launched_game = False
         self.current_rom = ''
+               
+        # Video widget
+        self.video_playing = False
+        self.video_enabled = False
+        self.video_timer = None
+        self.video_player = None
+        self.drwVideo.show()
+        self.fixd.add(self.drwVideo)
+
+        # List
+        self.sclGames.auto_update = False
+        self.sclGames.display_limiters = self.display_limiters
+        # Set window properties
+        self.winMain.set_position(gtk.WIN_POS_NONE)
+        self.winMain.set_type_hint(gtk.gdk.WINDOW_TYPE_HINT_NORMAL)
+        self.winMain.set_title('Wah!Cade')
+        # Init random engine
+        random.seed()
+        # Build list
+        self.lsGames = []
+        self.lsGames_len = 0
+        # Timers
+        self.scrsave_time = time.time()
+       
+        ### Create options window
+        self.options = WinOptions(self)
+        self.options.winOptions.hide()
+        ### Create message window
+        self.message = WinMessage(self)
+        self.message.winMessage.hide()
+        ### Create screen saver window
+        self.scrsaver = WinScrSaver(self)
+        self.scrsaver.winScrSaver.hide()
+        self.scrsave_timer = None
+        ### Create history viewer window
+        self.cpviewer = None
+        self.histview = WinHistory(self)
+        ### Create CP viewer window
+        self.cpviewer = WinCPViewer(self)
+        self.hide_window()
         
-        # Load list of games supported by HiToText
+        ### Build list of emulators
+        self.emu_lists = self.buildemulist()            # wc_common.py
+        
+        ### Check that current emu exists...
+        el = [e[1] for e in self.emu_lists]
+        if self.current_emu not in el:
+            #...no, switch to one that does
+            self.current_emu = el[0]
+            self.wahcade_ini.set('current_emulator', self.current_emu)  # mamewah_ini.py
+        
+        # Collect all image & label lists
+        self._main_items = [
+            (8, self.imgMainLogo, "MainLogo"),                          # Weird gray area at top of window
+            (21, self.lblGameListIndicator, "GameListIndicator"),       # Label above games list
+            (34, self.lblEmulatorName, "EmulatorName"),                 # Label above artwork
+            (60, self.lblGameSelected, "GameSelected"),                 # Label displaying selected game number out of the total
+            (73, self.imgArtwork1, "MainArtwork1"),                     # Large game image in top right
+            (86, self.imgArtwork2, "MainArtwork2"),                     # Smaller game image in the lower right
+            (99, self.imgArtwork3, "MainArtwork3"),                     # Large game image in top center
+            (112, self.imgArtwork4, "MainArtwork4"),                    # Large game image in top center
+            (125, self.imgArtwork5, "MainArtwork5"),                    # Large game image in top center
+            (138, self.imgArtwork6, "MainArtwork6"),                    # Large game image in top center with background
+            (151, self.imgArtwork7, "MainArtwork7"),                    # Large game image in top center
+            (164, self.imgArtwork8, "MainArtwork8"),                    # Large game image in top center
+            (177, self.imgArtwork9, "MainArtwork9"),                    # Large game image in top center
+            (190, self.imgArtwork10, "MainArtwork10"),                  # Large game image in top center
+            (47, self.sclGames, "GameList"),                            # Game list
+            (203, self.lblGameDescription, "GameDescription"),          # Which game is selected
+            (216, self.lblRomName, "RomName"),                          # Rom name
+            (229, self.lblYearManufacturer, "YearManufacturer"),        # Year
+            (242, self.lblScreenType, "ScreenType"),                    # Screen
+            (255, self.lblControllerType, "ControllerType"),            # Controller
+            (268, self.lblDriverStatus, "DriverStatus"),                # Driver
+            (281, self.lblCatVer, "CatVer"),
+            (552, self.overlayBG, "OverlayBG"),                         # Overlay scroll letter background image
+            (552, self.lblOverlayScrollLetters, "OverlayScrollLetters"),# Overlay scroll letters
+            (-1, self.lblHighScoreHeading, "HighScoreHeading"),         # High score heading
+            (-1, self.lblHighScoreData, "HighScoreData")]               # High score data
+        self._options_items = [
+            (301, self.options.lblHeading, "OptHeading"),               # Options window title
+            (314, self.options.sclOptions, "OptionsList"),              # Options list
+            (327, self.options.lblSettingHeading, "SettingHeading"),    # "Current setting"
+            (340, self.options.lblSettingValue, "SettingValue")]        # Value of current setting
+        self._message_items = [      
+            (357, self.message.lblHeading, "MsgHeading"),               # Message window title
+            (370, self.message.lblMessage, "Message"),                  # Message displayed in message window
+            (383, self.message.lblPrompt, "Prompt")]
+        self._screensaver_items = [              
+            (396, self.scrsaver.imgArtwork1, "ScrArtwork1"),
+            (409, self.scrsaver.imgArtwork2, "ScrArtwork2"),
+            (422, self.scrsaver.imgArtwork3, "ScrArtwork3"),
+            (435, self.scrsaver.imgArtwork4, "ScrArtwork4"),
+            (448, self.scrsaver.imgArtwork5, "ScrArtwork5"),
+            (461, self.scrsaver.imgArtwork6, "ScrArtwork6"),
+            (474, self.scrsaver.imgArtwork7, "ScrArtwork7"),
+            (487, self.scrsaver.imgArtwork8, "ScrArtwork8"),
+            (500, self.scrsaver.imgArtwork9, "ScrArtwork9"),
+            (513, self.scrsaver.imgArtwork10, "ScrArtwork10"),
+            (526, self.scrsaver.lblGameDescription, "GameDescription"),
+            (539, self.scrsaver.lblMP3Name, "MP3Name")]
+        self._layout_items = {'main': self._main_items, 'options': self._options_items,
+                              'message': self._message_items, 'screensaver': self._screensaver_items}
+          
+        # Initialize and show primary Fixd containers, and populate approrpriately
+        self.fixd.show()
+        self.winMain.add(self.fixd)
+        # Add everything to the main Fixd object, wrapping in an EVB as appropriate
+        for w_set_name in self._layout_items:
+            for offset, widget, name in self._layout_items[w_set_name]:
+                if widget.get_parent():
+                    pass
+                elif not (type(widget) is ScrollList):
+                    self.fixd.add(widget)
+                    # Needed?
+                    #self.fixd.add(self.make_evb_widget(widget))
+                else:
+                    self.fixd.add(widget.fixd)
+            
+        ### Load list
+        self.current_list_ini = None
+        self.emu_ini = None
+        self.layout_file = ''
+        self.load_emulator()
+        
+                # Load list of games supported by HiToText
         self.supported_games = set()
         self.supported_game_file = open('supported_games.lst')
         for line in self.supported_game_file:
@@ -305,110 +400,30 @@ class WinMain(WahCade):
         # Temporary high score stuff
         # TODO: finalize this
         self.lblHighScoreData.set_markup('<span color="white" size="13000">1. \tName\t\t\tScore</span>')
-        #Initial building of the database for games
-        if self.db_connected:
-            for rom in self.supported_games:
-                query = "SELECT * FROM game WHERE game.rom_name = '" + rom + "'"
-                self.cursor.execute(query)
-                #if game is not in database
-                if self.cursor.rowcount == 0:
-                    query = "INSERT INTO `" + self.props["db"] + "`.`game` (`version`, `game_name`, `rom_name`) VALUES (0, '', '" + rom + "')"
-                    self.cursor.execute(query)
-            self.db.autocommit(True)
-            
-        
-        self.lblHighScoreData.set_markup('<span color="white" size="13000">1. \tName\t\t\tScore</span>')
-        self.fixd.put(self.lblHighScoreData, 120, 540)
         self.lblHighScoreData.show()
         
-        self.fixd.show()
-        self.winMain.add(self.fixd)
-        for line, widget in self._layout_items:
-            #print widget.get_name()
-            if widget != self.sclGames:
-                self.fixd.add(self.make_evb_widget(widget))     # wc_common.py
-            else:
-                self.fixd.add(widget.fixd)
+        #Get a list of games already on the server
+        if self.connected:
+            url = "http://localhost:" + self.props['port'] + "/RcadeServer/rest/game/"
+            data = requests.get(url)
         
-        # video widget
-        self.video_playing = False
-        self.video_enabled = False
-        self.video_timer = None
-        self.video_player = None
-        self.drwVideo.show()
-        self.fixd.add(self.drwVideo)
-
-        # list
-        self.sclGames.auto_update = False
-        self.sclGames.display_limiters = False
-        # set window properties
-        self.winMain.set_position(gtk.WIN_POS_NONE)
-        self.winMain.set_type_hint(gtk.gdk.WINDOW_TYPE_HINT_NORMAL)
-        self.winMain.set_title('Wah!Cade')
-        # init random engine
-        random.seed()
-        # build list
-        self.lsGames = []
-        self.lsGames_len = 0
-        # timers
-        self.scrsave_time = time.time()
-       
-        ### CREATE OPTIONS WINDOW
-        self.options = WinOptions(self)
-        self.options.winOptions.hide()
-        ### create message window
-        self.message = WinMessage(self)
-        self.message.winMessage.hide()
-        ### create screen saver window
-        self.scrsaver = WinScrSaver(self)
-        self.scrsaver.winScrSaver.hide()
-        self.scrsave_timer = None
-        ### create history viewer window
-        self.cpviewer = None
-        self.histview = WinHistory(self)
-        ### create cp viewer window
-        self.cpviewer = WinCPViewer(self)
-        self.hide_window()
-        
-        # add options, message & screen saver widgets to _layout_items
-        self._layout_items += [
-            (301, self.options.lblHeading),             # Options window title
-            (314, self.options.sclOptions),             # Options list
-            (327, self.options.lblSettingHeading),      # "Current setting"
-            (340, self.options.lblSettingValue),        # Value of current setting
-            (357, self.message.lblHeading),             # Message window title
-            (370, self.message.lblMessage),             # Message displayed in message window
-            (383, self.message.lblPrompt),              
-            (396, self.scrsaver.imgArtwork1),
-            (409, self.scrsaver.imgArtwork2),
-            (422, self.scrsaver.imgArtwork3),
-            (435, self.scrsaver.imgArtwork4),
-            (448, self.scrsaver.imgArtwork5),
-            (461, self.scrsaver.imgArtwork6),
-            (474, self.scrsaver.imgArtwork7),
-            (487, self.scrsaver.imgArtwork8),
-            (500, self.scrsaver.imgArtwork9),
-            (513, self.scrsaver.imgArtwork10),
-            (526, self.scrsaver.lblGameDescription),
-            (539, self.scrsaver.lblMP3Name)]
-        
-        
-        ### build list of emulators
-        self.emu_lists = self.buildemulist()            # wc_common.py
-        
-        ### check that current emu exists...
-        el = [e[1] for e in self.emu_lists]
-        if self.current_emu not in el:
-            #...no, switch to one that does
-            self.current_emu = el[0]
-            self.wahcade_ini.set('current_emulator', self.current_emu)  # mamewah_ini.py
+            #map rom name to associated game name
+            romToName = {}
+            for sublist in self.lsGames: 
+                romToName[sublist[1]] = sublist[0]
             
-        ### load list
-        self.current_list_ini = None
-        self.emu_ini = None
-        self.layout_file = ''
-        self.load_emulator()
-        
+            #Get a list of games already on the server
+            data = fromstring(data.text)
+            games_on_server = []
+            for game in data.getiterator('game'):
+                games_on_server.append(game.find('romName').text)
+    
+            #add games to the server if not on the server
+            for rom in self.supported_games:
+                if rom not in games_on_server and rom in romToName:
+                    post_data = {"romName":rom, "gameName":romToName[rom]}
+                    requests.post(url, post_data)
+
         self.check_music_settings()
         
         self.winMain.show()
@@ -422,7 +437,7 @@ class WinMain(WahCade):
         self.display = self.screen.get_display()
         self.old_mouse = (0, 0)
         
-        #fullscreen
+        # Fullscreen
         if self.screentype == 1:
             self.log_msg('Fullscreen mode')
             self.winMain.fullscreen()
@@ -430,17 +445,17 @@ class WinMain(WahCade):
             self.log_msg('Windowed mode')
             pass
         
-        # show the window to the user
+        # Show the window to the user
         self.winMain.present()
         
         if self.splash_use == 1:
-            ### hide splash
+            ### Hide splash
             self.splash.destroy()
         self.do_events()                # wc_common.py
         self.on_winMain_focus_in()
 
 
-        #### start intro movie
+        #### Start intro movie
         if gst_media_imported and os.path.isfile(self.intro_movie):
             self.scrsaver.play_movie(
                 self.intro_movie,
@@ -452,10 +467,10 @@ class WinMain(WahCade):
                 self.gstMusic.play()
 
         ### INPUT CONFIGURATION
-        # input defaults
+        # Input defaults
         self.pointer_grabbed = False
        
-        # get keyboard & mouse events
+        # Get keyboard & mouse events
         self.sclGames.connect('update', self.on_sclGames_changed)           # scrolled_list.py
         self.sclGames.connect('mouse-left-click', self.on_sclGames_changed)
         self.sclGames.connect('mouse-right-click', self.on_winMain_key_press)
@@ -482,7 +497,7 @@ class WinMain(WahCade):
             'UP_1_LETTER', 'DOWN_1_LETTER']
         self.keypress_count = 0
        
-        #### joystick setup
+        #### Joystick setup
         self.joy = None
         if (self.joyint == 1) and pygame_imported:
             self.joy = joystick.joystick(debug_mode)
@@ -491,23 +506,23 @@ class WinMain(WahCade):
             self.start_timer('joystick')
     
         self.on_sclGames_changed()
-               
+        
         ### __INIT__ Complete
         self.init = False
         
     def on_winMain_destroy(self, *args):
         """done, quit the application"""
-        #stop vid playing if necessary
+        # Stop video playing if necessary
         self.stop_video()
-        #save ini files
+        # Save ini files
         self.wahcade_ini.write()
         self.emu_ini.write()
         self.current_list_ini.write()
-        #write fav list
+        # Write favorites list
         filters.write_fav_list(
             os.path.join(CONFIG_DIR, 'files', '%s.fav' % (self.current_emu)),
             self.emu_favs_list)
-        #exit gtk loop
+        # Exit GTK loop
         gtk.main_quit()
         sys.exit(0)
 
@@ -527,21 +542,21 @@ class WinMain(WahCade):
                     hal = dbus.Interface(hal_obj, 'org.freedesktop.Hal.Device.SystemPowerManagement')
         if exit_mode == 'default':
             if gst_media_imported and exit_movie:
-                #start exit movie
+                # Start exit movie
                 self.log_msg('Exit with movie file, exit mode selected')
                 self.scrsaver.play_movie(exit_movie,'exit')
             else:
                 self.log_msg('Default, exit mode selected')
                 self.on_winMain_destroy()
         elif exit_mode == 'reboot':
-            #reboot
+            # Reboot
             self.log_msg('Reboot, exit mode selected')
             try:
                 rv = ck.Restart()
             except: 
                 rv = hal.Reboot()
         elif exit_mode == 'shutdown':
-            #turn off
+            # Turn off
             self.log_msg('Shutdown, exit mode selected')
             try:
                 rv = ck.Stop()
@@ -551,28 +566,40 @@ class WinMain(WahCade):
 
     def on_winMain_focus_in(self, *args):
         """window received focus"""
-        #if returning from a game rather than something like ALT+Tab
+        # If returning from a game rather than something like ALT+Tab
         if self.launched_game:
             self.launched_game = False
-            #if the game supports high scores run the HiToText executions
+            # If the game supports high scores run the HiToText executions
             if self.current_rom in self.supported_games:
-                #testString = commands.getoutput("wine HiToText.exe -r " + self.mame_dir + "hi/" + self.current_rom + ".hi 2>/dev/null")
-                testString = commands.getoutput("mono HiToText.exe -r " + self.mame_dir + "hi/" + self.current_rom + ".hi")
-                print testString
+                htt_command = self.htt_read
+                if not onWindows:
+                    htt_command = "mono " + self.htt_read
+                #testString = commands.getoutput("wine HiToText.exe -r " + self.mame_dir + "hi" + sep + self.current_rom + ".hi 2>/dev/null")
+                #testString = commands.getoutput("mono HiToText.exe -r " + self.mame_dir + "hi" + sep + self.current_rom + ".hi")
+                testString = commands.getoutput(htt_command + "hi" + sep + self.current_rom + ".hi")
                 if 'Error' in testString:
-                    #testString = commands.getoutput("wine HiToText.exe -r " + self.mame_dir + "nvram/" + self.current_rom + ".nv 2>/dev/null")
-                    testString = commands.getoutput("mono HiToText.exe -r " + self.mame_dir + "nvram/" + self.current_rom + ".nv")
+                    #testString = commands.getoutput("wine HiToText.exe -r " + self.mame_dir + "nvram" + sep + self.current_rom + ".nv 2>/dev/null")
+                    #testString = commands.getoutput("mono HiToText.exe -r " + self.mame_dir + "nvram" + sep + self.current_rom + ".nv")
+                    testString = commands.getoutput(htt_command + "nvram" + sep + self.current_rom + ".nv")
                 if not 'Error' in testString:
-                    self.parse_high_score_text(testString.rstrip())
+                    valid_string = ''
+                    for i in testString:
+                        if (ord(i)<128 and ord(i)>31) or ord(i) == 13 or ord(i) == 10:
+                            valid_string += i
+                        else:
+                            valid_string += '?'
+                    testString = valid_string
+                    if self.connected:
+                        self.parse_high_score_text(testString)
             
         self.pointer_grabbed = False
         if self.sclGames.use_mouse and not self.showcursor:
-            #need to grab?
+            # Need to grab?
             mw_keys = ['MOUSE_LEFT', 'MOUSE_RIGHT', 'MOUSE_UP', 'MOUSE_DOWN']
             for mw_key in mw_keys:
                 mw_functions = self.ctrlr_ini.reverse_get(mw_key)
                 if mw_functions:
-                    #grab pointer
+                    # Grab pointer
                     r = gtk.gdk.pointer_grab(
                         self.winMain.window,
                         event_mask= gtk.gdk.POINTER_MOTION_MASK |
@@ -583,7 +610,7 @@ class WinMain(WahCade):
                         #confine_to=self.winMain.window)
                     if r==gtk.gdk.GRAB_SUCCESS:
                         self.pointer_grabbed = True
-                    #done
+                    # Done
                     #break
         # Remove Lock File workaround
         self.log_msg("Here", "debug")
@@ -605,38 +632,35 @@ class WinMain(WahCade):
         
     def parse_high_score_text(self, text_string):
         """Parse the text file for high scores. 0 scores are not sent"""
-        props = {}
+        high_score_table = {}
         index = 1
-        #go through each line of the the high score result
+        # Go through each line of the the high score result
         for line in iter(text_string.splitlines()):
             line = line.split('|')
+            
             if line[0] != '':
-                #if it is the first line treat it as the format
-                if index == 1:
+                if index == 1: # If it is the first line treat it as the format
                     _format = line
                     index += 1
                     for column in line:
-                        props[column] = '' #initialize dict values
+                        high_score_table[column] = '' # Initialize dictionary values
                 else:
-                    #Go to length of line rather than format because format can be wrong sometimes
-                    for i in range(0, len(line)):
-                        props[_format[i]] = line[i].rstrip()
-                    #Add to DB if score not zero
-                    if 'NAME' in props and 'SCORE' in props:
-                        if props['SCORE'] is not '0':
-                            query = "SELECT * FROM player WHERE player.name = '" + props['NAME'] + "'"
-                            self.cursor.execute(query)
-                            #if player doesn't exist add to database
-                            if self.cursor.rowcount == 0:
-                                randNum = random.randint(1, 5000)
-                                query = "INSERT INTO `" + self.props["db"] + "`.`player` (`version`, `name`, `playerid`) VALUES (0, '" + props['NAME'] + "', '" + str(randNum) + "')"
-                                self.cursor.execute(query)
-                            query = "INSERT INTO `" + self.props["db"] + "`.`score` (`version`, `cabinetid`, `date_created`, `game_id`, `player_id`, `score`, `arcade_name`) SELECT 0, 0, NOW(), game.id, player.id, " + props['SCORE'] + ", '" + props['NAME'] + "' FROM player, game WHERE player.name = '" + props['NAME'] + "' AND game.rom_name = '" + self.current_rom + "'"
-                            self.cursor.execute(query)
-        
-    def insert_into_db(self):
-        """May implement this, may not be needed"""
-        return
+                    for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
+                        high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
+                    
+                    if 'NAME' in high_score_table and 'SCORE' in high_score_table: # Add to DB if score not zero
+                        if high_score_table['SCORE'] is not '0':
+                            url = "http://localhost:" + self.props['port'] + "/RcadeServer/rest/player/"
+                            r = requests.get(url + high_score_table['NAME'])
+                            if r.text == 'null': #check if player exists and add them if they don't
+                                randNum = random.randint(1, 5000) #TODO: replacing RFID for now
+                                post_data = {"name":high_score_table['NAME'], "playerID":randNum}
+                                r = requests.post(url, post_data)
+                            url = "http://localhost:" + self.props['port'] + "/RcadeServer/rest/score/"
+                            post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": '0', "game":self.current_rom, "player":high_score_table['NAME']}                         
+                            r = requests.post(url, post_data)
+
+
 
     def on_winMain_key_press(self, widget, event, *args):
         """key pressed - translate to mamewah setup"""
@@ -652,48 +676,46 @@ class WinMain(WahCade):
                     joystick_key = args[1]
                     if debug_mode:
                         self.log_msg("on_winMain_key_press: joystick:" + str(joystick_key),1)
-            #reset screen saver time (and turn off if necessary)
+            # Reset screen saver time (and turn off if necessary)
             self.scrsave_time = time.time()
             if self.scrsaver.running:
                 self.scrsaver.stop_scrsaver()
                 #print "on_winMain_key_press: callifile_listsng start timer"
                 self.start_timer('scrsave')
             if event.type == gtk.gdk.MOTION_NOTIFY and self.pointer_grabbed:
-                #mouse moved
+                # Mouse moved
                 x, y = event.get_coords()
                 dx = x - self.old_mouse[0]
                 dy = y - self.old_mouse[1]
-                #print "x,y=", x,y, "    ox=,oy=",self.old_mouse[0],self.old_mouse[1], "    dx=,dy=",dx,dy
                 if abs(dx) >= abs(dy):
-                    #x-axis
+                    # X-axis
                     mm = dx
                     if mm < -3.0:
                         mw_keys = ['MOUSE_LEFT']
                     elif mm > 3.0:
                         mw_keys = ['MOUSE_RIGHT']
                 else:
-                    #y-axis
+                    # Yy-axis
                     mm = dy
                     if mm < -3.0:
                         mw_keys = ['MOUSE_UP']
                     elif mm > 3.0:
                         mw_keys = ['MOUSE_DOWN']
                 self.keypress_count += int(abs(mm) / 10) + 1
-                #print "mm=",mm, "    keyp=",self.keypress_count
                 if not mw_keys:
                     self.keypress_count = 0
                     if widget == self.winMain:
                         self.sclGames.update()
                     return
-                #warp pointer - stops mouse hitting screen edges
+                # Warp pointer - stops mouse hitting screen edges
                 winpos = self.winMain.get_position()
                 self.old_mouse = (200, 200)
                 self.display.warp_pointer(self.screen, winpos[0] + 200, winpos[1] + 200)
             elif event.type == gtk.gdk.BUTTON_RELEASE:
-                #mouse click
+                # Mouse click
                 mw_keys = ['MOUSE_BUTTON%s' % (event.button - 1)]
             elif event.type == gtk.gdk.SCROLL:
-                #mouse scroll wheel
+                # Mouse scroll wheel
                 if event.direction in [gtk.gdk.SCROLL_UP, gtk.gdk.SCROLL_LEFT]:
                     mw_keys = ['MOUSE_SCROLLUP']
                 elif event.direction in [gtk.gdk.SCROLL_DOWN, gtk.gdk.SCROLL_RIGHT]:
@@ -705,17 +727,16 @@ class WinMain(WahCade):
                     self.log_msg("  key-press",1)
                 self.keypress_count += 1
                 if joystick_key:
-                    #joystick action
+                    # Joystick action
                     mw_keys = [joystick_key]
                 else:
-                    #keyboard pressed, get gtk keyname
+                    # Keyboard pressed, get GTK keyname
                     keyname = gtk.gdk.keyval_name(event.keyval).lower()
-                    #got something?
+                    # Got something?
                     if keyname not in mamewah_keys:
                         return
-                    #get mamewah keyname
+                    # Get mamewah keyname
                     mw_keys = mamewah_keys[keyname]
-                    #print keyname, "pressed,", mw_keys
                     if mw_keys == []:
                         return
             elif event.type == gtk.gdk.KEY_RELEASE:
@@ -723,7 +744,7 @@ class WinMain(WahCade):
                 # Updates ROM image after scrolling stops
                 game_info = filters.get_game_dict(self.lsGames[self.sclGames.get_selected()])
                 for i, img in enumerate(self.visible_img_list):
-                    if self.keypress_count < 50:
+                    if self.keypress_count == 0:
                         img_filename = self.get_artwork_image(
                             self.visible_img_paths[i],
                             self.layout_path,
@@ -734,9 +755,9 @@ class WinMain(WahCade):
                 #self.lblOverlayScrollLetters.set_visible(False)
                 self.lblOverlayScrollLetters.hide()
                 self.overlayBG.hide()
-                #keyboard released, update labels, images, etc
+                # Keyboard released, update labels, images, etc
                 if widget == self.winMain:
-                    #only update if no further events pending
+                    # Only update if no further events pending
                     self.sclGames.update()
                     if old_keyb_events:
                         if debug_mode:
@@ -747,33 +768,30 @@ class WinMain(WahCade):
                             self.log_msg("  key-release",1)
                         self.sclGames.update()
                 if joystick_key:
-                    #don't need "release" joystick actions to be executed
+                    # Don't need "release" joystick actions to be executed
                     mw_keys = []
                     if debug_mode:
                         self.log_msg("  joystick: cleared_events",1)
-            #get mamewah function from key
+            # Get mamewah function from key
             for mw_key in mw_keys:
                 mw_functions = self.ctrlr_ini.reverse_get(mw_key)
                 if mw_functions:
                     break
             for mw_func in mw_functions:
-                #which function?
-                #print mw_func
+                # Which function?
                 if current_window == 'main':
                     # Display first two letters of selected game when scrolling quickly
-                    if self.keypress_count > 10:
+                    if self.keypress_count > self.showOverlayThresh:
                         self.overlayBG.show()
-                        overlayLetters = self.lsGames[self.sclGames.get_selected()][0][0:2]
+                        overlayLetters = self.lsGames[self.sclGames.get_selected()][0][0:self.lblOverlayScrollLetters.charShowCount]
                         self.lblOverlayScrollLetters.set_markup(_('%s%s%s') % (self.overlayMarkupHead, overlayLetters, self.overlayMarkupTail))
                         #self.lblOverlayScrollLetters.set_visible(True)
                         self.lblOverlayScrollLetters.show()
-                    #main form
+                    # Main form
                     if mw_func == 'UP_1_GAME':
-                        #print "keypresses:", self.keypress_count
                         self.play_clip('UP_1_GAME')
                         self.sclGames.scroll((int(self.keypress_count / 20) * -1) - 1)
                     elif mw_func == 'DOWN_1_GAME':
-                        #print "keypresses:", self.keypress_count
                         self.play_clip('DOWN_1_GAME')
                         self.sclGames.scroll(int(self.keypress_count / 20) + 1)
                     elif mw_func == 'UP_1_PAGE':
@@ -787,7 +805,6 @@ class WinMain(WahCade):
                         if self.lsGames_len == 0:
                             break
                         toLetter = self.lsGames[self.sclGames.get_selected()][0][0]
-                        print "to letter:", toLetter
                         games = [r[0] for r in self.lsGames]
                         games = games[:self.sclGames.get_selected()]
                         games.reverse()
@@ -804,7 +821,6 @@ class WinMain(WahCade):
                         if self.lsGames_len == 0:
                             break
                         toLetter = self.lsGames[self.sclGames.get_selected()][0][0]
-                        print "to letter:", toLetter
                         games = [r[0] for r in self.lsGames]
                         games = games[self.sclGames.get_selected():]
                         i = -1
@@ -919,7 +935,7 @@ class WinMain(WahCade):
                         self.options.set_menu('exit')
                         self.show_window('options')
                 elif current_window == 'options':
-                    #options form
+                    # Options form
                     if mw_func == 'OP_UP_1_OPTION':
                         self.play_clip('OP_UP_1_OPTION')
                         self.options.sclOptions.scroll(-1)
@@ -948,7 +964,7 @@ class WinMain(WahCade):
                             self.options.set_menu('list_options')
                         elif self.options.current_menu == 'generate_ftr':
                             if self.current_filter_changed:
-                                #generate new filter
+                                # Generate new filter
                                 self.options.set_menu('generate_new_list')
                             else:
                                 self.options.set_menu('list_options')
@@ -959,13 +975,13 @@ class WinMain(WahCade):
                         elif self.options.current_menu == 'music_dir':
                             self.options.set_menu('music')
                 elif current_window == 'scrsaver':
-                    #screensaver
+                    # Screensaver
                     if mw_func == 'SS_FIND_N_SELECT_GAME':
                         self.sclGames.set_selected(self.scrsaver.game_idx)
-                    #stop into / exit movie playing if any key is pressed
+                    # Stop intro / exit movie playing if any key is pressed
                     if self.scrsaver.movie_type in ('intro', 'exit'):
                         self.scrsaver.video_player.stop()
-                #history viewer
+                # History viewer
                 elif current_window == 'history':
                     if mw_func == 'UP_1_GAME':
                         self.play_clip('UP_1_GAME')
@@ -985,7 +1001,7 @@ class WinMain(WahCade):
                             'LAUNCH_GAME']:
                         self.hide_window('history')
                         self.auto_launch_external_app()
-                #control panel viewer
+                # Control panel viewer
                 elif current_window == 'cpviewer':
                     if mw_func in [
                             'EXIT_TO_WINDOWS',
@@ -993,11 +1009,11 @@ class WinMain(WahCade):
                             'LAUNCH_GAME']:
                         self.hide_window('cpviewer')
                         self.auto_launch_external_app()
-                #message window
+                # Message window
                 elif current_window == 'message':
                     if self.message.wait_for_key:
                         self.message.hide()
-            #force games list update if using mouse scroll wheel
+            # Force games list update if using mouse scroll wheel
             if 'MOUSE_SCROLLUP' in mw_keys or 'MOUSE_SCROLLDOWN' in mw_keys:
                 if widget == self.winMain:
                     self.play_clip('UP_1_GAME')
@@ -1005,31 +1021,26 @@ class WinMain(WahCade):
 
     def on_sclGames_changed(self, *args):
         """game selected"""
-        #formatting for the high score labels
-        #highScoreDataMarkupHead = '<span color="orange" size="12000">'
-        #highScoreDataMarkupTail = '</span>'
-
-        #print "on_sclGames_changed: sel=", self.sclGames.get_selected()
         self.game_ini_file = None
         self.stop_video()
         if self.sclGames.get_selected() > self.lsGames_len - 1:
-            #blank labels & images
+            # Blank labels & images
             for img in self.visible_img_list:
                 img.set_from_file(None)
             for lbl in self._main_labels:
                 lbl.set_text('')
             return
-        #set current game in ini file
+        # Set current game in ini file
         self.current_list_ini.set('current_game', self.sclGames.get_selected())
-        #get info to display in bottom right box
+        # Get info to display in bottom right box
         game_info = filters.get_game_dict(self.lsGames[self.sclGames.get_selected()])
         self.current_rom = game_info['rom_name']
-        #check for game ini file
+        # Check for game ini file
         game_ini_file = os.path.join(CONFIG_DIR, 'ini', '%s' % self.current_emu, '%s' % game_info['rom_name'] + '.ini' )
         if os.path.isfile(game_ini_file):
             self.log_msg(game_info['rom_name'] + " has custom ini file")
             self.game_ini_file = MameWahIni(game_ini_file)
-        #set layout text items
+        # Set layout text items
         self.lblGameDescription.set_text(game_info['game_name'])
         self.lblGameSelected.set_text(_('Game %s of %s selected') % (
             self.sclGames.get_selected() + 1,
@@ -1049,20 +1060,22 @@ class WinMain(WahCade):
             game_info['sound_status']))
         self.lblCatVer.set_text(game_info['category'])
 
-        #get high score data and display it
-        if not self.db_connected:
+        # Get high score data and display it        
+        if not self.connected:
             self.lblHighScoreData.set_markup(_('%s%s%s') % (self.highScoreDataMarkupHead, " NOT CONNECTED TO A DATABASE", self.highScoreDataMarkupTail))
         elif game_info['rom_name'] in self.supported_games:
             highScoreInfo = self.get_score_string()
             self.lblHighScoreData.set_markup(_('%s%s%s') % (self.highScoreDataMarkupHead, highScoreInfo, self.highScoreDataMarkupTail))
         else:
             self.lblHighScoreData.set_markup(_('%s%s%s') % (self.highScoreDataMarkupHead, "  HIGH SCORE NOT SUPPORTED", self.highScoreDataMarkupTail))        
-        #start video timer
+        # Start video timer
         if self.scrsaver.movie_type not in ('intro', 'exit'):
             self.start_timer('video')
-        #set layout images (at low scroll speeds)
+        # Set layout images (at low scroll speeds)
         for i, img in enumerate(self.visible_img_list):
-            if self.keypress_count < 50:
+            if self.keypress_count >= self.showImgThresh:
+                img.set_from_file(None)     # Don't display an image if starting to scroll quickly
+            else:
                 img_filename = self.get_artwork_image(
                     self.visible_img_paths[i],
                     self.layout_path,
@@ -1070,73 +1083,83 @@ class WinMain(WahCade):
                     self.current_emu,
                     (i + 1))
                 self.display_scaled_image(img, img_filename, self.keep_aspect, img.get_data('text-rotation'))
-            elif self.keypress_count == 50:
-                img.set_from_file(None)        # Make image screen go black
     
     def get_score_string(self):
         """Parse Scores from DB into display string"""
-        query = "SELECT player.name, score.score FROM player, score, game WHERE game.rom_name = '" + self.current_rom + "' AND player.id = score.player_id AND game.id = score.game_id ORDER BY score.score LIMIT 10"
-        self.cursor.execute(query)
-        numberOfTopScores = 10
+        url = "http://localhost:" + self.props['port'] + "/RcadeServer/rest/game/"
+        r = requests.get(url+self.current_rom+"/highscore")
+        score_string = r.text #string returned from server containing high scores
         index = 1
-        string=''
-        #determine the number of non-high score spots
-        numberOfTopScores -= int(self.cursor.rowcount)
-        for row in self.cursor.fetchall():
-            if index < 10:
-                string += "  "
-            if len(row[0]) > 5:
-                if str(row[1])[-3:] == ".00":
-                    string += str(str(index) + ". " + str(row[0][:5]) + "\t\t\t" + str(row[1])[:-3]) + "\n"
-                else:
-                    string += str(str(index) + ". " + str(row[0][:5]) + "\t\t\t" + str(row[1])) + "\n"
-            else:
-                if str(row[1])[-3:] == ".00":
-                    string += str(str(index) + ". " + str(row[0]) + "\t\t\t\t" + str(row[1])[:-3]) + "\n"
-                else:
-                    string += str(str(index) + ". " + str(row[0]) + "\t\t" + str(row[1])) + "\n"
-            index += 1
-        while numberOfTopScores > 0:
-            if index < 10:
-                string += "  "
-            string += str(index)
-            string += ". -------\t\t\t\t--------\n"
-            index += 1
-            numberOfTopScores -= 1
-        return string
         
+        if score_string != '[]':
+            score_string = score_string[1:-1] #trim leading and trailing [] from string
+            score_list = score_string.split(",")
+            name, score = zip(*(s.split(":") for s in score_list)) #split the list into name's and scores
+            score_list[:]=[]
+            score_string = ''
+            
+            for pair in range(len(name)): #take each name and score and tuple them together
+                paring = (name[pair].encode('utf8').strip(), score[pair].encode('utf8'))
+                score_list.append(paring)
+            
+            score_list = sorted(score_list, key=lambda score: score[1], reverse=True)            
+            
+            for name, score in score_list: #42 chars in a line
+                if index < 10: #format for leading spaces by numbers. Makes 1. match up with 10.
+                    score_string += "  "
+                if len(name) > 7:
+                    score_string += str(index) + ". " + name[:6] + ".\t" + " "*(24-len(score)) + score + "\n"
+                elif len(name) <= 3:
+                    score_string += str(index) + ". " + name + " "*(9-len(name)) + "\t" + " "*(24-len(score)) + score + "\n"
+                else:
+                    score_string += str(index) + ". " + name + " "*(7-len(name)) + "\t" + " "*(24-len(score)) + score + "\n"
+                index += 1
+            while index <= 10: #fill in un-used score spots
+                if index < 10:
+                    score_string += "  "
+                score_string += str(index) + ". " + "-"*12 + "\t" + " "*(24-6) + "-"*9 + "\n"
+                index += 1
+        else: #no high scores recorded
+            score_string = ''
+            while index <= 10:
+                if index < 10:
+                    score_string += "  "
+                score_string += str(index) + ". " + "-"*12 + "\t" + " "*(24-6) + "-"*9 + "\n"
+                index += 1
+            
+        return score_string
             
     def on_scrsave_timer(self):
         """timer event - check to see if we need to start video or screen saver"""
-        #need to start screen saver?
+        # Need to start screen saver?
         if int(time.time() - self.scrsave_time) >= self.scrsave_delay:
-            #yes, stop any vids playing
+            # Yes, stop any vids playing
             self.stop_video()
             if self.emu_ini.get('saver_type') in ['blank_screen', 'slideshow', 'movie', 'launch_scr']:
-                #start screen saver
+                # Start screen saver
                 self.scrsaver.start_scrsaver(self.emu_ini.get('saver_type'))
             else:
                 print _("Error: wrong screen saver type: [%s]") % (self.emu_ini.get('saver_type'))
             return False
-        #done
+        # Done
         return True
 
     def on_video_timer(self):
         """timer event - start video playing"""
-        #start video playing?
+        # Start video playing?
         if self.video_enabled and self.current_window == 'main':
-            #stop existing vid playing
+            # Stop existing vid playing
             self.stop_video()
-            #something in the list?
+            # Something in the list?
             if self.lsGames_len == 0:
                 return False
-            #get info
+            # Get info
             vid_filename = self.get_video_file(
                 self.emu_ini.get('movie_preview_path'),
                 filters.get_game_dict(self.lsGames[self.sclGames.get_selected()]))
             #print "vid_filename=",vid_filename
             if os.path.isfile(vid_filename):
-                #resize video vidget
+                # Resize video vidget
                 self.video_playing = True
                 img_w, img_h = self.video_artwork_widget.get_size_request()
                 xpos = (img_w - self.video_width) / 2
@@ -1147,15 +1170,15 @@ class WinMain(WahCade):
                 self.drwVideo.set_size_request(self.video_width, self.video_height)
                 self.drwVideo.set_property('visible', True)
                 self.video_artwork_widget.set_property('visible', False)
-                #set volume
+                # Set volume
                 if self.music_movies_mix == 'mute_movies':
                     vol = 0
                 else:
                     vol = self.wahcade_ini.getint('movie_volume')
                 self.video_player.set_volume(vol)
-                #start video
+                # Start video
                 self.video_player.play(vid_filename)
-        #done
+        # Done
         return False
 
     def stop_video(self):
@@ -1174,7 +1197,7 @@ class WinMain(WahCade):
         # Create array of available lists for current emulator
         file_lists = self.build_filelist("int", "ini", "(?<=-)\d+", self.current_emu, "-")
         current_idx = file_lists.index(self.current_list_idx) + direction
-        # find the next list then return number of list
+        # Find the next list then return number of list
         if current_idx == len(file_lists):
             new_idx = 0
         else:
@@ -1185,7 +1208,7 @@ class WinMain(WahCade):
         """call any automatically launched external applications
            then run currently selected game"""
         self.external_app_queue = self.emu_ini.get('auto_launch_apps').split(',')
-        self.external_app_queue.reverse() #get it into correct order
+        self.external_app_queue.reverse() # Get it into correct order
         if self.external_app_queue == ['']:
             self.external_app_queue = []
         if len(self.external_app_queue) > 0:
@@ -1196,12 +1219,12 @@ class WinMain(WahCade):
     def get_launch_options(self, opts):
         """returns parsed command line options"""
         d = {}
-        #minimize?
+        # Minimize?
         d['minimize_wahcade'] = ('{minimize}' in opts)
         d['play_music'] = ('{music}' in opts)
         if self.music_enabled and not d['play_music']:
             self.gstMusic.pause()
-        #replace markers with actual values
+        # Replace markers with actual values
         opts = opts.replace('[name]', self.lsGames[self.sclGames.get_selected()][GL_ROM_NAME])
         opts = opts.replace('[year]', self.lsGames[self.sclGames.get_selected()][GL_YEAR])
         opts = opts.replace('[manufacturer]', self.lsGames[self.sclGames.get_selected()][GL_MANUFACTURER])
@@ -1219,7 +1242,7 @@ class WinMain(WahCade):
         opts = opts.replace('[autorotate]', screen_set[self.layout_orientation])
         opts = opts.replace('[rompath]', self.emu_ini.get('rom_path'))
         # If multiple rom extensions are used, check which file is correct
-        # will break after first file is found
+        # Will break after first file is found
         romext = self.check_ext_on_game_launch(self.emu_ini.get('rom_extension'))
         try:
             opts = opts.replace('[romext]', romext)
@@ -1228,45 +1251,52 @@ class WinMain(WahCade):
         opts = opts.replace('{minimize}', '')
         opts = opts.replace('{music}', '')
         d['options'] = opts
-        #done
+        # Done
         return d
 
     def launch_game(self, cmdline_args=''):
         """run currently selected game"""
-        #collect any memory "leaks"
+        # Collect any memory "leaks"
         gc.collect()
-        #stop any vids playing
+        # Stop any vids playing
         self.stop_video()
-        #get rom name
+        # Get rom name
         if self.lsGames_len == 0:
             return
         rom = self.lsGames[self.sclGames.get_selected()][GL_ROM_NAME]
             
-        #show launch message
+        # Show launch message
         self.message.display_message(
             _('Starting...'),
             '%s: %s' % (rom, self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME]))
-        #Erase scores from hi score file of current game
+
+        # Erase scores from hi score file of current game
+        # Executable must be in same directory
         if rom in self.supported_games:
-            if os.path.exists(self.mame_dir + 'hi/' + rom + '.hi'):
-                #os.system('wine HiToText.exe -e ' + self.mame_dir + 'hi/' + rom + '.hi 2>/dev/null')
-                os.system('mono HiToText.exe -e ' + self.mame_dir + 'hi/' + rom + '.hi')
-            elif os.path.exists(self.mame_dir + 'nvram/' + rom + '.nv'):
-                #os.system('wine HiToText.exe -e ' + self.mame_dir + 'nvram/' + rom + '.nv 2>/dev/null')
-                os.system('mono HiToText.exe -e ' + self.mame_dir + 'nvram/' + rom + '.nv')
+            htt_command = self.htt_erase
+            if not onWindows:
+                    htt_command = "mono " + self.htt_erase
+            if os.path.exists(self.mame_dir + 'hi' + sep + rom + '.hi'):
+                #os.system('wine HiToText.exe -e ' + self.mame_dir + 'hi' + sep + rom + '.hi 2>/dev/null')
+                #os.system('mono HiToText.exe -e ' + self.mame_dir + 'hi' + sep + rom + '.hi')
+                os.system(htt_command + 'hi' + sep + rom + '.hi')
+            elif os.path.exists(self.mame_dir + 'nvram' + sep + rom + '.nv'):
+                #os.system('wine HiToText.exe -e ' + self.mame_dir + 'nvram' + sep + rom + '.nv 2>/dev/null')
+                #os.system('mono HiToText.exe -e ' + self.mame_dir + 'nvram' + sep + rom + '.nv')
+                os.system(htt_command + 'nvram' + sep + rom + '.nv')
             else:
                 print rom, 'high score file not found'
-            
-        #stop joystick poller
+
+        # Stop joystick poller
         if self.joy is not None:
             self.joy.joy_count('stop')
             gobject.source_remove(self.joystick_timer)
-        #start timing
+        # Start timing
         time_game_start = time.time()
-        #wait a bit - to let message window display
+        # Wait a bit - to let message window display
         self.show_window('message')
         self.wait_with_events(0.25)
-        #get command line options
+        # Get command line options
         if cmdline_args:
             opts = cmdline_args
         else:
@@ -1279,10 +1309,10 @@ class WinMain(WahCade):
                     option = 'commandline_format',
                     default_value = self.emu_ini.get('commandline_format'))
         game_opts = self.get_launch_options(opts)
-        #pause music?
+        # Pause music?
         if self.music_enabled and not game_opts['play_music']:
             self.gstMusic.stop()    
-        #check emu exe
+        # Check emu exe
         emulator_executable = self.emu_ini.get('emulator_executable')
         
         # CHECK FOR LAUNCHER PLUGINS
@@ -1317,31 +1347,33 @@ class WinMain(WahCade):
                 if self.music_enabled and not game_opts['play_music']:
                     self.gstMusic.play()
                 return           
-        #set command line
+        # Set command line
         if not args:
             args = game_opts['options']
-        #patch for ..[romext]
+        # Patch for ..[romext]
         if '..' in args:
             newargs = args.split('..')
             args = newargs[0] + '.' + newargs[1]
         cmd = '%s %s' % (emulator_executable, args)
-        #write lock file for emulator
+        # Write lock file for emulator
         f = open(self.lck_filename, 'w')
         f.write(cmd)
         f.close()
 
         if not debug_mode and sys.platform != 'win32':
             self.log_msg('******** Command from Wah!Cade is:  %s ' % cmd)
-            #redirect output to log file
+            # Redirect output to log file
             self.log_msg('******** Begin command output')
             cmd = '%s >> %s 2>&1' % (cmd, self.log_filename)
-        #change to emu dir
+
+        # Change to emu dir
         try:
             pwd = os.getcwd()
             os.chdir(os.path.dirname(emulator_executable))
         except:
             pass
-        #run emulator & wait for it to finish
+        
+        # Run emulator & wait for it to finish
         if not wshell:
             p = Popen(cmd, shell=False)
         else:
@@ -1357,23 +1389,23 @@ class WinMain(WahCade):
         os.system('kill `ps -e | awk \'/recordmydesktop/ {print $1}\'`')
         
         self.log_msg("Child Process Returned: " + `sts`, "debug")
-       #minimize wahcade
+       # Minimize wahcade
         if game_opts['minimize_wahcade']:
             self.winMain.iconify()
             self.do_events()
-        ### write to log file
+        ### Write to log file
         self.log_msg('******** End command output')
-        #change back to cwd
+        # Change back to cwd
         os.chdir(pwd)
-        #hide message window
+        # Hide message window
         self.message.hide()  
         self.play_clip('EXIT_GAME')
         self.scrsave_time = time.time()
-        #un-minimize
+        # Un-minimize
         if game_opts['minimize_wahcade']:
             self.winMain.present()
             self.do_events()
-        #start timers again
+        # Start timers again
         #self.wait_with_events(0.25)
         self.start_timer('scrsave')
         self.start_timer('video')
@@ -1382,9 +1414,9 @@ class WinMain(WahCade):
         self.start_timer('joystick')
         if self.music_enabled and not game_opts['play_music']:
             self.gstMusic.play()
-         #stop timing
+        # Stop timing
         time_game_stop = time.time()
-        #add to / update favs list
+        # Add to / update favs list
         if rom not in self.emu_favs_list:
             self.emu_favs_list[rom] = [
                 rom,
@@ -1393,7 +1425,7 @@ class WinMain(WahCade):
                 0]
         self.emu_favs_list[rom][FAV_TIMES_PLAYED] += 1
         self.emu_favs_list[rom][FAV_MINS_PLAYED] += int((time_game_stop - time_game_start) / 60)
-        #write favs list to disk, so we don't lose it on unclean exit
+        # Write favs list to disk, so we don't lose it on unclean exit
         filters.write_fav_list(
             os.path.join(CONFIG_DIR, 'files', '%s.fav' % (self.current_emu)),
             self.emu_favs_list)
@@ -1412,15 +1444,15 @@ class WinMain(WahCade):
 
     def launch_external_application(self, app_number, wait_for_finish=False, game_cmdline_args=''):
         """launch app specified in emu.ini"""
-        #get app name
+        # Get app name
         app_name = self.emu_ini.get('app_%s_executable' % (app_number))
         app_params = self.emu_ini.get('app_%s_commandline_format' % (app_number))
-        #pre-defined?
+        # Pre-defined?
         if app_name == 'wahcade-history-viewer':
             if self.histview:
-                #set app number so histview can be closed by same keypress that started it
+                # Set app number so histview can be closed by same keypress that started it
                 self.histview.app_number = app_number
-                #display game history
+                # Display game history
                 self.histview.set_history(
                     self.lsGames[self.sclGames.get_selected()][GL_ROM_NAME],
                     self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME])
@@ -1428,25 +1460,25 @@ class WinMain(WahCade):
                 self.auto_launch_external_app(cmdline_args=game_cmdline_args)
         elif app_name == 'wahcade-cp-viewer':
             if self.cpviewer:
-                #set app number so cpviewer can be closed by same keypress that started it
+                # Set app number so cpviewer can be closed by same keypress that started it
                 self.cpviewer.app_number = app_number
-                #display control panel info
+                # Display control panel info
                 cpvw_rom = self.lsGames[self.sclGames.get_selected()][GL_ROM_NAME]
-                #use clone name if necessary
+                # Use clone name if necessary
                 if self.lsGames[self.sclGames.get_selected()][GL_CLONE_OF] != '':
                     cpvw_rom = self.lsGames[self.sclGames.get_selected()][GL_CLONE_OF]
                 self.cpviewer.display_game_details(cpvw_rom)
             else:
                 self.auto_launch_external_app(cmdline_args=game_cmdline_args)
         else:
-            #get options
+            # Get options
             game_opts = self.get_launch_options(app_params)
-            #launch the app
+            # Launch the app
             if os.path.isfile(app_name):
-                #pause music?
+                # Pause music?
                 if self.music_enabled and not game_opts['play_music'] and wait_for_finish:
                     self.gstMusic.stop()
-                #minimize wahcade
+                # Minimize wahcade
                 if game_opts['minimize_wahcade'] and wait_for_finish:
                     self.winMain.iconify()
                     self.do_events()
@@ -1454,38 +1486,38 @@ class WinMain(WahCade):
                 p = Popen(cmd, shell=True)
                 if wait_for_finish:
                     sts = p.wait()
-                    #un-minimize
+                    # Un-minimize
                     if game_opts['minimize_wahcade']:
                         self.winMain.present()
                         self.do_events()
-                    #resume music
+                    # Resume music
                     if self.music_enabled and not game_opts['play_music']:
                         self.gstMusic.play()
             else:
                 print _('Error: External Application [%s] does not exist' % (app_name))
-            #call next app
+            # Call next app
             self.auto_launch_external_app(cmdline_args=game_cmdline_args)
 
     def load_emulator(self, emulator_name=None):
         """load emulator"""
         self.launch_game_after = False
-        #stop any vids playing
+        # Stop any vids playing
         self.stop_video()
-        #load emulator ini file
+        # Load emulator ini file
         if emulator_name:
             self.current_emu = emulator_name
             self.wahcade_ini.set('current_emulator', emulator_name)
-        #save current emulator list
+        # Save current emulator list
         if self.emu_ini:
             self.emu_ini.set('current_list', self.current_list_idx)
             self.emu_ini.write()
-        #load new emulator
+        # Load new emulator
         self.emu_ini = MameWahIni(os.path.join(CONFIG_DIR, 'ini', '%s.ini' % (self.current_emu)))
         self.lblEmulatorName.set_text(self.emu_ini.get('emulator_title'))
         self.log_msg('Selected platform: ' + self.emu_ini.get('emulator_title'))
-        #set catver file
+        # Set catver file
         filters._catver_ini = os.path.join(self.emu_ini.get('catver_ini_file'))
-        #calc number of game lists
+        # Calc number of game lists
         file_list = self.build_filelist("", "ini", "(?<=-)\d+", self.current_emu, "-") 
         self.game_lists = []
         self.game_lists_normal = []
@@ -1497,40 +1529,40 @@ class WinMain(WahCade):
             self.game_lists.append([ini.get('list_title'), i, ini.getint('cycle_list')]) 
             self.game_lists_normal.append([ini.get('list_title'), i, ini.getint('cycle_list')])        
 
-        #load fav list
+        # Load favorites list
         fav_name = os.path.join(CONFIG_DIR, 'files', '%s.fav' % (self.current_emu))
         if not os.path.isfile(fav_name):
-            #create fav list if it doesn't exist
+            # Create favorites list if it doesn't exist
             f = open(fav_name, 'w')
             f.close()
         self.emu_favs_list = filters.read_fav_list(fav_name)
-        #play videos?
+        # Play videos?
         self.check_video_settings()
-        #load list
+        # Load list
         self.current_list_idx = self.emu_ini.getint('current_list')
         self.list_creation_attempted = False
         self.load_list()
 
     def load_list(self):
         """load current list"""
-        #load layout for new list
+        # Load layout for new list
         self.stop_video()
         #self.load_layout_file()
         self.load_layouts(self.layout_orientation)
-        #save last list (if defined)
+        # Save last list (if defined)
         if self.current_list_ini:
             self.current_list_ini.write()
-        #load new list
+        # Load new list
         list_ini_file = os.path.join(CONFIG_DIR, 'ini', '%s-%s.ini' % (self.current_emu, self.current_list_idx))
         if not os.path.isfile(list_ini_file):
             list_ini_file = os.path.join(CONFIG_DIR, 'ini', '%s-0.ini' % (self.current_emu))
             self.current_list_idx = 0
         self.current_list_ini = MameWahIni(list_ini_file)
         self.emu_ini.set('current_list', self.current_list_idx)
-        #load list & set current game
+        # Load list & set current game
         self.lblGameListIndicator.set_text(self.current_list_ini.get('list_title'))
         self.log_msg('Selected gameslist: ' + self.current_list_ini.get('list_title'))
-        #has initial lst file been created?
+        # Has initial lst file been created?
         game_list_file = os.path.join(
             CONFIG_DIR,
             'files',
@@ -1550,11 +1582,11 @@ class WinMain(WahCade):
                 game_list_file,
                 self.emu_ini)
             self.load_list()
-            #hide message
+            # Hide message
             self.message.hide()
-        #load the list of games
+        # Load the list of games
         self.pop_games_list()
-        #load the list filter
+        # Load the list filter
         self.current_filter_changed = False
         if self.current_emu in MAME_INI_FILES:
             filter_file = os.path.join(
@@ -1562,7 +1594,7 @@ class WinMain(WahCade):
                 'files',
                 '%s-%s.ftr' % (self.current_emu, self.current_list_idx))
             if not os.path.isfile(filter_file):
-                #filter doesn't exist, so try and use use filter for list 0
+                # Filter doesn't exist, so try and use use filter for list 0
                 filter_file = os.path.join(
                     CONFIG_DIR,
                     'files',
@@ -1580,103 +1612,315 @@ class WinMain(WahCade):
         return layout_files[0]
 
     def load_layout_file(self, layout_file):
+        # Retrieve filepath to layout file
+        layout_path = os.path.join(CONFIG_DIR, 'layouts', self.layout)
+        # Store to member variable
+        self.layout_path = layout_path
+        
+        # Layout has not changed, but emulator has. Rebuild visibility for artwork, etc
+        if layout_file == self.layout_file:
+            self.rebuild_visible_lists()
+            return
+        
+        # Okay to setup
+        self.layout_file = layout_file
+        layout_info = yaml.load(open(self.layout_file, 'r'))
+        
+        # Temp for displaying high score data
+        # TODO: Finalize this
+        hs_heading_lay = layout_info['main']['HighScoreHeading']
+        self.lblHighScoreHeading.set_markup('<span color="%s" size="%s">High Scores</span>' % (hs_heading_lay['text-col'], hs_heading_lay['font-size']))
+        #self.fixd.put(self.lblHighScoreHeading, 200, 510)
+        self.lblHighScoreHeading.show()
+        
+        # Formatting for the high score labels
+        hs_data_lay = layout_info['main']['HighScoreData']
+        self.highScoreDataMarkupHead = ('<span color="%s" size="%s">' % (hs_data_lay['text-col'], hs_data_lay['font-size']))
+        self.highScoreDataMarkupTail = '</span>'
+        # Formatting for the overlay letters
+        overlay_lay = layout_info['main']['OverlayScrollLetters']
+        self.overlayMarkupHead = ('<span color="%s" size="%s">' % (overlay_lay['text-col'], overlay_lay['font-size']))
+        self.overlayMarkupTail = '</span>'
+        
+        # Set up main Fixd window
+        main = self.winMain
+        main_lay = layout_info['main']['fixdMain']
+        main.set_size_request(main_lay['width'], main_lay['height'])
+        main.set_default_size(main_lay['width'], main_lay['height'])
+        main.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(main_lay['background-col']))
+        self.fixd.move(self.imgBackground, 0, 0)
+        self.imgBackground.set_size_request(main_lay['width'], main_lay['height'])
+        main_img = main_lay['use-image']
+        # If there is not dirname on the image file (i.e., a relative path was provided)
+        # append it to the end of the dirpath to the layouts file
+        if not os.path.dirname(main_img):
+            main_img = os.path.join(self.layout_path, main_img)
+        self.imgBackground.set_data('layout-image', main_img)    
+                
+        # Set up options Fixd window
+        opt = self.options
+        opt_lay = layout_info['options']['fixdOpt']
+        opt.winOptions.set_size_request(opt_lay['width'], opt_lay['height'])
+        opt.winOptions.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(opt_lay['background-col']))
+        opt.winOptions.move(opt.imgBackground, 0, 0)
+        opt.imgBackground.set_size_request(opt_lay['width'], opt_lay['height'])
+        opt_img = opt_lay['use_image']
+        # If there is not dirname on the image file (i.e., a relative path was provided)
+        # append it to the end of the dirpath to the layouts file
+        if not os.path.dirname(opt_img):
+            opt_img = os.path.join(self.layout_path, opt_img)
+        opt.imgBackground.set_data('layout-image', opt_img)
+        self.fixd.move(opt.winOptions,
+                       (( main_lay['width'] - opt_lay['width'] ) / 2),
+                       (( main_lay['height'] - opt_lay['height'] ) / 2))
+        # Other stuff
+        opt.lblHeading.set_text(_('Options'))
+        opt.lblSettingHeading.set_text(_('Current Setting:'))
+        opt.lblSettingValue.set_text('')
+        
+        # Set up message Fixd window
+        msg = self.message
+        msg_lay = layout_info['message']['fixdMsg']
+        msg.winMessage.set_size_request(msg_lay['width'], msg_lay['height'])
+        msg.winMessage.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(opt_lay['background-col']))
+        msg.winMessage.move(self.message.imgBackground, 0, 0)
+        msg.imgBackground.set_size_request(msg_lay['width'], msg_lay['height'])
+        msg_img = msg_lay['use_image']
+        self.fixd.move(msg.winMessage,
+                       (( main_lay['width'] - msg_lay['width'] ) / 2),
+                       (( main_lay['height'] - msg_lay['height'] ) / 2))
+        # If there is not dirname on the image file (i.e., a relative path was provided)
+        # append it to the end of the dirpath to the layouts file
+        if not os.path.dirname(msg_img):
+            msg_img = os.path.join(self.layout_path, msg_img)
+        msg.imgBackground.set_data('layout-image', msg_img)
+        
+        # Set up ScreenSaver Fixd window
+        scr = self.scrsaver
+        self.fixd.move(scr.winScrSaver, 0, 0)
+        scr.winScrSaver.set_size_request(main_lay['width'], main_lay['height']) # Match main window
+        scr.winScrSaver.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('black'))
+        scr.drwVideo.set_size_request(main_lay['width'], main_lay['height'])
+        
+        
+        # Set up all Widgets
+        for w_set_name in self._layout_items.keys():
+            wset_layout_info = layout_info[w_set_name]
+            for offset, widget, name in self._layout_items[w_set_name]:
+                w_lay = wset_layout_info[name]
+                # Overlay stuff
+                if 'bg-image' in w_lay:
+                    bg_file = self.get_path(w_lay['bg-image'])
+                    if not os.path.dirname(bg_file):
+                        bg_file = os.path.join(self.layout_path, bg_file)
+                    widget.set_from_file(bg_file)
+                if 'show-count' in w_lay:
+                    widget.charShowCount = w_lay['show-count']
+                # Font
+                fontData = w_lay['font']
+                if w_lay['font-bold']:
+                    fontData += ' Bold'
+                fontData += ' %s' % (w_lay['font-size'])
+                fontDesc = pango.FontDescription(fontData)
+                # Text color
+                textColor = w_lay['text-col']
+                # Apply
+                widget.modify_font(fontDesc)
+                widget.modify_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse(textColor))
+                # BG color, transparency as appropriate
+                bgColor = w_lay['background-col']
+                parent = widget.get_parent()
+                if parent.get_ancestor(gtk.EventBox): # Check if we have an EventBox ancester
+                    if w_lay['transparent'] == True:
+                        parent.set_visible_window(False)
+                    else:
+                        parent.set_visible_window(True)
+                        parent.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(bgColor))
+                # Highlight colors (only for scroll lists)
+                if type(widget) is ScrollList:
+                    widget.modify_highlight_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(w_lay['text-bg-high']))
+                    widget.modify_highlight_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse(w_lay['text-fg-high']))
+                # Alignment of text
+                widget.set_property('xalign', w_lay['text-align'])
+                # Rotation
+                widget.set_data('text-rotation', w_lay['text-rotation'])
+                if widget is gtk.Label:
+                    widget.set_angle(w_lay['text-rotation'])
+                # Visibility
+                if not w_lay['visible']: # Hide self and parents if not visible
+                    widget.hide()
+                    if parent.get_ancestor(gtk.EventBox):
+                        parent.hide()
+                else:                    # Show self and parents if visible
+                    widget.show()
+                    if parent.get_ancestor(gtk.EventBox):
+                        parent.show()
+                # Size
+                widget.set_size_request(w_lay['width'], w_lay['height'])
+                # Position the video widget
+                if self.emu_ini.getint('movie_artwork_no') > 0:
+                    self.video_artwork_widget = self._main_images[(self.emu_ini.getint('movie_artwork_no') - 1)]
+                    if widget == self.video_artwork_widget:
+                        self.fixd.move(self.drwVideo, w_lay['x'], w_lay['y'])
+                        self.drwVideo.set_size_request(w_lay['width'], w_lay['height'])
+                # Modify widget reference for lists
+                if widget == self.sclGames:
+                    widget = self.sclGames.fixd
+                elif widget == self.options.sclOptions:
+                    widget = self.options.sclOptions.fixd
+                elif parent.get_ancestor(gtk.EventBox):
+                    widget = widget.get_parent()
+                # Add to fixed layout on correct window
+                if w_set_name == "main":
+                    self.fixd.move(widget, w_lay['x'], w_lay['y'])
+                elif w_set_name == "options":
+                    self.options.winOptions.move(widget, w_lay['x'], w_lay['y'])
+                elif w_set_name == "message":
+                    self.message.winMessage.move(widget, w_lay['x'], w_lay['y'])
+                elif w_set_name == "screensaver":
+                    self.scrsaver.winScrSaver.move(widget, w_lay['x'], w_lay['y'])
+                else:
+                    print "Orphaned widget detected. Did not belong to one of [main/options/message/screensaver]"
+       
+        # Load histview and cpviewer layouts
+        # Still in use?
+        self.histview.load_layout(self.histview.layout_filename)
+        self.cpviewer.load_layout(self.cpviewer.layout_filename)
+        # Build visible lists for displaying artwork images
+        self.rebuild_visible_lists()
+ 
+    def load_legacy_layout_file(self, layout_file):
         """load layout file"""
         layout_path = os.path.join(CONFIG_DIR, 'layouts', self.layout)
         #if layout_file == '':
             #layout_file = self.get_layout_filename()
         self.layout_path = layout_path
         if layout_file == self.layout_file:
-            #layout not changed, but emulator has, so...
-            #...build visible lists for displaying artwork images and exit
+            # Layout not changed, but emulator has, so build visible
+            # lists for displaying artwork images and exit
             self.rebuild_visible_lists()
             return
         self.layout_file = layout_file
-        #read file & strip any crap
+        
+        # Read file & strip any whitespace
         lines = open(self.layout_file, 'r').readlines()
         lines = [s.strip() for s in lines]
         lines.insert(0, '.')
-        #window sizes
-        main_width, main_height = int(lines[1].split(';')[0]), int(lines[2])
-        opt_width, opt_height = int(lines[294].split(';')[0]), int(lines[295])
-        msg_width, msg_height = int(lines[353].split(';')[0]), int(lines[354])
-        #main window
+        
+        # Specific lines from the layout file
+        at = {
+              'main_width':1,
+              'main_height':2,
+              'opt_width':294,
+              'opt_height':295,
+              'msg_width':353,
+              'msg_height':354,
+              'main_bg':3,
+              'scroll_img':552,
+              'scroll_img_x':553,
+              'scroll_img_y':554,
+              'scroll_let_x':555,
+              'scroll_let_y':556,
+              'main_img':4,
+              'opt_bg':296,
+              'opt_img':297,
+              'games_bg_col':6,
+              'games_fg_col':7,
+              'opt_bg_col':299,
+              'opt_fg_col':300,
+              'msg_bg':355,
+              'msg_img':356}
+        
+        # Window sizes
+        main_width, main_height = int(lines[at['main_width']].split(';')[0]), int(lines[at['main_height']])
+        opt_width, opt_height = int(lines[at['opt_width']].split(';')[0]), int(lines[at['opt_height']])
+        msg_width, msg_height = int(lines[at['msg_width']].split(';')[0]), int(lines[at['msg_height']])
+        # Main window
         self.winMain.set_size_request(main_width, main_height)
         self.winMain.set_default_size(main_width, main_height)
-        bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[3]))) # Converts an integer value to a reversed hex value to a gtk color object
+        bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['main_bg']]))) # Converts an integer value to a reversed hex value to a gtk color object
         self.winMain.modify_bg(gtk.STATE_NORMAL, bg_col)
         self.fixd.move(self.imgBackground, 0, 0)
         self.imgBackground.set_size_request(main_width, main_height)
-        img_file = self.get_path(lines[4])
         
         # Overlay scroll letter background
-        bg_file = self.get_path(lines[552])
+        bg_file = self.get_path(lines[at['scroll_img']])
         if not os.path.dirname(bg_file):
             bg_file = os.path.join(self.layout_path, bg_file)
         self.overlayBG.set_from_file(bg_file)
-        self.fixd.put(self.overlayBG, 100, 100)
+        #self.fixd.put(self.overlayBG, 100, 100)
+        self.fixd.put(self.overlayBG, int(lines[at['scroll_img_x']]), int(lines[at['scroll_img_y']]))
         
         # Display overlay letters on ROM list when scrolling quickly
-        #self.lblOverlayScrollLetters.set_visible(False)
         self.lblOverlayScrollLetters.hide()
-        self.fixd.put(self.lblOverlayScrollLetters, 120, 118)
+        #self.fixd.put(self.lblOverlayScrollLetters, 120, 118)
+        self.fixd.put(self.lblOverlayScrollLetters, int(lines[at['scroll_let_x']]), int(lines[at['scroll_let_y']]))
         
-        # Background image file        
+        # Background image file
+        img_file = self.get_path(lines[at['main_img']])
         if not os.path.dirname(img_file):
             img_file = os.path.join(self.layout_path, img_file)
         self.imgBackground.set_data('layout-image', img_file)
         
-        #set options window
+        # Set options window
         self.options.winOptions.set_size_request(opt_width, opt_height)
-        bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[296])))      # Color of box surrounding the options window
+        bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['opt_bg']]))) # Color of box surrounding the options window
         self.options.winOptions.modify_bg(gtk.STATE_NORMAL, bg_col)
         self.options.winOptions.move(self.options.imgBackground, 0, 0)
         self.options.imgBackground.set_size_request(opt_width, opt_height)
-        img_file = self.get_path(lines[297])
+        img_file = self.get_path(lines[at['opt_img']])
         if not os.path.dirname(img_file):
             img_file = os.path.join(self.layout_path, img_file)
         self.options.imgBackground.set_data('layout-image', img_file)
         self.fixd.move(self.options.winOptions, ((main_width - opt_width) / 2), ((main_height - opt_height) / 2))
-        #games list highlight colours
-        hl_bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[6]))) # Colored bar
-        hl_fg_col = gtk.gdk.color_parse(self.get_colour(int(lines[7]))) # Text
+        
+        # Games list highlight colours
+        hl_bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['games_bg_col']]))) # Colored bar
+        hl_fg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['games_fg_col']]))) # Text
         self.sclGames.modify_highlight_bg(gtk.STATE_NORMAL, hl_bg_col)
         self.sclGames.modify_highlight_fg(gtk.STATE_NORMAL, hl_fg_col)
-        #options list highlight colours
-        hl_bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[299])))
-        hl_fg_col = gtk.gdk.color_parse(self.get_colour(int(lines[300])))
+        
+        # Options list highlight colours
+        hl_bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['opt_bg_col']])))
+        hl_fg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['opt_fg_col']])))
         self.options.sclOptions.modify_highlight_bg(gtk.STATE_NORMAL, hl_bg_col)
         self.options.sclOptions.modify_highlight_fg(gtk.STATE_NORMAL, hl_fg_col)
-        #set message window
+        
+        # Set message window
         self.message.winMessage.set_size_request(msg_width, msg_height)
-        bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[355])))
+        bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['msg_bg']])))
         self.message.winMessage.modify_bg(gtk.STATE_NORMAL, bg_col)
         self.message.winMessage.move(self.message.imgBackground, 0, 0)
         self.message.imgBackground.set_size_request(msg_width, msg_height)
-        img_file = self.get_path(lines[356])
+        img_file = self.get_path(lines[at['msg_img']])
         if not os.path.dirname(img_file):
             img_file = os.path.join(self.layout_path, img_file)
         self.message.imgBackground.set_data('layout-image', img_file)
         self.fixd.move(self.message.winMessage, ((main_width - msg_width) / 2), ((main_height - msg_height) / 2))
-        #screen saver window
+        
+        # Screen saver window
         self.fixd.move(self.scrsaver.winScrSaver, 0, 0)
         self.scrsaver.winScrSaver.set_size_request(main_width, main_height)
         self.scrsaver.winScrSaver.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('black'))
         self.scrsaver.drwVideo.set_size_request(main_width, main_height)
-        #set all window items
+        
+        # Set all window items
+        #print self._layout_items
         for offset, widget in self._layout_items:
-            #get properties
+            # Get properties
             data = self.get_layout_item_properties(lines, offset)
-            #font
+            #print str(offset) + ",", widget.get_name(), ":", data
+            # Font
             fontData = data['font']
             if data['font-bold']:
                 fontData += ' Bold'
             fontData += ' %s' % (data['font-size'])
             font_desc = pango.FontDescription(fontData)
-            #text colour
+            # Text colour
             fg_col = gtk.gdk.color_parse(data['text-col'])
             widget.modify_font(font_desc)
             widget.modify_fg(gtk.STATE_NORMAL, fg_col)
-            #background colour & transparency
+            # Background colour & transparency
             bg_col = gtk.gdk.color_parse(data['background-col'])
             parent = widget.get_parent()
             if parent.get_ancestor(gtk.EventBox):
@@ -1685,18 +1929,18 @@ class WinMain(WahCade):
                 else:
                     parent.set_visible_window(True)
                     parent.modify_bg(gtk.STATE_NORMAL, bg_col)
-            #alignment
+            # Alignment
             if data['text-align'] == 2:
-                widget.set_property('xalign', .5)
+                widget.set_property('xalign', .5)   # 0.5 -> Center alignment
             else:
                 widget.set_property('xalign', data['text-align'])
-            #rotation
+            # Rotation
             widget.set_data('text-rotation', data['text-rotation'])
             try:
                 widget.set_angle(data['text-rotation'])
             except AttributeError:
                 pass
-            #visible?
+            # Visible?
             if not data['visible']:
                 widget.hide()
                 if parent.get_ancestor(gtk.EventBox):
@@ -1706,46 +1950,46 @@ class WinMain(WahCade):
                 if parent.get_ancestor(gtk.EventBox):
                     parent.show()
                     
-            #divide height of scroll list in half
+            # Divide height of scroll list in half
             if isinstance(widget, ScrollList):
-                widget.set_size_request(data['width'], (data['height']/2)+38)
+                widget.set_size_request(data['width'], (data['height']/2) + 38) # 38 is a magic number to make it look nice
             else:
                 widget.set_size_request(data['width'], data['height'])
                 
-            #position video widget
+            # Position video widget
             if self.emu_ini.getint('movie_artwork_no') > 0:
                 self.video_artwork_widget = self._main_images[(self.emu_ini.getint('movie_artwork_no') - 1)]
                 if widget == self.video_artwork_widget:
                     self.fixd.move(self.drwVideo, data['x'], data['y'])
                     self.drwVideo.set_size_request(data['width'], data['height'])
-            #modify widget for lists
+            # Modify widget for lists
             if widget == self.sclGames:
                 widget = self.sclGames.fixd
             elif widget == self.options.sclOptions:
                 widget = self.options.sclOptions.fixd
             elif parent.get_ancestor(gtk.EventBox):
                 widget = widget.get_parent()
-            #add to fixed layout on correct window
+            # Add to fixed layout on correct window
             if offset < 293:
-                #main window
+                # Main window
                 self.fixd.move(widget, data['x'], data['y'])
             elif offset < 353:
-                #options window
+                # Options window
                 self.options.winOptions.move(widget, data['x'], data['y'])
             elif offset < 396:
-                #message window
+                # Message window
                 self.message.winMessage.move(widget, data['x'], data['y'])
             else:
-                #screen saver window
+                # Screen saver window
                 self.scrsaver.winScrSaver.move(widget, data['x'], data['y'])
-        #other stuff
+        # Other stuff
         self.options.lblHeading.set_text(_('Options'))
         self.options.lblSettingHeading.set_text(_('Current Setting:'))
         self.options.lblSettingValue.set_text('')
-        #load histview and cpviewer layouts
+        # Load histview and cpviewer layouts
         self.histview.load_layout(self.histview.layout_filename)
         self.cpviewer.load_layout(self.cpviewer.layout_filename)
-        #build visible lists for displaying artwork images
+        # Build visible lists for displaying artwork images
         self.rebuild_visible_lists()
 
     def rebuild_visible_lists(self):
@@ -1753,7 +1997,8 @@ class WinMain(WahCade):
         self.visible_img_list = [img for img in self._main_images if img.get_property('visible')]
         self.visible_img_paths = [self.emu_ini.get('artwork_%s_image_path' % (i + 1)) for i, img in enumerate(self.visible_img_list)]
         #self.buildartlist(self.visible_img_paths[0])
-        #check background images
+        
+        # Check background images
         bg_files = (
             [self.imgBackground,
             [os.path.split(os.path.splitext(self.imgBackground.get_data('layout-image'))[0]),
@@ -1787,7 +2032,7 @@ class WinMain(WahCade):
                 img.set_property('visible', True)
             else:
                 img.set_property('visible', False)
-        #check logo images
+        # Check logo images
         if self.imgMainLogo.get_property('visible'):
             if self.current_emu in MAME_INI_FILES:
                 image_files = []
@@ -1802,21 +2047,21 @@ class WinMain(WahCade):
                     (self.layout_path, '%s-logo' % (self.current_emu)),
                     (self.layout_path, '%slogo' % (self.current_emu)),
                     (self.layout_path, 'logo')]
-            #get logo filename
+            # Get logo filename
             logo_filename = self.get_matching_filename(image_files, IMAGE_FILETYPES)
             if os.path.isfile(logo_filename):
                 self.display_scaled_image(self.imgMainLogo, logo_filename, self.keep_aspect, self.imgMainLogo.get_data('text-rotation'))
             else:
                 self.imgMainLogo.set_from_file(None)
-        #refresh list (seems necessary for rotated layouts - not sure why at the moment)
+        # Refresh list (seems necessary for rotated layouts - not sure why at the moment)
         self.on_sclGames_changed()
         self.sclGames.scroll(0)
 
     def pop_games_list(self):
         """populate games list"""
-        #which type of list is it?
+        # Which type of list is it?
         if self.current_list_idx == 0 or self.current_list_ini.get('list_type') == 'normal':
-            #normal, so sort list
+            # Normal, so sort list
             list_filename = os.path.join(
                 CONFIG_DIR,
                 'files',
@@ -1839,7 +2084,7 @@ class WinMain(WahCade):
                         list_filename,
                         self.emu_ini)
                     self.load_list()
-                    #hide message
+                    # Hide message
                     self.message.hide()
                     return
             else:
@@ -1847,12 +2092,12 @@ class WinMain(WahCade):
                 self.lsGames_len = 0
             self.lsGames.sort()
         elif self.current_list_ini.get('list_type') in ['most_played', 'longest_played']:
-            #favs type, so choose sort column
+            # Favs type, so choose sort column
             if self.current_list_ini.get('list_type') == 'most_played':
                 sort_column = FAV_TIMES_PLAYED
             else:
                 sort_column = FAV_MINS_PLAYED
-            #use all games to gen list
+            # Use all games to gen list
             list_filename = os.path.join(
                 CONFIG_DIR,
                 'files',
@@ -1862,12 +2107,12 @@ class WinMain(WahCade):
             else:
                 self.lsGames = []
                 self.lsGames_len = 0
-            #create list of roms
+            # Create list of roms
             flist_roms = [r[GL_ROM_NAME] for r in self.lsGames]
-            #order fav dictionary by number of plays
+            # Order fav dictionary by number of plays
             favs = list(self.emu_favs_list.values())
             favs.sort(key = itemgetter(sort_column), reverse=True)
-            #order filtered list by favs
+            # Order filtered list by favs
             flist_sorted = []
             for fav in favs:
                 try:
@@ -1877,17 +2122,17 @@ class WinMain(WahCade):
                     self.log_msg("%s not in list" % (fav[FAV_ROM_NAME]))
             self.lsGames = flist_sorted
             self.lsGames_len = len(self.lsGames)
-        #setup scroll list
+        # Setup scroll list
         if self.current_list_idx == 0:
             self.sclGames.ls = [l[0] for l in self.lsGames]
         else:
             self.sclGames.ls = []
             for l in [l[0] for l in self.lsGames]:
-                #remove "(bar)" from "foo (bar)" game description
+                # Remove "(bar)" from "foo (bar)" game description
                 if l[0] != '(':
                     l = l.split('(')[0]
                 self.sclGames.ls.append(l)
-        #select game in list
+        # Select game in list
         current_game = self.current_list_ini.getint('current_game')
         if current_game >= self.lsGames_len:
             current_game = 0
@@ -1907,7 +2152,7 @@ class WinMain(WahCade):
             os.path.join(CONFIG_DIR, 'files', '%s-%s.lst' % (
                 self.current_emu, self.current_list_idx)),
             self.lsGames)
-        #update displays
+        # Update displays
         self.sclGames.set_selected(self.sclGames.get_selected() - 1)
         self.sclGames.update()
 
@@ -1922,18 +2167,18 @@ class WinMain(WahCade):
                 if self.sound_enabled:
                         self.gstSound = gst_media.SoundPlayer()
             except:
-                #playbin object creation failed
+                # Playbin object creation failed
                 self.log_msg('Warning: Failed to create Music gstreamer objects','0')
                 return
-            #check dir
+            # Check dir
             if not os.path.isdir(self.wahcade_ini.get('music_path')):
                 self.log_msg('Error: Music Path [%s] does not exist' % (self.musicpath))
                 return
-            #set dir
+            # Set dir
             tracks = self.gstMusic.set_directory(self.musicpath, MUSIC_FILESPEC)
-            #set volume
+            # Set volume
             self.gstMusic.set_volume(self.music_vol)
-            #play
+            # Play
             if len(tracks) > 0:
                 self.gstMusic.load_playlist(
                     playlist = tracks,
@@ -1943,47 +2188,47 @@ class WinMain(WahCade):
     def check_video_settings(self):
         """enable video playing?"""
         self.video_enabled = True
-        #did gst_media module import ok?
+        # Did gst_media module import ok?
         if not gst_media_imported:
             self.video_enabled = False
-        #movie delay
+        # Movie delay
         if self.delaymovieprev == 0:
             self.video_enabled = False
-        #check video path exists
+        # Check video path exists
         if self.emumovieprevpath != '' and not os.path.exists(self.emumovieprevpath):
             if debug_mode:
                 self.log_msg('Error: Movie Preview Path [%s] does not exist' % self.emumovieprevpath,'0')
             self.video_enabled = False
-        #check movie artwork
+        # Check movie artwork
         if not(self.emumovieartworkno > 0):
             self.video_enabled = False
-        #create gstreamer video player
+        # Create gstreamer video player
         if self.video_enabled:
             try:
                 self.video_player = gst_media.GstVideo(self.drwVideo)
                 self.log_msg('Created Video gstreamer objects','0')
             except:
-                #gstreamer object creation failed
+                # gStreamer object creation failed
                 self.video_enabled = False
                 self.log_msg('Warning: Failed to create Video gstreamer objects','0')
                 return
 
     def start_timer(self, timer_type):
         """start given timer"""
-        #screen saver
+        # Screen saver
         if timer_type == 'scrsave' and self.scrsave_delay > 0:
             if self.scrsave_timer:
                 gobject.source_remove(self.scrsave_timer)
             self.scrsave_timer = gobject.timeout_add(2500, self.on_scrsave_timer)
-        #video
+        # Video
         elif timer_type == 'video' and self.video_enabled:
-            #stop any playing vids first
+            # Stop any playing vids first
             self.stop_video()
-            #restart timer
+            # Restart timer
             self.video_timer = gobject.timeout_add(
                 self.delaymovieprev * 1000,
                 self.on_video_timer)
-        #joystick
+        # Joystick
         elif timer_type == 'joystick' and (self.joyint == 1):
             self.joystick_timer = gobject.timeout_add(50, self.joy.poll, self.on_winMain_key_press)
 
@@ -2022,7 +2267,7 @@ class WinMain(WahCade):
         """Checks for the existence of layout file(s) for given angle.  Returns:
            (main layout filename, history viewer filename, cpviewer filename)
         """
-        #main layout
+        # Main layout
         layout_path = os.path.join(CONFIG_DIR, 'layouts', self.wahcade_ini.get('layout'))
         if angle == 0:
             # The 0 degree layout angle _may_ not actually have a angle in the filename as this is the default
@@ -2046,10 +2291,10 @@ class WinMain(WahCade):
                 (layout_path, '%s.%s.lay' % (self.current_emu, angle)),
                 (layout_path, 'layout.%s.lay' % (angle))]
         layout_file = self.get_matching_filename(layout_files, '')
-        #check to see whether the returned layout matches the requested orientation
+        # Check to see whether the returned layout matches the requested orientation
         lfp = [os.path.join(dirname, fp) for dirname, fp in layout_files]
         layout_matched = layout_file in lfp
-        #history viewer layout
+        # History viewer layout
         hv_layout_path, hv_layout_file = os.path.split(self.histview.histview_ini.get('history_layout'))
         hv_file_base, hv_file_ext = os.path.splitext(hv_layout_file)
         if angle == 0:
@@ -2060,7 +2305,7 @@ class WinMain(WahCade):
             hv_layout_files = [
                 (hv_layout_path, '%s.%s%s' % (hv_file_base, angle, hv_file_ext))] #0
         hv_layout_file = self.get_matching_filename(hv_layout_files, '')
-        #cp viewer layout
+        # CP viewer layout
         cp_layout_path, cp_layout_file = os.path.split(self.cpviewer.cpviewer_ini.get('viewer_layout'))
         cp_file_base, cp_file_ext = os.path.splitext(cp_layout_file)
         if angle == 0:
@@ -2071,18 +2316,18 @@ class WinMain(WahCade):
             cp_layout_files = [
                 (cp_layout_path, '%s.%s%s' % (cp_file_base, angle, cp_file_ext))] #0
         cp_layout_file = self.get_matching_filename(cp_layout_files, '')
-        #update ini
+        # Update ini
         if layout_matched:
             self.wahcade_ini.set('layout_orientation', angle)
             self.wahcade_ini.write()
-        #done
+        # Done
         return layout_matched, [layout_file, hv_layout_file, cp_layout_file]
 
     def load_layouts(self, requested_angle):
         """switch layout to specified rotation"""
-        #layout
+        # Layout
         if requested_angle == 'toggle':
-            #toggle between 0, 90, 180, 270 degree layouts
+            # Toggle between 0, 90, 180, 270 degree layouts
             new_angle = (self.layout_orientation + 90) % 360
             layout_matched, layout_files = False, []
             while not layout_matched:
@@ -2092,14 +2337,15 @@ class WinMain(WahCade):
                 if new_angle == self.layout_orientation:
                     break
         else:
-            #switch to specified rotation
+            # Switch to specified rotation
             new_angle = requested_angle
             layout_matched, layout_files = self.get_rotated_layouts(new_angle)
-        #load rotated layout(s)
+        # Load rotated layout(s)
         if layout_matched:
             #print "switched to:", new_angle
             self.layout_orientation = new_angle
             if os.path.isfile(layout_files[0]):
+                #self.load_legacy_layout_file(layout_files[0])
                 self.load_layout_file(layout_files[0])
             if os.path.isfile(layout_files[1]):
                 self.histview.load_layout(layout_files[1])
@@ -2121,7 +2367,7 @@ class WinMain(WahCade):
         elif window_name == 'cpviewer':
             if self.cpviewer:
                 child_win = self.cpviewer.winCPViewer
-        #show given child window
+        # Show given child window
         if child_win:
             self.stop_video()
             child_win.show()
@@ -2134,27 +2380,27 @@ class WinMain(WahCade):
 
     def hide_window(self, window_name='all'):
         """hide given window"""
-        #hide all child windows
+        # Hide all child windows
         self.message.winMessage.hide()
         self.options.winOptions.hide()
         self.scrsaver.winScrSaver.hide()
         self.histview.winHistory.hide()
         self.cpviewer.winCPViewer.hide()
-        #"show" main
+        # "show" main
         self.current_window = 'main'
         self.winMain.present()
-        #start timers again
+        # Start timers again
         self.start_timer('scrsave')
         self.start_timer('video')
 
 
     def check_ext_on_game_launch(self, romext='*'):
         if romext == '' or '*':
-            #Lookup Rom Extension for Launch
+            # Lookup Rom Extension for Launch
             roms = glob.glob(os.path.join(self.emu_ini.get('rom_path'), '*'))
             for romname in roms:
                 if self.lsGames[self.sclGames.get_selected()][GL_ROM_NAME] in romname:
-                    #Set romext to actual extension
+                    # Set romext to actual extension
                     romext = re.search('\.[^\.]+$',romname).group(0)
                     return romext
         # Multiple Extensions Specified, step through on launch
