@@ -227,7 +227,7 @@ class WinMain(WahCade):
         self.lblControllerType = gtk.Label()
         self.lblDriverStatus = gtk.Label()
         self.lblCatVer = gtk.Label()
-        self.lblHighScoreTitle = gtk.Label()
+        self.lblHighScoreHeading = gtk.Label()
         self.lblHighScoreData = gtk.Label()
         self.lblOverlayScrollLetters = gtk.Label()
 
@@ -260,19 +260,6 @@ class WinMain(WahCade):
         self.current_window = 'main'
         self.fixd.add(self.imgBackground)
         self.imgBackground.show()
-        
-        # Temp for displaying high score data
-        # TODO: Finalize this
-        self.lblHighScoreTitle.set_markup('<span color="#0099cc" size="14000">High Scores</span>')
-        self.fixd.put(self.lblHighScoreTitle, 200, 510)
-        self.lblHighScoreTitle.show()
-        
-        # Formatting for the high score labels
-        self.highScoreDataMarkupHead = '<span color="white" size="12000">'
-        self.highScoreDataMarkupTail = '</span>'
-        # Formatting for the overlay letters
-        self.overlayMarkupHead = '<span color="white" size="20000">'
-        self.overlayMarkupTail = '</span>'
         
         # Mark mame directory
         self.mame_dir = self.emu_ini.get('emulator_executable')[:self.emu_ini.get('emulator_executable').rfind(sep) + 1]
@@ -307,7 +294,7 @@ class WinMain(WahCade):
             
         
         self.lblHighScoreData.set_markup('<span color="white" size="13000">1. \tName\t\t\tScore</span>')
-        self.fixd.put(self.lblHighScoreData, 120, 540)
+        #self.fixd.put(self.lblHighScoreData, 120, 540)
         self.lblHighScoreData.show()
         
 
@@ -363,38 +350,40 @@ class WinMain(WahCade):
         
         # Collect all image & label lists
         self._main_items = [
-            (8, self.imgMainLogo, "MainLogo"),              # Weird gray area at top of window
-            (21, self.lblGameListIndicator, "GameListIndicator"),    # Label above games list
-            (34, self.lblEmulatorName, "EmulatorName"),         # Label above artwork
-            (60, self.lblGameSelected, "GameSelected"),         # Label displaying selected game number out of the total
-            (73, self.imgArtwork1, "MainArtwork1"),             # Large game image in top right
-            (86, self.imgArtwork2, "MainArtwork2"),             # Smaller game image in the lower right
-            (99, self.imgArtwork3, "MainArtwork3"),             # Large game image in top center
-            (112, self.imgArtwork4, "MainArtwork4"),            # Large game image in top center
-            (125, self.imgArtwork5, "MainArtwork5"),            # Large game image in top center
-            (138, self.imgArtwork6, "MainArtwork6"),            # Large game image in top center with background
-            (151, self.imgArtwork7, "MainArtwork7"),            # Large game image in top center
-            (164, self.imgArtwork8, "MainArtwork8"),            # Large game image in top center
-            (177, self.imgArtwork9, "MainArtwork9"),            # Large game image in top center
-            (190, self.imgArtwork10, "MainArtwork10"),           # Large game image in top center
-            (47, self.sclGames, "GameList"),                # Game list
-            (203, self.lblGameDescription, "GameDescription"),     # Which game is selected
-            (216, self.lblRomName, "RomName"),             # Rom name
-            (229, self.lblYearManufacturer, "YearManufacturer"),    # Year
-            (242, self.lblScreenType, "ScreenType"),          # Screen
-            (255, self.lblControllerType, "ControllerType"),      # Controller
-            (268, self.lblDriverStatus, "DriverStatus"),        # Driver
+            (8, self.imgMainLogo, "MainLogo"),                          # Weird gray area at top of window
+            (21, self.lblGameListIndicator, "GameListIndicator"),       # Label above games list
+            (34, self.lblEmulatorName, "EmulatorName"),                 # Label above artwork
+            (60, self.lblGameSelected, "GameSelected"),                 # Label displaying selected game number out of the total
+            (73, self.imgArtwork1, "MainArtwork1"),                     # Large game image in top right
+            (86, self.imgArtwork2, "MainArtwork2"),                     # Smaller game image in the lower right
+            (99, self.imgArtwork3, "MainArtwork3"),                     # Large game image in top center
+            (112, self.imgArtwork4, "MainArtwork4"),                    # Large game image in top center
+            (125, self.imgArtwork5, "MainArtwork5"),                    # Large game image in top center
+            (138, self.imgArtwork6, "MainArtwork6"),                    # Large game image in top center with background
+            (151, self.imgArtwork7, "MainArtwork7"),                    # Large game image in top center
+            (164, self.imgArtwork8, "MainArtwork8"),                    # Large game image in top center
+            (177, self.imgArtwork9, "MainArtwork9"),                    # Large game image in top center
+            (190, self.imgArtwork10, "MainArtwork10"),                  # Large game image in top center
+            (47, self.sclGames, "GameList"),                            # Game list
+            (203, self.lblGameDescription, "GameDescription"),          # Which game is selected
+            (216, self.lblRomName, "RomName"),                          # Rom name
+            (229, self.lblYearManufacturer, "YearManufacturer"),        # Year
+            (242, self.lblScreenType, "ScreenType"),                    # Screen
+            (255, self.lblControllerType, "ControllerType"),            # Controller
+            (268, self.lblDriverStatus, "DriverStatus"),                # Driver
             (281, self.lblCatVer, "CatVer"),
-            (552, self.overlayBG, "OverlayBG"),
-            (552, self.lblOverlayScrollLetters, "OverlayScrollLetters")]  
+            (552, self.overlayBG, "OverlayBG"),                         # Overlay scroll letter background image
+            (552, self.lblOverlayScrollLetters, "OverlayScrollLetters"),# Overlay scroll letters
+            (-1, self.lblHighScoreHeading, "HighScoreHeading"),         # High score heading
+            (-1, self.lblHighScoreData, "HighScoreData")]               # High score data
         self._options_items = [
-            (301, self.options.lblHeading, "OptHeading"),             # Options window title
-            (314, self.options.sclOptions, "OptionsList"),             # Options list
-            (327, self.options.lblSettingHeading, "SettingHeading"),      # "Current setting"
-            (340, self.options.lblSettingValue, "SettingValue")]  # Value of current setting
+            (301, self.options.lblHeading, "OptHeading"),               # Options window title
+            (314, self.options.sclOptions, "OptionsList"),              # Options list
+            (327, self.options.lblSettingHeading, "SettingHeading"),    # "Current setting"
+            (340, self.options.lblSettingValue, "SettingValue")]        # Value of current setting
         self._message_items = [      
-            (357, self.message.lblHeading, "MsgHeading"),             # Message window title
-            (370, self.message.lblMessage, "Message"),             # Message displayed in message window
+            (357, self.message.lblHeading, "MsgHeading"),               # Message window title
+            (370, self.message.lblMessage, "Message"),                  # Message displayed in message window
             (383, self.message.lblPrompt, "Prompt")]
         self._screensaver_items = [              
             (396, self.scrsaver.imgArtwork1, "ScrArtwork1"),
@@ -1619,6 +1608,22 @@ class WinMain(WahCade):
         self.layout_file = layout_file
         layout_info = yaml.load(open(self.layout_file, 'r'))
         
+        # Temp for displaying high score data
+        # TODO: Finalize this
+        hs_heading_lay = layout_info['main']['HighScoreHeading']
+        self.lblHighScoreHeading.set_markup('<span color="%s" size="%s">High Scores</span>' % (hs_heading_lay['text-col'], hs_heading_lay['font-size']))
+        #self.fixd.put(self.lblHighScoreHeading, 200, 510)
+        self.lblHighScoreHeading.show()
+        
+        # Formatting for the high score labels
+        hs_data_lay = layout_info['main']['HighScoreData']
+        self.highScoreDataMarkupHead = ('<span color="%s" size="%s">' % (hs_data_lay['text-col'], hs_data_lay['font-size']))
+        self.highScoreDataMarkupTail = '</span>'
+        # Formatting for the overlay letters
+        overlay_lay = layout_info['main']['OverlayScrollLetters']
+        self.overlayMarkupHead = ('<span color="%s" size="%s">' % (overlay_lay['text-col'], overlay_lay['font-size']))
+        self.overlayMarkupTail = '</span>'
+        
         # Set up main Fixd window
         main = self.winMain
         main_lay = layout_info['main']['fixdMain']
@@ -1650,7 +1655,7 @@ class WinMain(WahCade):
         self.fixd.move(opt.winOptions,
                        (( main_lay['width'] - opt_lay['width'] ) / 2),
                        (( main_lay['height'] - opt_lay['height'] ) / 2))
-         #other stuff
+        # Other stuff
         opt.lblHeading.set_text(_('Options'))
         opt.lblSettingHeading.set_text(_('Current Setting:'))
         opt.lblSettingValue.set_text('')
@@ -1685,7 +1690,7 @@ class WinMain(WahCade):
             wset_layout_info = layout_info[w_set_name]
             for offset, widget, name in self._layout_items[w_set_name]:
                 w_lay = wset_layout_info[name]
-                # overlay stuff
+                # Overlay stuff
                 if 'bg-image' in w_lay:
                     bg_file = self.get_path(w_lay['bg-image'])
                     if not os.path.dirname(bg_file):
@@ -1693,18 +1698,18 @@ class WinMain(WahCade):
                     widget.set_from_file(bg_file)
                 if 'show-count' in w_lay:
                     widget.charShowCount = w_lay['show-count']
-                # font
+                # Font
                 fontData = w_lay['font']
                 if w_lay['font-bold']:
                     fontData += ' Bold'
                 fontData += ' %s' % (w_lay['font-size'])
                 fontDesc = pango.FontDescription(fontData)
-                # text color
+                # Text color
                 textColor = w_lay['text-col']
-                # apply
+                # Apply
                 widget.modify_font(fontDesc)
                 widget.modify_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse(textColor))
-                # bg color, transparency as appropriate
+                # BG color, transparency as appropriate
                 bgColor = w_lay['background-col']
                 parent = widget.get_parent()
                 if parent.get_ancestor(gtk.EventBox): # Check if we have an EventBox ancester
@@ -1713,18 +1718,17 @@ class WinMain(WahCade):
                     else:
                         parent.set_visible_window(True)
                         parent.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(bgColor))
-                # highlight colors (only for scroll lists)
+                # Highlight colors (only for scroll lists)
                 if type(widget) is ScrollList:
                     widget.modify_highlight_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(w_lay['text-bg-high']))
                     widget.modify_highlight_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse(w_lay['text-fg-high']))
-                # alignment of text
-                # Legacy 2 -> .5?
+                # Alignment of text
                 widget.set_property('xalign', w_lay['text-align'])
-                # rotation
+                # Rotation
                 widget.set_data('text-rotation', w_lay['text-rotation'])
                 if widget is gtk.Label:
                     widget.set_angle(w_lay['text-rotation'])
-                # visibility
+                # Visibility
                 if not w_lay['visible']: # Hide self and parents if not visible
                     widget.hide()
                     if parent.get_ancestor(gtk.EventBox):
@@ -1733,22 +1737,22 @@ class WinMain(WahCade):
                     widget.show()
                     if parent.get_ancestor(gtk.EventBox):
                         parent.show()
-                # size
+                # Size
                 widget.set_size_request(w_lay['width'], w_lay['height'])
-                # position the video widget
+                # Position the video widget
                 if self.emu_ini.getint('movie_artwork_no') > 0:
                     self.video_artwork_widget = self._main_images[(self.emu_ini.getint('movie_artwork_no') - 1)]
                     if widget == self.video_artwork_widget:
                         self.fixd.move(self.drwVideo, w_lay['x'], w_lay['y'])
                         self.drwVideo.set_size_request(w_lay['width'], w_lay['height'])
-                # modify widget reference for lists
+                # Modify widget reference for lists
                 if widget == self.sclGames:
                     widget = self.sclGames.fixd
                 elif widget == self.options.sclOptions:
                     widget = self.options.sclOptions.fixd
                 elif parent.get_ancestor(gtk.EventBox):
                     widget = widget.get_parent()
-                # add to fixed layout on correct window <--(what?)
+                # Add to fixed layout on correct window
                 if w_set_name == "main":
                     self.fixd.move(widget, w_lay['x'], w_lay['y'])
                 elif w_set_name == "options":
@@ -1760,11 +1764,11 @@ class WinMain(WahCade):
                 else:
                     print "Orphaned widget detected. Did not belong to one of [main/options/message/screensaver]"
        
-        #load histview and cpviewer layouts
+        # Load histview and cpviewer layouts
         # Still in use?
         self.histview.load_layout(self.histview.layout_filename)
         self.cpviewer.load_layout(self.cpviewer.layout_filename)
-        #build visible lists for displaying artwork images
+        # Build visible lists for displaying artwork images
         self.rebuild_visible_lists()
  
     def load_legacy_layout_file(self, layout_file):
