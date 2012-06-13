@@ -1,5 +1,12 @@
+<<<<<<< HEAD
 host=
 user=
 passwd=
 db=
 port=8080
+=======
+host=localhost
+user=tester
+passwd=test
+db=ScoresDB
+>>>>>>> 80d3e65c02eade203830537b65a25574ba52500d

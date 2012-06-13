@@ -32,7 +32,7 @@ import gobject
 gobject.threads_init()
 import pango
 
-class ScrollList:
+class ScrollList(object):
     """custom scroll list control"""
 
     def __init__(self):
@@ -144,6 +144,9 @@ class ScrollList:
     def get_parent(self):
         """return the parent of the scrolled list"""
         return self.fixd.get_parent()
+    
+    def reparent(self, parent):
+        self.fixd.reparent(parent)
 
     def set_property(self, property_name, property_value):
         """set property"""
@@ -175,7 +178,7 @@ class ScrollList:
                 self.arwScrollTop.set(gtk.ARROW_UP, gtk.SHADOW_NONE)
                 self.arwScrollBottom.set(gtk.ARROW_DOWN, gtk.SHADOW_NONE)
                 self.fixd.move(self.arwScrollTop, 0, 0)
-                self.fixd.move(self.arwScrollBottom, 0, height - 15)
+                self.fixd.move(self.arwScrollBottom, 0, height + 15)
             else:
                 self.arwScrollTop.set(gtk.ARROW_DOWN, gtk.SHADOW_NONE)
                 self.arwScrollBottom.set(gtk.ARROW_UP, gtk.SHADOW_NONE)
@@ -202,7 +205,7 @@ class ScrollList:
         font_size = int(self._pango_font_desc.get_size() / pango.SCALE)
         #calc number of rows that will fit (depends on labels font size) and set list_row size
         if self.display_limiters:
-            height_modifier = -30
+            height_modifier = -15
             self._row_height = (h + height_modifier) / self.num_rows
         else:
             height_modifier = 0
