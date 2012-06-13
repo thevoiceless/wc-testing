@@ -178,7 +178,7 @@ class ScrollList(object):
                 self.arwScrollTop.set(gtk.ARROW_UP, gtk.SHADOW_NONE)
                 self.arwScrollBottom.set(gtk.ARROW_DOWN, gtk.SHADOW_NONE)
                 self.fixd.move(self.arwScrollTop, 0, 0)
-                self.fixd.move(self.arwScrollBottom, 0, height - 15)
+                self.fixd.move(self.arwScrollBottom, 0, height + 15)
             else:
                 self.arwScrollTop.set(gtk.ARROW_DOWN, gtk.SHADOW_NONE)
                 self.arwScrollBottom.set(gtk.ARROW_UP, gtk.SHADOW_NONE)
