@@ -2,3 +2,4 @@ host=localhost
 user=root
 passwd=root
 db=Rcade
+port=8080
