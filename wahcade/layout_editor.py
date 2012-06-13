@@ -27,6 +27,7 @@ import sys
 import shutil
 import glob
 import yaml
+from scrolled_list import ScrollList    # Transparent scrolled list widget
 #thanks to Trent Mick (http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/475126)
 try:
     import xml.etree.cElementTree as ET # python >=2.5 C module
@@ -263,18 +264,27 @@ class WinLayout(GladeSupport, WahCade):
             histview_ini = MameWahIni(os.path.join(self.config_dir, 'histview.ini'), 'default', '0.16')
             #setup layout combo
             self.layouts = []
-            layout_files = glob.glob(os.path.join(self.config_dir, 'layouts', wahcade_ini.get('layout'), '*.lay'))
+            layout_files = glob.glob(os.path.join(self.config_dir, 'layouts', wahcade_ini.get('layout'), '*.layy'))
             for layout_file in layout_files:
                 # Add a (layout-name, file-identifier) pair to layouts by parsing the filename a bit
                 self.layouts.append(
                     [os.path.splitext(os.path.basename(layout_file))[0],
                     layout_file])
-            self.layouts.sort() # Sort by?...layout name?
+            legacy_layout_files = glob.glob(os.path.join(self.config_dir, 'layouts', wahcade_ini.get('layout'), '*.lay'))
+            for layout_file in legacy_layout_files:
+                # Add a (layout-name, file-identifier) pair to layouts by parsing the filename a bit
+                self.layouts.append(
+                    [os.path.splitext(os.path.basename(layout_file))[0],
+                    layout_file])
+            #self.layouts.sort() # Sort by?...layout name?
             #setup layout combo
             l = ['%s.lay' % (l[0]) for l in self.layouts]
             self.setup_combo_box(self.cboLayout, l)
             #load layout
-            layout_file = os.path.join(self.config_dir, 'layouts', wahcade_ini.get('layout'), 'layout.lay')
+            layout_file = os.path.join(self.config_dir, 'layouts', wahcade_ini.get('layout'), 'layout.layy')
+            if not layout_file:
+                # failed to find .layy file, attempt legacy load
+                layout_file = os.path.join(self.config_dir, 'layouts', wahcade_ini.get('layout'), 'layout.lay')
             if not os.path.isfile(layout_file):
                 layout_file = os.path.join(self.config_dir, 'layouts', wahcade_ini.get('layout'), 'mame.lay')
                 if not os.path.exists(layout_file):
@@ -326,7 +336,10 @@ class WinLayout(GladeSupport, WahCade):
             resp = dlg.run()
             if resp == gtk.RESPONSE_YES:
                 if self.layout_altered:
-                    self.save_layout_file()
+                    if os.path.basename(self.layouts[self.cboLayout.get_active()][0])[1] is ".layy":
+                        self.save_layout_file()
+                    else:
+                        self.save_legacy_layout_file()
                 if self.cpviewer_altered:
                     self.save_cpviewer_file()
                 if self.histview_altered:
@@ -794,6 +807,158 @@ class WinLayout(GladeSupport, WahCade):
         """load layout file"""
         self.layout_filename = layout_filename
         layout_path = os.path.dirname(layout_filename)
+        lay_info = yaml.load(open(layout_filename, 'r'))
+        
+        # Initialize main window stuff
+        main_lay = lay_info['main']
+        fixdm_lay = main_lay['fixdMain']
+        self.dLayout[self.fixdMain] = {
+            'name': 'Main',
+            'width': fixdm_lay['width'], 'height': fixdm_lay['height']}
+        # main viewport
+        if gtk.gdk.screen_width() > fixdm_lay['width'] and gtk.gdk.screen_height() > fixdm_lay['height']:
+            #set default size if screen size is big enough
+            self.viewport.set_size_request(fixdm_lay['width'], fixdm_lay['height'])
+            self.winMain.set_size_request(fixdm_lay['width'], fixdm_lay['height'])
+        else:
+            #minimum size fallback
+            self.viewport.set_size_request(640, 480)
+            self.winMain.set_size_request(640, 480)
+        self.dLayout[self.fixdMain]['background-col'] = fixdm_lay['background-col']
+        main_bg_col = gtk.gdk.color_parse(fixdm_lay['background-col'])
+        self.viewport.modify_bg(gtk.STATE_NORMAL, main_bg_col)
+        self.dLayout[self.fixdMain]['image'] = fixdm_lay['use-image']
+        img_file = self.get_path(fixdm_lay['use-image'])
+        if not os.path.dirname(img_file):
+            img_file = os.path.join(layout_path, img_file)
+        #print "img=",img_file, os.path.isfile(img_file)
+        self.dLayout[self.fixdMain]['use_image'] = os.path.isfile(img_file)
+        
+        # Initialize options window stuff
+        opt_lay = lay_info['options']
+        fixdo_lay = opt_lay['fixdOpt']
+        self.dLayout[self.fixdOpt] = {
+            'name': 'Options',
+            'width': fixdo_lay['width'], 'height': fixdo_lay['height']}
+        self.dLayout[self.fixdOpt]['background-col'] = fixdo_lay['background-col']
+        opt_bg_col = gtk.gdk.color_parse(fixdo_lay['background-col'])
+        self.dLayout[self.fixdOpt]['image'] = fixdo_lay['use-image']
+        img_file = self.get_path(fixdo_lay['use-image'])
+        if not os.path.dirname(img_file):
+            img_file = os.path.join(layout_path, img_file)
+        self.dLayout[self.fixdOpt]['use_image'] = os.path.isfile(img_file)
+        
+        # Initialize message window stuff
+        msg_lay = lay_info['message']
+        fixdg_lay = msg_lay['fixdMsg']
+        self.dLayout[self.fixdMsg] = {
+            'name': 'Message',
+            'width': fixdg_lay['width'], 'height': fixdg_lay['height']}
+        self.dLayout[self.fixdMsg]['background-col'] = fixdg_lay['background-col']
+        msg_bg_col = gtk.gdk.color_parse(fixdg_lay['background-col'])
+        self.dLayout[self.fixdMsg]['image'] = fixdg_lay['use-image']
+        img_file = self.get_path(fixdg_lay['use-image'])
+        if not os.path.dirname(img_file):
+            img_file = os.path.join(layout_path, img_file)
+        self.dLayout[self.fixdMsg]['use_image'] = os.path.isfile(img_file)
+        
+        # Initialize screensaver window stuff (matches dimensions of main window)
+        self.dLayout[self.fixdScr] = {
+            'name': 'Screen Saver',
+            'width': fixdm_lay['width'], 'height': fixdm_lay['height']}
+        self.dLayout[self.fixdScr]['background-col'] = self.dLayout[self.fixdMain]['background-col']
+        self.dLayout[self.fixdScr]['image'] = ''
+        self.dLayout[self.fixdScr]['use_image'] = False
+        
+        # Initialize widget standins
+        for tup in self._layout_items:
+            widget = tup[1]
+            # Find what string header to associate with the given widget
+            hName = ""
+            # Check if the name associated with the widget tuple from _layout_items
+            #    is in any given widget dict, and capture the name appropriately
+            if widget in self.main_widgets.values():
+                hName = "main"
+            elif widget in self.opt_widgets.values():
+                hName = "options"
+            elif widget in self.msg_widgets.values():
+                hName = "message"
+            elif widget in self.scr_widgets.values():
+                hName = "screensaver"
+            else:
+                print "Orphaned widget processed. Probably an unreachable history widget."
+                continue
+            # take the first name associated with the given widget, using list comprehensions
+            # tuple is of the form (offset, &widget, "name")
+            name = [tup[2] for tup in self._layout_items if tup[1] is widget][0]
+            # Navigate down YAML hierarchy to find layout propes, store to dLayout for retrieval
+            header_lay = lay_info[hName]
+            w_lay = header_lay[name]
+            self.dLayout[widget] = w_lay
+            # construct font string
+            font = w_lay['font']
+            if w_lay['font-bold']:
+                font += ' Bold'
+            if w_lay['font-italic']:
+                font += ' Italic'
+            font += ' %s' % (w_lay['font-size'])
+            w_lay['font-name'] = font
+            # Necessary?
+            #d['font-name'] = font
+            font_desc = pango.FontDescription(font)
+            # list widget?
+            if type(widget) is ScrollList:
+                d['bar-col'] = w_lay['text-bg-high']
+                d['selected-col'] = w_lay['text-fg-high']
+            #label colours
+            widget.child.modify_font(font_desc)
+            widget.child.modify_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse(w_lay['text-col']))
+            if not w_lay['transparent']:
+                widget.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(w_lay['background-col']))
+            #alignment
+            widget.child.set_property('xalign', w_lay['text-align'])
+            #rotation
+            widget.child.set_angle(w_lay['text-rotation'])
+            #visible?
+            widget.set_property('visible', w_lay['visible'])
+            #size
+            widget.set_size_request(w_lay['width'], w_lay['height'])
+            
+            #move to fixed layout on correct window
+            if hName is "main":
+                #main window
+                if w_lay['transparent']:
+                    widget.modify_bg(gtk.STATE_NORMAL, main_bg_col)
+                self.fixdMain.move(widget, w_lay['x'], w_lay['y'])
+            elif hName is "options":
+                #options window
+                if w_lay['transparent']:
+                    widget.modify_bg(gtk.STATE_NORMAL, opt_bg_col)
+                self.fixdOpt.move(widget, w_lay['x'], w_lay['y'])
+            elif hName is "message":
+                #message window
+                if w_lay['transparent']:
+                    widget.modify_bg(gtk.STATE_NORMAL, msg_bg_col)
+                self.fixdMsg.move(widget, w_lay['x'], w_lay['y'])
+            elif hName is "screensaver":
+                #screen saver window
+                if w_lay['transparent']:
+                    widget.modify_bg(gtk.STATE_NORMAL, main_bg_col)
+                self.fixdScr.move(widget, w_lay['x'], w_lay['y'])
+            else:
+                print "Orphaned widget reached assignment stage. This is a bug!"
+                continue
+        #finish up
+        self.dlg_screen.set_properties()
+        self.layout_altered = False
+        #set to main window
+        self.on_rbWindow_toggled(self.mnuVMain)
+            
+
+    def load_legacy_layout_file(self, layout_filename):
+        """load legacy layout file"""
+        self.layout_filename = layout_filename
+        layout_path = os.path.dirname(layout_filename)
         #read file & strip any crap
         lines = open(layout_filename, 'r').readlines()
         lines = [s.strip() for s in lines]
@@ -919,12 +1084,9 @@ class WinLayout(GladeSupport, WahCade):
         self.on_rbWindow_toggled(self.mnuVMain)
 
     def save_layout_file(self, layout_filename=None):
-        """save layout"""
         if layout_filename:
             self.layout_filename = layout_filename
-        #setup empty layout
-        lines = [''] * 552
-        # YAML
+        # YAML setup
         ylines = {}
         main = {}
         options = {}
@@ -934,6 +1096,87 @@ class WinLayout(GladeSupport, WahCade):
         ylines['options'] = options
         ylines['message'] = message
         ylines['screensaver'] = screensaver
+        for offset, widget, name in self._layout_windows:
+            # Fixd object saving
+            if offset < 0:
+                break
+            d = self.dLayout[widget]
+            dic = {}
+            dic['width'] = d['width']
+            dic['height'] = d['height']
+            dic['background-col'] = d['background-col']
+            dic['use-image'] = os.path.basename(self.get_path(d['image']))
+            dic['unknown'] = 1
+            if name is "fixdMain":
+                main[name] = dic
+            elif name is "fixdOpt":
+                options[name] = dic
+            elif name is "fixdMsg":
+                message[name] = dic
+            elif name is "fixdScr":
+                screensaver[name] = dic
+            else:
+                print "Orphaned window processsed. Data lost."
+        for tup in self._layout_items:
+            widget = tup[1]
+            # Find what string header to associate with the given widget
+            hName = ""
+            # Check if the name associated with the widget tuple from _layout_items
+            #    is in any given widget dict, and capture the name appropriately
+            if widget in self.main_widgets.values():
+                hName = "main"
+            elif widget in self.opt_widgets.values():
+                hName = "options"
+            elif widget in self.msg_widgets.values():
+                hName = "message"
+            elif widget in self.scr_widgets.values():
+                hName = "screensaver"
+            else:
+                print "Orphaned widget processed. Probably an unreachable history widget."
+                continue
+            # take the first name associated with the given widget, using list comprehensions
+            # tuple is of the form (offset, &widget, "name")
+            name = [tup[2] for tup in self._layout_items if tup[1] is widget][0]
+            d = self.dLayout[widget]
+            # YAML
+            dic = {}
+            dic['visible'] = d['visible']
+            dic['transparent'] = d['transparent']
+            dic['background-col'] = d['background-col']
+            dic['text-col'] = d['text-col']
+            dic['font'] = d['font']
+            dic['font-bold'] = str(d['font-bold'])
+            dic['font-italic'] = str(d['font-italic'])
+            dic['font-size'] = d['font-size']
+            dic['text-align'] = .5 if (d['text-align'] == 2) else d['text-align']
+            dic['text-rotation'] = d['text-rotation']
+            dic['x'] = d['x']
+            dic['y'] = d['y']
+            dic['width'] = d['width']
+            dic['height'] = d['height']
+            if hName is "main":
+                main[name] = dic
+            elif hName is "options":
+                options[name] = dic
+            elif hName is "message":
+                message[name] = dic
+            elif hName is "screensaver":
+                screensaver[name] = dic
+            else:
+                print "Orphaned widget processsed. Data lost."
+        #write file
+        fname = os.path.join(self.layout_filename)
+        yfile = open(fname, 'w')
+        yaml.dump(ylines, yfile, default_flow_style=False)
+        #reset altered flag
+        self.layout_altered = False
+
+    def save_legacy_layout_file(self, layout_filename=None):
+        """save layout (Broken due to deprecation)"""
+        if layout_filename:
+            self.layout_filename = layout_filename
+        #setup empty layout
+        lines = [''] * 552
         #window widgets
         for offset, widget, name in self._layout_windows:
             if offset < 0:
@@ -950,21 +1193,6 @@ class WinLayout(GladeSupport, WahCade):
             else:
                 lines[offset + 3] = ' '
             lines[offset + 4] = ' 1'
-            # YAML
-            dic = {}
-            dic['width'] = d['width']
-            dic['height'] = d['height']
-            dic['background-col'] = d['background-col']
-            dic['use_image'] = os.path.basename(self.get_path(d['image']))
-            dic['unknown'] = 1
-            if offset < 293:
-                main[name] = dic
-            elif offset < 353:
-                options[name] = dic
-            elif offset < 396:
-                message[name] = dic
-            else:
-                screensaver[name] = dic
         #item widgets
         for offset, widget, name in self._layout_items:
             d = self.dLayout[widget]
@@ -991,37 +1219,10 @@ class WinLayout(GladeSupport, WahCade):
             elif widget.get_name() == 'Options List':
                 lines[299] = ' %s' % self.reverse_get_colour(d['bar-col'])
                 lines[300] = ' %s' % self.reverse_get_colour(d['selected-col'])
-            # YAML
-            dic = {}
-            dic['visible'] = d['visible']
-            dic['transparent'] = d['transparent']
-            dic['background-col'] = d['background-col']
-            dic['text-col'] = d['text-col']
-            dic['font'] = d['font']
-            dic['font-bold'] = str(d['font-bold'])
-            dic['font-italic'] = str(d['font-italic'])
-            dic['font-size'] = d['font-size']
-            dic['text-align'] = .5 if (d['text-align'] == 2) else d['text-align']
-            dic['text-rotation'] = d['text-rotation']
-            dic['x'] = d['x']
-            dic['y'] = d['y']
-            dic['width'] = d['width']
-            dic['height'] = d['height']
-            if offset < 293:
-                main[name] = dic
-            elif offset < 353:
-                options[name] = dic
-            elif offset < 396:
-                message[name] = dic
-            else:
-                screensaver[name] = dic
         #write file
         lines = ['%s\n' % (l) for l in lines]
         fname = os.path.join(self.layout_filename)
-        open(fname, 'w').writelines(lines[1:])
-        #YAML
-        yfile = open(fname+"_y", 'w')
-        yaml.dump(ylines, yfile, default_flow_style=False)
+        open(fname + ".legacy", 'w').writelines(lines[1:])
         #reset altered flag
         self.layout_altered = False
 

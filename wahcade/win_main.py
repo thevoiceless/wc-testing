@@ -1627,7 +1627,7 @@ class WinMain(WahCade):
         main.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(main_lay['background-col']))
         self.fixd.move(self.imgBackground, 0, 0)
         self.imgBackground.set_size_request(main_lay['width'], main_lay['height'])
-        main_img = main_lay['use_image']
+        main_img = main_lay['use-image']
         # If there is not dirname on the image file (i.e., a relative path was provided)
         # append it to the end of the dirpath to the layouts file
         if not os.path.dirname(main_img):
