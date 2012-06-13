@@ -384,7 +384,9 @@ class WinMain(WahCade):
             (242, self.lblScreenType, "ScreenType"),          # Screen
             (255, self.lblControllerType, "ControllerType"),      # Controller
             (268, self.lblDriverStatus, "DriverStatus"),        # Driver
-            (281, self.lblCatVer, "CatVer")]  
+            (281, self.lblCatVer, "CatVer"),
+            (552, self.overlayBG, "OverlayBG"),
+            (552, self.lblOverlayScrollLetters, "OverlayScrollLetters")]  
         self._options_items = [
             (301, self.options.lblHeading, "OptHeading"),             # Options window title
             (314, self.options.sclOptions, "OptionsList"),             # Options list
@@ -419,7 +421,9 @@ class WinMain(WahCade):
                 if widget.get_parent():
                     pass
                 elif not (type(widget) is ScrollList):
-                    self.fixd.add(self.make_evb_widget(widget))     # wc_common.py
+                    self.fixd.add(widget)
+                    # Needed?
+                    #self.fixd.add(self.make_evb_widget(widget))
                 else:
                     self.fixd.add(widget.fixd)
             
@@ -785,7 +789,7 @@ class WinMain(WahCade):
                     # Display first two letters of selected game when scrolling quickly
                     if self.keypress_count > self.showOverlayThresh:
                         self.overlayBG.show()
-                        overlayLetters = self.lsGames[self.sclGames.get_selected()][0][0:2]
+                        overlayLetters = self.lsGames[self.sclGames.get_selected()][0][0:self.lblOverlayScrollLetters.charShowCount]
                         self.lblOverlayScrollLetters.set_markup(_('%s%s%s') % (self.overlayMarkupHead, overlayLetters, self.overlayMarkupTail))
                         #self.lblOverlayScrollLetters.set_visible(True)
                         self.lblOverlayScrollLetters.show()
@@ -1659,6 +1663,9 @@ class WinMain(WahCade):
         msg.winMessage.move(self.message.imgBackground, 0, 0)
         msg.imgBackground.set_size_request(msg_lay['width'], msg_lay['height'])
         msg_img = msg_lay['use_image']
+        self.fixd.move(msg.winMessage,
+                       (( main_lay['width'] - msg_lay['width'] ) / 2),
+                       (( main_lay['height'] - msg_lay['height'] ) / 2))
         # If there is not dirname on the image file (i.e., a relative path was provided)
         # append it to the end of the dirpath to the layouts file
         if not os.path.dirname(msg_img):
@@ -1678,6 +1685,14 @@ class WinMain(WahCade):
             wset_layout_info = layout_info[w_set_name]
             for offset, widget, name in self._layout_items[w_set_name]:
                 w_lay = wset_layout_info[name]
+                # overlay stuff
+                if 'bg-image' in w_lay:
+                    bg_file = self.get_path(w_lay['bg-image'])
+                    if not os.path.dirname(bg_file):
+                        bg_file = os.path.join(self.layout_path, bg_file)
+                    widget.set_from_file(bg_file)
+                if 'show-count' in w_lay:
+                    widget.charShowCount = w_lay['show-count']
                 # font
                 fontData = w_lay['font']
                 if w_lay['font-bold']:
@@ -1726,7 +1741,7 @@ class WinMain(WahCade):
                     if widget == self.video_artwork_widget:
                         self.fixd.move(self.drwVideo, w_lay['x'], w_lay['y'])
                         self.drwVideo.set_size_request(w_lay['width'], w_lay['height'])
-                # modify widget for lists
+                # modify widget reference for lists
                 if widget == self.sclGames:
                     widget = self.sclGames.fixd
                 elif widget == self.options.sclOptions:
