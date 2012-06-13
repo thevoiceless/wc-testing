@@ -494,7 +494,7 @@ class WinMain(WahCade):
                
         ### __INIT__ Complete
         self.init = False
-
+        
     def on_winMain_destroy(self, *args):
         """done, quit the application"""
         #stop vid playing if necessary
@@ -1246,7 +1246,6 @@ class WinMain(WahCade):
         self.message.display_message(
             _('Starting...'),
             '%s: %s' % (rom, self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME]))
-        
         #Erase scores from hi score file of current game
         if rom in self.supported_games:
             if os.path.exists(self.mame_dir + 'hi/' + rom + '.hi'):
@@ -1258,7 +1257,6 @@ class WinMain(WahCade):
             else:
                 print rom, 'high score file not found'
             
-
         #stop joystick poller
         if self.joy is not None:
             self.joy.joy_count('stop')
@@ -1331,28 +1329,32 @@ class WinMain(WahCade):
         f = open(self.lck_filename, 'w')
         f.write(cmd)
         f.close()
-                       
+
         if not debug_mode and sys.platform != 'win32':
             self.log_msg('******** Command from Wah!Cade is:  %s ' % cmd)
             #redirect output to log file
             self.log_msg('******** Begin command output')
             cmd = '%s >> %s 2>&1' % (cmd, self.log_filename)
-
         #change to emu dir
         try:
             pwd = os.getcwd()
             os.chdir(os.path.dirname(emulator_executable))
         except:
             pass
-   
         #run emulator & wait for it to finish
         if not wshell:
             p = Popen(cmd, shell=False)
         else:
             p = Popen(cmd, shell=True)
+        #begins video recording of game
+        self.wait_with_events(1.00)
+        window_name = 'MAME: %s [%s]' % (self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME], rom)
+        os.system('recordmydesktop --full-shots --fps 16 --no-frame --windowid $(xwininfo -name ' + "\'" + str(window_name) + "\'" + ' | awk \'/Window id:/ {print $4}\') -o \'recorded games\'/' + rom + '_highscore &')
+
         sts = p.wait()
-        
         self.launched_game = True
+        #stops video recording 
+        os.system('kill `ps -e | awk \'/recordmydesktop/ {print $1}\'`')
         
         self.log_msg("Child Process Returned: " + `sts`, "debug")
        #minimize wahcade
