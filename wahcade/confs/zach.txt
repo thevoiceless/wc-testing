@@ -2,3 +2,4 @@ host=localhost
 user=root
 passwd=password
 db=wahcade
+port=9090
