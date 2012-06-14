@@ -318,6 +318,7 @@ main:
     y: 0
   OverlayBG:
     background-col: '#000000'
+    bg-image: scroll-overlay-70.png
     font: SF Atarian System Extended
     font-bold: false
     font-italic: false
@@ -327,12 +328,13 @@ main:
     text-col: '#FF5300'
     text-rotation: 0
     transparent: false
-    visible: true
+    visible: false
     width: 70
     x: 100
     y: 100
   OverlayScrollLetters:
     background-col: '#000000'
+    show-count: 2
     font: SF Atarian System Extended
     font-bold: false
     font-italic: false
