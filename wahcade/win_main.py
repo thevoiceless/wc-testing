@@ -35,7 +35,7 @@ import commands
 from operator import itemgetter
 import subprocess
 from subprocess import Popen
-import yaml
+import yaml #@UnresolvedImport
 
 
 ## GTK Modules
@@ -83,7 +83,7 @@ import filters                          # filters.py, routines to read/write mam
 from mamewah_ini import MameWahIni      # Reads mamewah-formatted ini file
 import joystick                         # joystick.py, joystick class, uses pygame package (SDL bindings for games in Python)
 import MySQLdb
-import requests
+import requests #@UnresolvedImport
 from xml.etree.ElementTree import fromstring
 from dummy_db import DummyDB
 # Set gettext function
@@ -509,7 +509,7 @@ class WinMain(WahCade):
         
         ### __INIT__ Complete
         self.init = False
-
+        
     def on_winMain_destroy(self, *args):
         """done, quit the application"""
         # Stop video playing if necessary
@@ -1094,8 +1094,7 @@ class WinMain(WahCade):
         r = requests.get(url+self.current_rom+"/highscore")
         score_string = r.text #string returned from server containing high scores
         index = 1
-        
-        if score_string != '[]':
+        if score_string != '[]' and "Could not find" not in score_string:
             score_string = score_string[1:-1] #trim leading and trailing [] from string
             score_list = score_string.split(",")
             name, score = zip(*(s.split(":") for s in score_list)) #split the list into name's and scores
@@ -1123,7 +1122,7 @@ class WinMain(WahCade):
                     score_string += "  "
                 score_string += str(index) + ". " + "-"*12 + "\t" + " "*(24-6) + "-"*9 + "\n"
                 index += 1
-        elif not "could not find game" in score_string : #no high scores recorded
+        else: #no high scores recorded
             score_string = ''
             while index <= 10:
                 if index < 10:
@@ -1273,7 +1272,7 @@ class WinMain(WahCade):
         self.message.display_message(
             _('Starting...'),
             '%s: %s' % (rom, self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME]))
-        
+
         # Erase scores from hi score file of current game
         # Executable must be in same directory
         if rom in self.supported_games:
@@ -1290,7 +1289,6 @@ class WinMain(WahCade):
                 os.system(htt_command + 'nvram' + sep + rom + '.nv')
             else:
                 print rom, 'high score file not found'
-            
 
         # Stop joystick poller
         if self.joy is not None:
@@ -1364,7 +1362,7 @@ class WinMain(WahCade):
         f = open(self.lck_filename, 'w')
         f.write(cmd)
         f.close()
-                       
+
         if not debug_mode and sys.platform != 'win32':
             self.log_msg('******** Command from Wah!Cade is:  %s ' % cmd)
             # Redirect output to log file
@@ -1377,15 +1375,21 @@ class WinMain(WahCade):
             os.chdir(os.path.dirname(emulator_executable))
         except:
             pass
-   
+        
         # Run emulator & wait for it to finish
         if not wshell:
             p = Popen(cmd, shell=False)
         else:
             p = Popen(cmd, shell=True)
+        #begins video recording of game
+        self.wait_with_events(1.00)
+        window_name = 'MAME: %s [%s]' % (self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME], rom)
+        os.system('recordmydesktop --full-shots --fps 16 --no-frame --windowid $(xwininfo -name ' + "\'" + str(window_name) + "\'" + ' | awk \'/Window id:/ {print $4}\') -o \'recorded games\'/' + rom + '_highscore &')
+
         sts = p.wait()
-        
         self.launched_game = True
+        #stops video recording 
+        os.system('kill `ps -e | awk \'/recordmydesktop/ {print $1}\'`')
         
         self.log_msg("Child Process Returned: " + `sts`, "debug")
        # Minimize wahcade
