@@ -742,16 +742,17 @@ class WinMain(WahCade):
             elif event.type == gtk.gdk.KEY_RELEASE:
                 self.keypress_count = 0
                 # Updates ROM image after scrolling stops
-                game_info = filters.get_game_dict(self.lsGames[self.sclGames.get_selected()])
-                for i, img in enumerate(self.visible_img_list):
-                    if self.keypress_count == 0:
-                        img_filename = self.get_artwork_image(
-                            self.visible_img_paths[i],
-                            self.layout_path,
-                            game_info,
-                            self.current_emu,
-                            (i + 1))
-                        self.display_scaled_image(img, img_filename, self.keep_aspect, img.get_data('text-rotation'))
+                if len(self.lsGames) != 0:
+                    game_info = filters.get_game_dict(self.lsGames[self.sclGames.get_selected()])
+                    for i, img in enumerate(self.visible_img_list):
+                        if self.keypress_count == 0:
+                            img_filename = self.get_artwork_image(
+                                self.visible_img_paths[i],
+                                self.layout_path,
+                                game_info,
+                                self.current_emu,
+                                (i + 1))
+                            self.display_scaled_image(img, img_filename, self.keep_aspect, img.get_data('text-rotation'))
                 #self.lblOverlayScrollLetters.set_visible(False)
                 self.lblOverlayScrollLetters.hide()
                 self.overlayBG.hide()
@@ -1033,6 +1034,9 @@ class WinMain(WahCade):
         # Set current game in ini file
         self.current_list_ini.set('current_game', self.sclGames.get_selected())
         # Get info to display in bottom right box
+        if len(self.lsGames) == 0: #Fixes error when switching lists with empty games
+            return
+        
         game_info = filters.get_game_dict(self.lsGames[self.sclGames.get_selected()])
         self.current_rom = game_info['rom_name']
         # Check for game ini file
@@ -2146,15 +2150,16 @@ class WinMain(WahCade):
 
     def remove_current_game(self):
         """remove currently selected game from the list"""
-        item = self.sclGames.ls.pop(self.sclGames.get_selected())
-        item = self.lsGames.pop(self.sclGames.get_selected())
-        filters.write_filtered_list(
-            os.path.join(CONFIG_DIR, 'files', '%s-%s.lst' % (
-                self.current_emu, self.current_list_idx)),
-            self.lsGames)
-        # Update displays
-        self.sclGames.set_selected(self.sclGames.get_selected() - 1)
-        self.sclGames.update()
+        if len(self.lsGames) != 0:
+            item = self.sclGames.ls.pop(self.sclGames.get_selected())
+            item = self.lsGames.pop(self.sclGames.get_selected())
+            filters.write_filtered_list(
+                os.path.join(CONFIG_DIR, 'files', '%s-%s.lst' % (
+                    self.current_emu, self.current_list_idx)),
+                self.lsGames)
+            # Update displays
+            self.sclGames.set_selected(self.sclGames.get_selected() - 1)
+            self.sclGames.update()
 
     def check_music_settings(self):
         """enable music playing?"""
