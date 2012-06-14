@@ -1123,7 +1123,7 @@ class WinMain(WahCade):
                     score_string += "  "
                 score_string += str(index) + ". " + "-"*12 + "\t" + " "*(24-6) + "-"*9 + "\n"
                 index += 1
-        else: #no high scores recorded
+        elif not "could not find game" in score_string : #no high scores recorded
             score_string = ''
             while index <= 10:
                 if index < 10:
