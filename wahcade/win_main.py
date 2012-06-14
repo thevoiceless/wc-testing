@@ -1659,7 +1659,7 @@ class WinMain(WahCade):
         opt.winOptions.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(opt_lay['background-col']))
         opt.winOptions.move(opt.imgBackground, 0, 0)
         opt.imgBackground.set_size_request(opt_lay['width'], opt_lay['height'])
-        opt_img = opt_lay['use_image']
+        opt_img = opt_lay['use-image']
         # If there is not dirname on the image file (i.e., a relative path was provided)
         # append it to the end of the dirpath to the layouts file
         if not os.path.dirname(opt_img):
@@ -1680,7 +1680,7 @@ class WinMain(WahCade):
         msg.winMessage.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(opt_lay['background-col']))
         msg.winMessage.move(self.message.imgBackground, 0, 0)
         msg.imgBackground.set_size_request(msg_lay['width'], msg_lay['height'])
-        msg_img = msg_lay['use_image']
+        msg_img = msg_lay['use-image']
         self.fixd.move(msg.winMessage,
                        (( main_lay['width'] - msg_lay['width'] ) / 2),
                        (( main_lay['height'] - msg_lay['height'] ) / 2))
