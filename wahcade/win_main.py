@@ -1627,7 +1627,7 @@ class WinMain(WahCade):
         # Okay to setup
         self.layout_file = layout_file
         layout_info = yaml.load(open(self.layout_file, 'r'))
-        
+
         # Temp for displaying high score data
         # TODO: Finalize this
         hs_heading_lay = layout_info['main']['HighScoreHeading']
