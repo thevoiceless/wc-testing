@@ -399,7 +399,6 @@ class WinMain(WahCade):
         
         # Temporary high score stuff
         # TODO: finalize this
-        self.lblHighScoreData.set_markup('<span color="white" size="13000">1. \tName\t\t\tScore</span>')
         self.lblHighScoreData.show()
         
         #Get a list of games already on the server
