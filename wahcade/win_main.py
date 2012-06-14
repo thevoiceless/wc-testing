@@ -2264,27 +2264,34 @@ class WinMain(WahCade):
         """
         # Main layout
         layout_path = os.path.join(CONFIG_DIR, 'layouts', self.wahcade_ini.get('layout'))
+        layout_extension = ".layy"
         if angle == 0:
             # The 0 degree layout angle _may_ not actually have a angle in the filename as this is the default
             # layout filename so make sure that we include this in the set.
             first_globbed_lay = ''
-            glob_lays = glob.glob(os.path.join(layout_path, '*.lay'))
-            if len(glob_lays) > 0:
+            glob_lays = glob.glob(os.path.join(layout_path, '*'+layout_extension))
+            if len(glob_lays) == 0:
+                layout_extension = ".lay"
+                glob_lays = glob.glob(os.path.join(layout_path, '*'+layout_extension))
+                if len(glob_lays) == 0:
+                    print "Failed to find suitable layout file (legacy or current)."
+                    exit()
+            elif len(glob_lays) > 0:
                 first_globbed_lay = glob_lays[0]
             layout_files = [
-                (layout_path, '%s-%s.%s.lay' % (self.current_emu, self.current_list_idx, angle)), #0
-                (layout_path, '%s-%s.lay' % (self.current_emu, self.current_list_idx)), #1
-                (layout_path, '%s.%s.lay' % (self.current_emu, angle)), #2
-                (layout_path, '%s.lay' % (self.current_emu)), #3
-                (layout_path, 'layout.%s.lay' % (angle)), #4
-                (layout_path, 'layout.lay'), #5
+                (layout_path, '%s-%s.%s' % (self.current_emu, self.current_list_idx, angle)+layout_extension), #0
+                (layout_path, '%s-%s' % (self.current_emu, self.current_list_idx)+layout_extension), #1
+                (layout_path, '%s.%s' % (self.current_emu, angle)+layout_extension), #2
+                (layout_path, '%s.lay' % (self.current_emu)+layout_extension), #3
+                (layout_path, 'layout.%s' % (angle)+layout_extension), #4
+                (layout_path, 'layout'+layout_extension), #5
                 ('', first_globbed_lay), #6
                 (os.path.join(CONFIG_DIR, 'layouts', 'classic_640x480'), 'layout.lay')] #7
         else:
             layout_files = [
-                (layout_path, '%s-%s.%s.lay' % (self.current_emu, self.current_list_idx, angle)),
-                (layout_path, '%s.%s.lay' % (self.current_emu, angle)),
-                (layout_path, 'layout.%s.lay' % (angle))]
+                (layout_path, '%s-%s.%s' % (self.current_emu, self.current_list_idx, angle)+layout_extension),
+                (layout_path, '%s.%s' % (self.current_emu, angle)+layout_extension),
+                (layout_path, 'layout.%s' % (angle)+layout_extension)]
         layout_file = self.get_matching_filename(layout_files, '')
         # Check to see whether the returned layout matches the requested orientation
         lfp = [os.path.join(dirname, fp) for dirname, fp in layout_files]

@@ -94,8 +94,8 @@ class WinLayout(GladeSupport, WahCade):
         #widgets
         self._main_widgets = [
             'Main Logo', 'Game List Indicator', 'Emulator Name', 'Game Selected',
-            'Game Description', 'Rom Name', 'Year Manufacturer', 'Screen Type', 'Overlay BG',
-            'Controller Type', 'Driver Status', 'Cat Ver', 'Games List', 'Overlay Scroll Letters',
+            'Game Description', 'Rom Name', 'Year Manufacturer', 'Screen Type', 'High Score Heading', 'High Score Data'
+            'Controller Type', 'Driver Status', 'Cat Ver', 'Games List',  'Overlay BG','Overlay Scroll Letters',
             'Artwork1', 'Artwork2', 'Artwork3', 'Artwork4', 'Artwork5',
             'Artwork6', 'Artwork7', 'Artwork8', 'Artwork9', 'Artwork10']
         self._opt_widgets = [
@@ -834,7 +834,7 @@ class WinLayout(GladeSupport, WahCade):
         if not os.path.dirname(img_file):
             img_file = os.path.join(layout_path, img_file)
         #print "img=",img_file, os.path.isfile(img_file)
-        self.dLayout[self.fixdMain]['use_image'] = os.path.isfile(img_file)
+        self.dLayout[self.fixdMain]['use-image'] = os.path.isfile(img_file)
         
         # Initialize options window stuff
         opt_lay = lay_info['options']
@@ -848,7 +848,7 @@ class WinLayout(GladeSupport, WahCade):
         img_file = self.get_path(fixdo_lay['use-image'])
         if not os.path.dirname(img_file):
             img_file = os.path.join(layout_path, img_file)
-        self.dLayout[self.fixdOpt]['use_image'] = os.path.isfile(img_file)
+        self.dLayout[self.fixdOpt]['use-image'] = os.path.isfile(img_file)
         
         # Initialize message window stuff
         msg_lay = lay_info['message']
@@ -862,7 +862,7 @@ class WinLayout(GladeSupport, WahCade):
         img_file = self.get_path(fixdg_lay['use-image'])
         if not os.path.dirname(img_file):
             img_file = os.path.join(layout_path, img_file)
-        self.dLayout[self.fixdMsg]['use_image'] = os.path.isfile(img_file)
+        self.dLayout[self.fixdMsg]['use-image'] = os.path.isfile(img_file)
         
         # Initialize screensaver window stuff (matches dimensions of main window)
         self.dLayout[self.fixdScr] = {
@@ -870,7 +870,7 @@ class WinLayout(GladeSupport, WahCade):
             'width': fixdm_lay['width'], 'height': fixdm_lay['height']}
         self.dLayout[self.fixdScr]['background-col'] = self.dLayout[self.fixdMain]['background-col']
         self.dLayout[self.fixdScr]['image'] = ''
-        self.dLayout[self.fixdScr]['use_image'] = False
+        self.dLayout[self.fixdScr]['use-image'] = False
         
         # Initialize widget standins
         for tup in self._layout_items:
@@ -893,7 +893,6 @@ class WinLayout(GladeSupport, WahCade):
             # take the first name associated with the given widget, using list comprehensions
             # tuple is of the form (offset, &widget, "name")
             name = [tup[2] for tup in self._layout_items if tup[1] is widget][0]
-            print name + " processed"
             # Navigate down YAML hierarchy to find layout propes, store to dLayout for retrieval
             header_lay = lay_info[hName]
             w_lay = header_lay[name]
@@ -999,7 +998,7 @@ class WinLayout(GladeSupport, WahCade):
         if not os.path.dirname(img_file):
             img_file = os.path.join(layout_path, img_file)
         #print "img=",img_file, os.path.isfile(img_file)
-        self.dLayout[self.fixdMain]['use_image'] = os.path.isfile(img_file)
+        self.dLayout[self.fixdMain]['use-image'] = os.path.isfile(img_file)
         #options window
         self.dLayout[self.fixdOpt]['background-col'] = self.get_colour(int(lines[296]))
         opt_bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[296])))
@@ -1007,7 +1006,7 @@ class WinLayout(GladeSupport, WahCade):
         img_file = self.get_path(lines[297])
         if not os.path.dirname(img_file):
             img_file = os.path.join(layout_path, img_file)
-        self.dLayout[self.fixdOpt]['use_image'] = os.path.isfile(img_file)
+        self.dLayout[self.fixdOpt]['use-image'] = os.path.isfile(img_file)
         #message window
         self.dLayout[self.fixdMsg]['background-col'] = self.get_colour(int(lines[355]))
         msg_bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[355])))
@@ -1015,11 +1014,11 @@ class WinLayout(GladeSupport, WahCade):
         img_file = self.get_path(lines[356])
         if not os.path.dirname(img_file):
             img_file = os.path.join(layout_path, img_file)
-        self.dLayout[self.fixdMsg]['use_image'] = os.path.isfile(img_file)
+        self.dLayout[self.fixdMsg]['use-image'] = os.path.isfile(img_file)
         #screen saver window
         self.dLayout[self.fixdScr]['background-col'] = self.dLayout[self.fixdMain]['background-col']
         self.dLayout[self.fixdScr]['image'] = ''
-        self.dLayout[self.fixdScr]['use_image'] = False
+        self.dLayout[self.fixdScr]['use-image'] = False
         #set all window items
         for offset, widget, name in self._layout_items:
             #get properties
@@ -1188,7 +1187,7 @@ class WinLayout(GladeSupport, WahCade):
             lines[offset] = ' %s' % d['width']
             lines[offset + 1] = ' %s' % d['height']
             lines[offset + 2] = ' %s' % self.reverse_get_colour(d['background-col'])
-            if d['use_image']:
+            if d['use-image']:
                 img_path = self.get_path(d['image'])
                 if os.path.dirname(img_path) == os.path.dirname(self.layout_filename):
                     d['image'] = os.path.basename(img_path)
@@ -1339,7 +1338,7 @@ class WinLayout(GladeSupport, WahCade):
             'width': cpv_width, 'height': cpv_height,
             'background-col': back_col,
             'image': cpv_img,
-            'use_image': os.path.isfile(self.get_path(cpv_img))}
+            'use-image': os.path.isfile(self.get_path(cpv_img))}
         #done
         ctrl_element.clear()
         self.dlg_screen.set_properties()
@@ -1404,7 +1403,7 @@ class WinLayout(GladeSupport, WahCade):
         d = self.dLayout[self.fixdCpv]
         ET.SubElement(mf_ele, 'Width').text = str(d['width'])
         ET.SubElement(mf_ele, 'Height').text = str(d['height'])
-        if d['use_image']:
+        if d['use-image']:
             img_path = self.get_path(d['image'])
             if os.path.dirname(img_path) == os.path.dirname(self.histview_filename):
                 d['image'] = os.path.basename(img_path)
@@ -1442,7 +1441,7 @@ class WinLayout(GladeSupport, WahCade):
         img_path = self.get_path(lines[4])
         if not os.path.dirname(img_path):
             img_path = os.path.join(os.path.dirname(self.histview_filename), img_path)
-        self.dLayout[self.fixdHist]['use_image'] = os.path.isfile(img_path)
+        self.dLayout[self.fixdHist]['use-image'] = os.path.isfile(img_path)
         #set window size
         self.fixdHist.set_size_request(hist_width, hist_height)
         #set all window items
@@ -1499,7 +1498,7 @@ class WinLayout(GladeSupport, WahCade):
         lines[1] = ' %s' % d['width']
         lines[2] = ' %s' % d['height']
         lines[3] = ' %s' % self.reverse_get_colour(d['background-col'])
-        if d['use_image']:
+        if d['use-image']:
             img_path = self.get_path(d['image'])
             if os.path.dirname(img_path) == os.path.dirname(self.histview_filename):
                 d['image'] = os.path.basename(img_path)
