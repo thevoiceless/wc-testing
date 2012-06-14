@@ -1382,14 +1382,14 @@ class WinMain(WahCade):
         else:
             p = Popen(cmd, shell=True)
         #begins video recording of game
-        self.wait_with_events(1.00)
-        window_name = 'MAME: %s [%s]' % (self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME], rom)
-        os.system('recordmydesktop --full-shots --fps 16 --no-frame --windowid $(xwininfo -name ' + "\'" + str(window_name) + "\'" + ' | awk \'/Window id:/ {print $4}\') -o \'recorded games\'/' + rom + '_highscore &')
+        #self.wait_with_events(1.00)
+        #window_name = 'MAME: %s [%s]' % (self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME], rom)
+        #os.system('recordmydesktop --full-shots --fps 16 --no-frame --windowid $(xwininfo -name ' + "\'" + str(window_name) + "\'" + ' | awk \'/Window id:/ {print $4}\') -o \'recorded games\'/' + rom + '_highscore &')
 
         sts = p.wait()
         self.launched_game = True
         #stops video recording 
-        os.system('kill `ps -e | awk \'/recordmydesktop/ {print $1}\'`')
+        #os.system('kill `ps -e | awk \'/recordmydesktop/ {print $1}\'`')
         
         self.log_msg("Child Process Returned: " + `sts`, "debug")
        # Minimize wahcade
