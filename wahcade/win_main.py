@@ -1046,7 +1046,7 @@ class WinMain(WahCade):
             self.game_ini_file = MameWahIni(game_ini_file)
         # Set layout text items
         self.lblGameDescription.set_text(game_info['game_name'])
-        self.lblGameSelected.set_text(_('Game %s of %s selected') % (
+        self.lblGameSelected.set_text(_('Game %s/%s') % (
             self.sclGames.get_selected() + 1,
             self.lsGames_len))
         if game_info['clone_of'] != '':
@@ -1381,18 +1381,18 @@ class WinMain(WahCade):
             p = Popen(cmd, shell=False)
         else:
             p = Popen(cmd, shell=True)
-        #begins video recording of game
+        # Begins video recording of game
         self.wait_with_events(1.00)
         window_name = 'MAME: %s [%s]' % (self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME], rom)
         os.system('recordmydesktop --full-shots --fps 16 --no-frame --windowid $(xwininfo -name ' + "\'" + str(window_name) + "\'" + ' | awk \'/Window id:/ {print $4}\') -o \'recorded games\'/' + rom + '_highscore &')
 
         sts = p.wait()
         self.launched_game = True
-        #stops video recording 
+        # Stops video recording 
         os.system('kill `ps -e | awk \'/recordmydesktop/ {print $1}\'`')
         
         self.log_msg("Child Process Returned: " + `sts`, "debug")
-       # Minimize wahcade
+        # Minimize wahcade
         if game_opts['minimize_wahcade']:
             self.winMain.iconify()
             self.do_events()
