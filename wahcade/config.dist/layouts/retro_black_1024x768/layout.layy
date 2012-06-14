@@ -2,8 +2,8 @@ main:
   CatVer:
     background-col: '#000000'
     font: SF Atarian System Extended
-    font-bold: 'False'
-    font-italic: 'False'
+    font-bold: false
+    font-italic: false
     font-size: 9.0
     height: 24
     text-align: 0.5
@@ -17,8 +17,8 @@ main:
   ControllerType:
     background-col: '#000000'
     font: SF Atarian System Extended
-    font-bold: 'False'
-    font-italic: 'False'
+    font-bold: false
+    font-italic: false
     font-size: 10.0
     height: 24
     text-align: 0.5
@@ -62,8 +62,8 @@ main:
   DriverStatus:
     background-col: '#000000'
     font: SF Atarian System Extended
-    font-bold: 'False'
-    font-italic: 'False'
+    font-bold: false
+    font-italic: false
     font-size: 10.0
     height: 24
     text-align: 0.5
@@ -77,8 +77,8 @@ main:
   EmulatorName:
     background-col: '#000000'
     font: SF Atarian System Extended
-    font-bold: 'False'
-    font-italic: 'False'
+    font-bold: false
+    font-italic: false
     font-size: 16.0
     height: 40
     text-align: 0.5
@@ -92,8 +92,8 @@ main:
   GameDescription:
     background-col: '#000000'
     font: SF Atarian System Extended
-    font-bold: 'False'
-    font-italic: 'False'
+    font-bold: false
+    font-italic: false
     font-size: 10.0
     height: 24
     text-align: 0.5
@@ -107,8 +107,8 @@ main:
   GameList:
     background-col: '#000000'
     font: SF Atarian System Extended
-    font-bold: 'False'
-    font-italic: 'False'
+    font-bold: false
+    font-italic: false
     font-size: 12.0
     height: 340
     text-align: 0.5
@@ -120,12 +120,12 @@ main:
     visible: true
     width: 370
     x: 80
-    y: 96
+    y: 86
   GameListIndicator:
     background-col: '#000000'
     font: SF Atarian System Extended
-    font-bold: 'False'
-    font-italic: 'False'
+    font-bold: false
+    font-italic: false
     font-size: 16.0
     height: 40
     text-align: 0.5
@@ -139,8 +139,8 @@ main:
   GameSelected:
     background-col: '#000000'
     font: Sans
-    font-bold: 'False'
-    font-italic: 'False'
+    font-bold: false
+    font-italic: false
     font-size: 9.75
     height: 20
     text-align: 0.5
@@ -154,8 +154,8 @@ main:
   MainArtwork1:
     background-col: '#808080'
     font: Sans
-    font-bold: 'True'
-    font-italic: 'False'
+    font-bold: true
+    font-italic: false
     font-size: 9.75
     height: 345
     text-align: 0.5
@@ -169,8 +169,8 @@ main:
   MainArtwork10:
     background-col: '#808080'
     font: Sans
-    font-bold: 'True'
-    font-italic: 'False'
+    font-bold: true
+    font-italic: false
     font-size: 9.75
     height: 277
     text-align: 0.5
@@ -184,8 +184,8 @@ main:
   MainArtwork2:
     background-col: '#808080'
     font: Sans
-    font-bold: 'True'
-    font-italic: 'False'
+    font-bold: true
+    font-italic: false
     font-size: 9.75
     height: 120
     text-align: 0.5
@@ -199,8 +199,8 @@ main:
   MainArtwork3:
     background-col: '#808080'
     font: Sans
-    font-bold: 'True'
-    font-italic: 'False'
+    font-bold: true
+    font-italic: false
     font-size: 9.75
     height: 277
     text-align: 0.5
@@ -214,8 +214,8 @@ main:
   MainArtwork4:
     background-col: '#808080'
     font: Sans
-    font-bold: 'True'
-    font-italic: 'False'
+    font-bold: true
+    font-italic: false
     font-size: 9.75
     height: 277
     text-align: 0.5
@@ -229,8 +229,8 @@ main:
   MainArtwork5:
     background-col: '#808080'
     font: Sans
-    font-bold: 'True'
-    font-italic: 'False'
+    font-bold: true
+    font-italic: false
     font-size: 9.75
     height: 277
     text-align: 0.5
@@ -244,8 +244,8 @@ main:
   MainArtwork6:
     background-col: '#808080'
     font: Sans
-    font-bold: 'True'
-    font-italic: 'False'
+    font-bold: true
+    font-italic: false
     font-size: 9.75
     height: 277
     text-align: 0.5
@@ -259,8 +259,8 @@ main:
   MainArtwork7:
     background-col: '#808080'
     font: Sans
-    font-bold: 'True'
-    font-italic: 'False'
+    font-bold: true
+    font-italic: false
     font-size: 9.75
     height: 277
     text-align: 0.5
@@ -274,8 +274,8 @@ main:
   MainArtwork8:
     background-col: '#808080'
     font: Sans
-    font-bold: 'True'
-    font-italic: 'False'
+    font-bold: true
+    font-italic: false
     font-size: 9.75
     height: 277
     text-align: 0.5
@@ -289,8 +289,8 @@ main:
   MainArtwork9:
     background-col: '#808080'
     font: Sans
-    font-bold: 'True'
-    font-italic: 'False'
+    font-bold: true
+    font-italic: false
     font-size: 9.75
     height: 277
     text-align: 0.5
@@ -304,8 +304,8 @@ main:
   MainLogo:
     background-col: '#808080'
     font: Sans
-    font-bold: 'True'
-    font-italic: 'False'
+    font-bold: true
+    font-italic: false
     font-size: 9.75
     height: 36
     text-align: 0.5
@@ -319,8 +319,8 @@ main:
   OverlayBG:
     background-col: '#000000'
     font: SF Atarian System Extended
-    font-bold: 'False'
-    font-italic: 'False'
+    font-bold: false
+    font-italic: false
     font-size: 9.0
     height: 70
     text-align: 0.5
@@ -334,8 +334,8 @@ main:
   OverlayScrollLetters:
     background-col: '#000000'
     font: SF Atarian System Extended
-    font-bold: 'False'
-    font-italic: 'False'
+    font-bold: false
+    font-italic: false
     font-size: 20000
     height: 54
     text-align: 0.5
@@ -349,8 +349,8 @@ main:
   RomName:
     background-col: '#000000'
     font: SF Atarian System Extended
-    font-bold: 'False'
-    font-italic: 'False'
+    font-bold: false
+    font-italic: false
     font-size: 10.0
     height: 24
     text-align: 0.5
@@ -364,8 +364,8 @@ main:
   ScreenType:
     background-col: '#000000'
     font: SF Atarian System Extended
-    font-bold: 'False'
-    font-italic: 'False'
+    font-bold: false
+    font-italic: false
     font-size: 10.0
     height: 24
     text-align: 0.5
@@ -379,8 +379,8 @@ main:
   YearManufacturer:
     background-col: '#000000'
     font: SF Atarian System Extended
-    font-bold: 'False'
-    font-italic: 'False'
+    font-bold: false
+    font-italic: false
     font-size: 10.0
     height: 24
     text-align: 0.5
@@ -401,8 +401,8 @@ message:
   Message:
     background-col: '#323232'
     font: SF Atarian System Extended
-    font-bold: 'False'
-    font-italic: 'False'
+    font-bold: false
+    font-italic: false
     font-size: 12.0
     height: 127
     text-align: 0.5
@@ -416,8 +416,8 @@ message:
   MsgHeading:
     background-col: '#323232'
     font: SF Atarian System Extended
-    font-bold: 'True'
-    font-italic: 'False'
+    font-bold: true
+    font-italic: false
     font-size: 14.0
     height: 20
     text-align: 0.5
@@ -431,8 +431,8 @@ message:
   Prompt:
     background-col: '#323232'
     font: SF Atarian System Extended
-    font-bold: 'False'
-    font-italic: 'False'
+    font-bold: false
+    font-italic: false
     font-size: 12.0
     height: 40
     text-align: 0.5
@@ -453,8 +453,8 @@ options:
   OptHeading:
     background-col: '#000000'
     font: SF Atarian System Extended
-    font-bold: 'True'
-    font-italic: 'False'
+    font-bold: true
+    font-italic: false
     font-size: 14.0
     height: 20
     text-align: 0.5
@@ -468,8 +468,8 @@ options:
   OptionsList:
     background-col: '#000000'
     font: SF Atarian System Extended
-    font-bold: 'False'
-    font-italic: 'False'
+    font-bold: false
+    font-italic: false
     font-size: 12.0
     height: 170
     text-align: 0.5
@@ -485,8 +485,8 @@ options:
   SettingHeading:
     background-col: '#000000'
     font: SF Atarian System Extended
-    font-bold: 'True'
-    font-italic: 'False'
+    font-bold: true
+    font-italic: false
     font-size: 14.0
     height: 20
     text-align: 0.5
@@ -500,8 +500,8 @@ options:
   SettingValue:
     background-col: '#000000'
     font: SF Atarian System Extended
-    font-bold: 'False'
-    font-italic: 'False'
+    font-bold: false
+    font-italic: false
     font-size: 12.0
     height: 40
     text-align: 0.5
@@ -522,8 +522,8 @@ screensaver:
   GameDescription:
     background-col: '#000000'
     font: SF Atarian System Extended
-    font-bold: 'False'
-    font-italic: 'False'
+    font-bold: false
+    font-italic: false
     font-size: 12.0
     height: 20
     text-align: 0.5
@@ -537,8 +537,8 @@ screensaver:
   MP3Name:
     background-col: '#000000'
     font: SF Atarian System Extended
-    font-bold: 'False'
-    font-italic: 'False'
+    font-bold: false
+    font-italic: false
     font-size: 12.0
     height: 20
     text-align: 0.5
@@ -552,8 +552,8 @@ screensaver:
   ScrArtwork1:
     background-col: '#808080'
     font: Sans
-    font-bold: 'True'
-    font-italic: 'False'
+    font-bold: true
+    font-italic: false
     font-size: 9.75
     height: 720
     text-align: 0.5
@@ -567,8 +567,8 @@ screensaver:
   ScrArtwork10:
     background-col: '#808080'
     font: Sans
-    font-bold: 'True'
-    font-italic: 'False'
+    font-bold: true
+    font-italic: false
     font-size: 9.75
     height: 430
     text-align: 0.5
@@ -582,8 +582,8 @@ screensaver:
   ScrArtwork2:
     background-col: '#808080'
     font: Sans
-    font-bold: 'True'
-    font-italic: 'False'
+    font-bold: true
+    font-italic: false
     font-size: 9.75
     height: 400
     text-align: 0.5
@@ -597,8 +597,8 @@ screensaver:
   ScrArtwork3:
     background-col: '#808080'
     font: Sans
-    font-bold: 'True'
-    font-italic: 'False'
+    font-bold: true
+    font-italic: false
     font-size: 9.75
     height: 87
     text-align: 0.5
@@ -612,8 +612,8 @@ screensaver:
   ScrArtwork4:
     background-col: '#808080'
     font: Sans
-    font-bold: 'True'
-    font-italic: 'False'
+    font-bold: true
+    font-italic: false
     font-size: 9.75
     height: 430
     text-align: 0.5
@@ -627,8 +627,8 @@ screensaver:
   ScrArtwork5:
     background-col: '#808080'
     font: Sans
-    font-bold: 'True'
-    font-italic: 'False'
+    font-bold: true
+    font-italic: false
     font-size: 9.75
     height: 430
     text-align: 0.5
@@ -642,8 +642,8 @@ screensaver:
   ScrArtwork6:
     background-col: '#808080'
     font: Sans
-    font-bold: 'True'
-    font-italic: 'False'
+    font-bold: true
+    font-italic: false
     font-size: 9.75
     height: 430
     text-align: 0.5
@@ -657,8 +657,8 @@ screensaver:
   ScrArtwork7:
     background-col: '#808080'
     font: Sans
-    font-bold: 'True'
-    font-italic: 'False'
+    font-bold: true
+    font-italic: false
     font-size: 9.75
     height: 430
     text-align: 0.5
@@ -672,8 +672,8 @@ screensaver:
   ScrArtwork8:
     background-col: '#808080'
     font: Sans
-    font-bold: 'True'
-    font-italic: 'False'
+    font-bold: true
+    font-italic: false
     font-size: 9.75
     height: 430
     text-align: 0.5
@@ -687,8 +687,8 @@ screensaver:
   ScrArtwork9:
     background-col: '#808080'
     font: Sans
-    font-bold: 'True'
-    font-italic: 'False'
+    font-bold: true
+    font-italic: false
     font-size: 9.75
     height: 430
     text-align: 0.5
