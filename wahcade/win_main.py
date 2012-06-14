@@ -35,7 +35,7 @@ import commands
 from operator import itemgetter
 import subprocess
 from subprocess import Popen
-import yaml
+import yaml #@UnresolvedImport
 
 
 ## GTK Modules
@@ -83,7 +83,7 @@ import filters                          # filters.py, routines to read/write mam
 from mamewah_ini import MameWahIni      # Reads mamewah-formatted ini file
 import joystick                         # joystick.py, joystick class, uses pygame package (SDL bindings for games in Python)
 import MySQLdb
-import requests
+import requests #@UnresolvedImport
 from xml.etree.ElementTree import fromstring
 from dummy_db import DummyDB
 # Set gettext function
@@ -1094,8 +1094,7 @@ class WinMain(WahCade):
         r = requests.get(url+self.current_rom+"/highscore")
         score_string = r.text #string returned from server containing high scores
         index = 1
-        
-        if score_string != '[]':
+        if score_string != '[]' and "Could not find" not in score_string:
             score_string = score_string[1:-1] #trim leading and trailing [] from string
             score_list = score_string.split(",")
             name, score = zip(*(s.split(":") for s in score_list)) #split the list into name's and scores
@@ -1123,7 +1122,7 @@ class WinMain(WahCade):
                     score_string += "  "
                 score_string += str(index) + ". " + "-"*12 + "\t" + " "*(24-6) + "-"*9 + "\n"
                 index += 1
-        elif not "could not find game" in score_string : #no high scores recorded
+        else: #no high scores recorded
             score_string = ''
             while index <= 10:
                 if index < 10:
