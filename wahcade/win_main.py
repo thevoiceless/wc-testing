@@ -1389,8 +1389,8 @@ class WinMain(WahCade):
         sts = p.wait()
         self.launched_game = True
         #stops video recording 
-        #os.system('kill `ps -e | awk \'/recordmydesktop/ {print $1}\'`')
-        
+        #os.system('kill `ps -e | awk \'/recordmydesktop/{a=$1}END{print a}\'`')
+
         self.log_msg("Child Process Returned: " + `sts`, "debug")
        # Minimize wahcade
         if game_opts['minimize_wahcade']:
