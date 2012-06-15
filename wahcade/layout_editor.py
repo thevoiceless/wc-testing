@@ -671,7 +671,7 @@ class WinLayout(GladeSupport, WahCade):
                 self.dLayout[self.drag_widget]['x'] = new_x
                 self.dLayout[self.drag_widget]['y'] = new_y
             #re-select moved / resized widget
-            self.drag_widget.window.raise_()
+            #self.drag_widget.window.raise_()
             self.select_widget(self.drag_widget)
             #set props
             self.dlg_props.set_properties(self.drag_widget, self.dLayout[self.drag_widget])
@@ -789,7 +789,7 @@ class WinLayout(GladeSupport, WahCade):
         self.drag_widget = widget
         widget.set_property('visible', True)
         widget.set_state(gtk.STATE_SELECTED)
-        widget.window.raise_()
+        #widget.window.raise_()
 
     def deselect_widgets(self, leave_selected):
         """de-select all currently selected widgets"""

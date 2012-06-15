@@ -35,7 +35,7 @@ import commands
 from operator import itemgetter
 import subprocess
 from subprocess import Popen
-import yaml
+import yaml #@UnresolvedImport
 
 
 ## GTK Modules
@@ -83,7 +83,7 @@ import filters                          # filters.py, routines to read/write mam
 from mamewah_ini import MameWahIni      # Reads mamewah-formatted ini file
 import joystick                         # joystick.py, joystick class, uses pygame package (SDL bindings for games in Python)
 import MySQLdb
-import requests
+import requests #@UnresolvedImport
 from xml.etree.ElementTree import fromstring
 from dummy_db import DummyDB
 # Set gettext function
@@ -509,7 +509,7 @@ class WinMain(WahCade):
         
         ### __INIT__ Complete
         self.init = False
-
+        
     def on_winMain_destroy(self, *args):
         """done, quit the application"""
         # Stop video playing if necessary
@@ -742,16 +742,17 @@ class WinMain(WahCade):
             elif event.type == gtk.gdk.KEY_RELEASE:
                 self.keypress_count = 0
                 # Updates ROM image after scrolling stops
-                game_info = filters.get_game_dict(self.lsGames[self.sclGames.get_selected()])
-                for i, img in enumerate(self.visible_img_list):
-                    if self.keypress_count == 0:
-                        img_filename = self.get_artwork_image(
-                            self.visible_img_paths[i],
-                            self.layout_path,
-                            game_info,
-                            self.current_emu,
-                            (i + 1))
-                        self.display_scaled_image(img, img_filename, self.keep_aspect, img.get_data('text-rotation'))
+                if len(self.lsGames) != 0:
+                    game_info = filters.get_game_dict(self.lsGames[self.sclGames.get_selected()])
+                    for i, img in enumerate(self.visible_img_list):
+                        if self.keypress_count == 0:
+                            img_filename = self.get_artwork_image(
+                                self.visible_img_paths[i],
+                                self.layout_path,
+                                game_info,
+                                self.current_emu,
+                                (i + 1))
+                            self.display_scaled_image(img, img_filename, self.keep_aspect, img.get_data('text-rotation'))
                 #self.lblOverlayScrollLetters.set_visible(False)
                 self.lblOverlayScrollLetters.hide()
                 self.overlayBG.hide()
@@ -1033,6 +1034,9 @@ class WinMain(WahCade):
         # Set current game in ini file
         self.current_list_ini.set('current_game', self.sclGames.get_selected())
         # Get info to display in bottom right box
+        if len(self.lsGames) == 0: #Fixes error when switching lists with empty games
+            return
+        
         game_info = filters.get_game_dict(self.lsGames[self.sclGames.get_selected()])
         self.current_rom = game_info['rom_name']
         # Check for game ini file
@@ -1042,7 +1046,7 @@ class WinMain(WahCade):
             self.game_ini_file = MameWahIni(game_ini_file)
         # Set layout text items
         self.lblGameDescription.set_text(game_info['game_name'])
-        self.lblGameSelected.set_text(_('Game %s of %s selected') % (
+        self.lblGameSelected.set_text(_('Game %s/%s') % (
             self.sclGames.get_selected() + 1,
             self.lsGames_len))
         if game_info['clone_of'] != '':
@@ -1090,8 +1094,7 @@ class WinMain(WahCade):
         r = requests.get(url+self.current_rom+"/highscore")
         score_string = r.text #string returned from server containing high scores
         index = 1
-        
-        if score_string != '[]':
+        if score_string != '[]' and "Could not find" not in score_string:
             score_string = score_string[1:-1] #trim leading and trailing [] from string
             score_list = score_string.split(",")
             name, score = zip(*(s.split(":") for s in score_list)) #split the list into name's and scores
@@ -1269,7 +1272,7 @@ class WinMain(WahCade):
         self.message.display_message(
             _('Starting...'),
             '%s: %s' % (rom, self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME]))
-        
+
         # Erase scores from hi score file of current game
         # Executable must be in same directory
         if rom in self.supported_games:
@@ -1286,7 +1289,6 @@ class WinMain(WahCade):
                 os.system(htt_command + 'nvram' + sep + rom + '.nv')
             else:
                 print rom, 'high score file not found'
-            
 
         # Stop joystick poller
         if self.joy is not None:
@@ -1360,7 +1362,7 @@ class WinMain(WahCade):
         f = open(self.lck_filename, 'w')
         f.write(cmd)
         f.close()
-                       
+
         if not debug_mode and sys.platform != 'win32':
             self.log_msg('******** Command from Wah!Cade is:  %s ' % cmd)
             # Redirect output to log file
@@ -1373,18 +1375,26 @@ class WinMain(WahCade):
             os.chdir(os.path.dirname(emulator_executable))
         except:
             pass
-   
+        
         # Run emulator & wait for it to finish
         if not wshell:
             p = Popen(cmd, shell=False)
         else:
             p = Popen(cmd, shell=True)
+
+        # Begins video recording of game
+        #self.wait_with_events(1.00)
+        #window_name = 'MAME: %s [%s]' % (self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME], rom)
+        #os.system('recordmydesktop --full-shots --fps 16 --no-frame --windowid $(xwininfo -name ' + "\'" + str(window_name) + "\'" + ' | awk \'/Window id:/ {print $4}\') -o \'recorded games\'/' + rom + '_highscore &')
+
         sts = p.wait()
-        
         self.launched_game = True
         
+        # Stops video recording 
+        #os.system('kill `ps -e | awk \'/recordmydesktop/{a=$1}END{print a}\'`')
+
         self.log_msg("Child Process Returned: " + `sts`, "debug")
-       # Minimize wahcade
+        # Minimize wahcade
         if game_opts['minimize_wahcade']:
             self.winMain.iconify()
             self.do_events()
@@ -1620,7 +1630,7 @@ class WinMain(WahCade):
         # Okay to setup
         self.layout_file = layout_file
         layout_info = yaml.load(open(self.layout_file, 'r'))
-        
+
         # Temp for displaying high score data
         # TODO: Finalize this
         hs_heading_lay = layout_info['main']['HighScoreHeading']
@@ -2144,15 +2154,16 @@ class WinMain(WahCade):
 
     def remove_current_game(self):
         """remove currently selected game from the list"""
-        item = self.sclGames.ls.pop(self.sclGames.get_selected())
-        item = self.lsGames.pop(self.sclGames.get_selected())
-        filters.write_filtered_list(
-            os.path.join(CONFIG_DIR, 'files', '%s-%s.lst' % (
-                self.current_emu, self.current_list_idx)),
-            self.lsGames)
-        # Update displays
-        self.sclGames.set_selected(self.sclGames.get_selected() - 1)
-        self.sclGames.update()
+        if len(self.lsGames) != 0:
+            item = self.sclGames.ls.pop(self.sclGames.get_selected())
+            item = self.lsGames.pop(self.sclGames.get_selected())
+            filters.write_filtered_list(
+                os.path.join(CONFIG_DIR, 'files', '%s-%s.lst' % (
+                    self.current_emu, self.current_list_idx)),
+                self.lsGames)
+            # Update displays
+            self.sclGames.set_selected(self.sclGames.get_selected() - 1)
+            self.sclGames.update()
 
     def check_music_settings(self):
         """enable music playing?"""
