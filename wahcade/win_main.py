@@ -391,14 +391,15 @@ class WinMain(WahCade):
         self.layout_file = ''
         self.load_emulator()
         
-                # Load list of games supported by HiToText
+        # Load list of games supported by HiToText
         self.supported_games = set()
         self.supported_game_file = open('supported_games.lst')
         for line in self.supported_game_file:
-            self.supported_games.add(line[:-2])
+            self.supported_games.add(line.strip())
         
-        # Temporary high score stuff
-        # TODO: finalize this
+        for x in self.supported_games:
+            if x == 'digdug':
+                print 'in supported'
         self.lblHighScoreData.show()
         
         #Get a list of games already on the server
