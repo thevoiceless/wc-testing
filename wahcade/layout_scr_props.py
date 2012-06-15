@@ -112,10 +112,10 @@ class DlgScreenProps(GladeSupport):
             if not self.chkBackgroundImage.get_active():
                 #don't use image
                 self.WinLayout.imgBg.set_property('visible', False)
-                self.screen_props['use_image'] = False
+                self.screen_props['image-available'] = False
             else:
                 self.WinLayout.imgBg.set_property('visible', True)
-                self.screen_props['use_image'] = True
+                self.screen_props['image-available'] = True
             self.WinLayout.set_layout_altered(self.screen_widget)
 
     def on_colourBg_color_set(self, widget, *args):
@@ -145,9 +145,9 @@ class DlgScreenProps(GladeSupport):
             self.chkBackgroundImage.set_sensitive(True)
             self.txeBackgroundImage.set_sensitive(True)
             self.btnBackgroundImage.set_sensitive(True)
-            self.chkBackgroundImage.set_active(self.screen_props['use_image'])
+            self.chkBackgroundImage.set_active(self.screen_props['image-available'])
                 #os.path.exists(self.WinLayout.get_path(self.screen_props['image'])))
-            self.txeBackgroundImage.set_text(self.screen_props['image'])
+            self.txeBackgroundImage.set_text(self.screen_props['use-image'])
         else:
             #screen saver window
             self.chkBackgroundImage.set_sensitive(False)

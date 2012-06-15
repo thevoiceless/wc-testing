@@ -251,16 +251,45 @@ class DlgProps(GladeSupport):
             self.rbTextAlignC.set_active(True)
         self.spnRotation.set_value(widget_props['text-rotation'])
         #list widget?
-        if type(widget) is ScrollList:
+        if 'text-bg-high' in widget_props and 'text-fg-high' in widget_props:
             self.lblBar.set_sensitive(True)
             self.clrBar.set_sensitive(True)
             self.lblSelected.set_sensitive(True)
             self.clrSelected.set_sensitive(True)
-            self.clrBar.set_color(gtk.gdk.color_parse(widget_props['bar-col']))
-            self.clrSelected.set_color(gtk.gdk.color_parse(widget_props['selected-col']))
+            self.clrBar.set_color(gtk.gdk.color_parse(widget_props['text-bg-high']))
+            self.clrSelected.set_color(gtk.gdk.color_parse(widget_props['text-fg-high']))
         else:
             self.lblBar.set_sensitive(False)
             self.clrBar.set_sensitive(False)
             self.lblSelected.set_sensitive(False)
             self.clrSelected.set_sensitive(False)
+            self.clrBar.set_color(gtk.gdk.color_parse('Black'))
+            self.clrSelected.set_color(gtk.gdk.color_parse('Black'))
         self.updating = False
+        
+    def unset_properties(self):
+        """return to startup "empty" state"""
+        self.name_idx = ""
+        #set updating flag to stop events from processing
+        self.updating = True
+        #set props
+        self.cboName.set_active(-1)
+        self.chkVisible.set_active(False)
+        self.chkTransparent.set_active(True)
+        self.spnX.set_value(0)
+        self.spnY.set_value(0)
+        self.spnWidth.set_value(0)
+        self.spnHeight.set_value(0)
+        self.fontText.set_font_name("Sans 12")
+        self.clrBackground.set_color(gtk.gdk.color_parse("Black"))
+        self.clrText.set_color(gtk.gdk.color_parse("Black"))
+        self.clrBar.set_color(gtk.gdk.color_parse('Black'))
+        self.clrSelected.set_color(gtk.gdk.color_parse('Black'))
+        self.rbTextAlignC.set_active(True)
+        self.spnRotation.set_value(0)
+        self.lblBar.set_sensitive(False)
+        self.clrBar.set_sensitive(False)
+        self.lblSelected.set_sensitive(False)
+        self.clrSelected.set_sensitive(False)
+        self.updating = False
+        

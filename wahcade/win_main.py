@@ -781,11 +781,11 @@ class WinMain(WahCade):
             for mw_func in mw_functions:
                 # Which function?
                 if current_window == 'main':
-                    # Display first two letters of selected game when scrolling quickly
+                    # Display first n letters of selected game when scrolling quickly
                     if self.keypress_count > self.showOverlayThresh:
                         self.overlayBG.show()
-                        overlayLetters = self.lsGames[self.sclGames.get_selected()][0][0:self.lblOverlayScrollLetters.charShowCount]
-                        self.lblOverlayScrollLetters.set_markup(_('%s%s%s') % (self.overlayMarkupHead, overlayLetters, self.overlayMarkupTail))
+                        overlayLetters = self.lsGames[ self.sclGames.get_selected() ][ 0 ][ 0 : self.lblOverlayScrollLetters.charShowCount ]
+                        self.lblOverlayScrollLetters.set_markup( _('%s%s%s') % (self.overlayMarkupHead, overlayLetters, self.overlayMarkupTail) )
                         #self.lblOverlayScrollLetters.set_visible(True)
                         self.lblOverlayScrollLetters.show()
                     # Main form
@@ -1710,14 +1710,6 @@ class WinMain(WahCade):
             wset_layout_info = layout_info[w_set_name]
             for offset, widget, name in self._layout_items[w_set_name]:
                 w_lay = wset_layout_info[name]
-                # Overlay stuff
-                if 'bg-image' in w_lay:
-                    bg_file = self.get_path(w_lay['bg-image'])
-                    if not os.path.dirname(bg_file):
-                        bg_file = os.path.join(self.layout_path, bg_file)
-                    widget.set_from_file(bg_file)
-                if 'show-count' in w_lay:
-                    widget.charShowCount = w_lay['show-count']
                 # Font
                 fontData = w_lay['font']
                 if w_lay['font-bold']:
@@ -1759,6 +1751,17 @@ class WinMain(WahCade):
                         parent.show()
                 # Size
                 widget.set_size_request(w_lay['width'], w_lay['height'])
+                # Overlay stuff
+                if 'bg-image' in w_lay:
+                    bg_file = self.get_path(w_lay['bg-image'])
+                    if not os.path.dirname(bg_file):
+                        bg_file = os.path.join(self.layout_path, bg_file)
+                    widget.set_from_file(bg_file)
+                    widget.hide()
+                if 'show-count' in w_lay:
+                    widget.charShowCount = w_lay['show-count']
+                    widget.hide()
+                    
                 # Position the video widget
                 if self.emu_ini.getint('movie_artwork_no') > 0:
                     self.video_artwork_widget = self._main_images[(self.emu_ini.getint('movie_artwork_no') - 1)]
