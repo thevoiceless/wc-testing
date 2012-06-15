@@ -397,9 +397,6 @@ class WinMain(WahCade):
         for line in self.supported_game_file:
             self.supported_games.add(line.strip())
         
-        for x in self.supported_games:
-            if x == 'digdug':
-                print 'in supported'
         self.lblHighScoreData.show()
         
         #Get a list of games already on the server
