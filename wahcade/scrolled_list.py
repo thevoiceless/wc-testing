@@ -178,7 +178,7 @@ class ScrollList(object):
                 self.arwScrollTop.set(gtk.ARROW_UP, gtk.SHADOW_NONE)
                 self.arwScrollBottom.set(gtk.ARROW_DOWN, gtk.SHADOW_NONE)
                 self.fixd.move(self.arwScrollTop, 0, 0)
-                self.fixd.move(self.arwScrollBottom, 0, height)
+                self.fixd.move(self.arwScrollBottom, 0, height - 15)
             else:
                 self.arwScrollTop.set(gtk.ARROW_DOWN, gtk.SHADOW_NONE)
                 self.arwScrollBottom.set(gtk.ARROW_UP, gtk.SHADOW_NONE)
@@ -205,7 +205,7 @@ class ScrollList(object):
         font_size = int(self._pango_font_desc.get_size() / pango.SCALE)
         # Calc number of rows that will fit (depends on labels font size) and set list_row size
         if self.display_limiters:
-            height_modifier = -15
+            height_modifier = -30
             h = h + height_modifier
             self._row_height = ((h + height_modifier) / self.num_rows)
         else:
@@ -215,7 +215,7 @@ class ScrollList(object):
             self.num_rows = 1
             self._row_height = (h / self.num_rows) - ((h + height_modifier) - (font_size * 2))
         else:
-            self.num_rows = (((h + height_modifier) / (font_size * 2)) + int(row_modifier))
+            self.num_rows = (((h + height_modifier) / (font_size * 2)) + int(row_modifier)) - 1
             h = int(h)
             self._row_height = (h / self.num_rows) +1 # Reposition rows
         # Create labels
