@@ -1378,18 +1378,15 @@ class WinMain(WahCade):
             p = Popen(cmd, shell=False)
         else:
             p = Popen(cmd, shell=True)
-
+        
         # Begins video recording of game
-        #self.wait_with_events(1.00)
-        #window_name = 'MAME: %s [%s]' % (self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME], rom)
-        #os.system('recordmydesktop --full-shots --fps 16 --no-frame --windowid $(xwininfo -name ' + "\'" + str(window_name) + "\'" + ' | awk \'/Window id:/ {print $4}\') -o \'recorded games\'/' + rom + '_highscore &')
-
+        if self.options.record:
+            self.start_recording_video(rom)
         sts = p.wait()
         self.launched_game = True
-        
-        # Stops video recording 
-        #os.system('kill `ps -e | awk \'/recordmydesktop/{a=$1}END{print a}\'`')
-
+        # Stops video recording
+        if self.options.record:
+            self.stop_recording_video()
         self.log_msg("Child Process Returned: " + `sts`, "debug")
         # Minimize wahcade
         if game_opts['minimize_wahcade']:
@@ -2453,3 +2450,13 @@ class WinMain(WahCade):
                 self.gstSound.set_volume(self.sound_vol)
                 self.gstSound.play(theclip)
             break
+        
+    def start_recording_video(self, rom):
+        self.wait_with_events(1.00)
+        window_name = 'MAME: %s [%s]' % (self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME], rom)
+        os.system('recordmydesktop --full-shots --fps 16 --no-frame --windowid $(xwininfo -name ' + "\'" + str(window_name) + "\'" + ' | awk \'/Window id:/ {print $4}\') -o \'recorded games\'/' + rom + '_highscore &')
+
+    def stop_recording_video(self):
+        return os.system('kill `ps -e | awk \'/recordmydesktop/{a=$1}END{print a}\'`')
+
+
