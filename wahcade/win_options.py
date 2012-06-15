@@ -94,6 +94,7 @@ class WinOptions(WahCade):
                 [_('Games List Options'), 'list_options'],
                 #['Launch External Application', 'external'],
                 [_('Music Options'), 'music'],
+                [_('Video Recording Options'), 'record_video'],
                 [_('About...'), 'about'],
                 [_('Exit Wah!Cade'), 'exit']],
                 #[_('Close Arcade'), 'shutdown']],
@@ -119,6 +120,9 @@ class WinOptions(WahCade):
                 [_('Next Track'), 'next_track'],
                 [_('Previous Track'), 'previous_track'],
                 [_('Select Track / Directory'), 'show_music_dir']],
+            'record_video':
+                [[_('On'), 'recording_on'],
+                [_('Off'), 'recording_off']],
             'exit':
                 [[_('Exit to Desktop'), 'exit_desktop'],
                 [_('Exit & Reboot'), 'exit_reboot'],
@@ -133,6 +137,7 @@ class WinOptions(WahCade):
         self.sclOptions.use_mouse = self.WinMain.ctrlr_ini.getint('mouse')
         self.sclOptions.wrap_list = self.WinMain.wahcade_ini.getint('wrap_list')
         #self.lblHeading.set_ellipsize(pango.ELLIPSIZE_START)
+        self.record = False
 
     def on_sclOptions_changed(self, *args):
         """options menu selected item changed"""
@@ -201,8 +206,8 @@ class WinOptions(WahCade):
             #show all game lists
             self.lblSettingValue.set_text(self.WinMain.current_list_ini.get('list_title'))
             for list_name, idx, cycle_list in self.WinMain.game_lists:
-                self.lsOptions.append([list_name, idx])
-                self.sclOptions.set_selected(self.WinMain.current_list_idx)
+                self.lsOptions.append([list_name, idx]) # The lines selectable, list names
+                self.sclOptions.set_selected(self.WinMain.current_list_idx) # Which option is currently highlighted when list is opened
         elif menu_level == 'add_to_list':
             #show "normal" game lists
             self.lblSettingValue.set_text(self.WinMain.current_list_ini.get('list_title'))
@@ -224,6 +229,13 @@ class WinOptions(WahCade):
             else:
                 #all other lists
                 [self.lsOptions.append(menu_item) for menu_item in self._menus[menu_level][:3]]
+        elif menu_level == 'record_video':
+            [self.lsOptions.append(menu_item) for menu_item in self._menus[menu_level][:2]] # Generates list choices
+            self.sclOptions.set_selected(0) # Sets which option is selected when opened
+            if self.record:
+                self.lblSettingValue.set_text('On')  # What "Current Setting:" says
+            else:
+                self.lblSettingValue.set_text('Off')  # What "Current Setting:" says
         elif menu_level == 'generate_list':
             #re-create initial filter
             self.lblHeading.set_text(_('Please Wait...'))
@@ -324,9 +336,15 @@ class WinOptions(WahCade):
                 #about
                 self.show_about_dialog('Wah!Cade', CONFIG_DIR)
                 self.WinMain.hide_window('options')
-            else:
-                #show appropriate menu
-                self.set_menu(menu_item, menu_desc)
+            #show appropriate menu
+            self.set_menu(menu_item, menu_desc)
+        elif self.current_menu == 'record_video':
+            if menu_item == 'recording_on':
+                self.record = True
+            elif menu_item == 'recording_off':
+                self.record = False
+      #      self.WinMain.hide_window('options')
+            self.WinMain.hide_window('options')
         elif self.current_menu == 'emu_list':
             #emulator list menu, so switch to selected emulator
             self.WinMain.hide_window('options')
