@@ -98,14 +98,16 @@ class WinMain(WahCade):
         # Try connecting to a database, otherwise
         self.db_file = "confs" + sep + config_opts.db_config_file + ".txt"
         try:
+            print "blah"
             with open(self.db_file, 'rt') as f: # Open the config file and extract the database connection information
                 self.props = {}  # Dictionary
                 for line in f.readlines():
                     val = line.split('=')
                     self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
-                requests.get("http://localhost:" + self.props['port'] + "/RcadeServer") #attempt to make connection to server
+                #requests.get("http://localhost:" + self.props['port'] + "/RcadeServer")
+                requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']) # Attempt to make connection to server
                 self.connected = True
-        except: #any exeption would mean some sort of failed server connection
+        except: # Any exception would mean some sort of failed server connection
             self.connected = False
         
         ### Set Global Variables
