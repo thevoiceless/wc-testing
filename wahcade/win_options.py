@@ -340,20 +340,22 @@ class WinOptions(WahCade):
                 #about
                 self.show_about_dialog('Wah!Cade', CONFIG_DIR)
                 self.WinMain.hide_window('options')
-            #show appropriate menu
-            self.set_menu(menu_item, menu_desc)
+            else:
+                #show appropriate menu
+                self.set_menu(menu_item, menu_desc)
         elif self.current_menu == 'record_video':
             if menu_item == 'recording_launch':
                 self.record = True
                 self.on_keypress = False
+                self.lblSettingValue.set_text('Record on game launch')  # What "Current Setting:" says
             elif menu_item == 'recording_keypress':
                 self.record = True
                 self.on_keypress = True
+                self.lblSettingValue.set_text('Record on keypress')  # What "Current Setting:" says
             elif menu_item == 'recording_off':
                 self.record = False
                 self.on_keypress = False
-      #      self.WinMain.hide_window('options')
-            self.WinMain.hide_window('options')
+                self.lblSettingValue.set_text('Off')  # What "Current Setting:" says
         elif self.current_menu == 'emu_list':
             #emulator list menu, so switch to selected emulator
             self.WinMain.hide_window('options')
