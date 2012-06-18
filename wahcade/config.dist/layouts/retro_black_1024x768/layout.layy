@@ -59,6 +59,21 @@ main:
     width: 510
     x: 0
     y: 525
+  UserName:
+    background-col: '#000000'
+    font: SF Atarian System Extended
+    font-bold: false
+    font-italic: false
+    font-size: 10000
+    height: 170
+    text-align: 0.5
+    text-col: '#FFFFFF'
+    text-rotation: 0
+    transparent: false
+    visible: true
+    width: 510
+    x: 0
+    y: 525  
   DriverStatus:
     background-col: '#000000'
     font: SF Atarian System Extended
