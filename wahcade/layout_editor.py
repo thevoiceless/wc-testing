@@ -97,7 +97,7 @@ class WinLayout(GladeSupport, WahCade):
             'Game Description', 'Rom Name', 'Year Manufacturer', 'Screen Type', 'High Score Heading', 'High Score Data',
             'Controller Type', 'Driver Status', 'Cat Ver', 'Games List',  'Overlay BG','Overlay Scroll Letters',
             'Artwork1', 'Artwork2', 'Artwork3', 'Artwork4', 'Artwork5',
-            'Artwork6', 'Artwork7', 'Artwork8', 'Artwork9', 'Artwork10']
+            'Artwork6', 'Artwork7', 'Artwork8', 'Artwork9', 'Artwork10', 'User Name']
         self._opt_widgets = [
             'Heading', 'Options List', 'Setting Heading', 'Setting Value']
         self._msg_widgets = [
@@ -215,6 +215,7 @@ class WinLayout(GladeSupport, WahCade):
             (552, main_widgets['Overlay Scroll Letters'], "OverlayScrollLetters"),
             (-1, main_widgets['High Score Heading'], "HighScoreHeading"),                         
             (-1, main_widgets['High Score Data'], "HighScoreData"),
+            (-1, main_widgets['User Name'], "UserName"),
             (301, opt_widgets['Heading'], "OptHeading"),
             (314, opt_widgets['Options List'], "OptionsList"),
             (327, opt_widgets['Setting Heading'], "SettingHeading"),
