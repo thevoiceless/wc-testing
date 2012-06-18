@@ -99,7 +99,6 @@ class WinMain(WahCade):
         # Try connecting to a database, otherwise
         self.db_file = "confs" + sep + config_opts.db_config_file + ".txt"
         try:
-            print "blah"
             with open(self.db_file, 'rt') as f: # Open the config file and extract the database connection information
                 self.props = {}  # Dictionary
                 for line in f.readlines():
@@ -402,23 +401,23 @@ class WinMain(WahCade):
         for line in self.supported_game_file:
             self.supported_games.add(line.strip())
                 
-        #Get a list of games already on the server
+        # Get a list of games already on the server
         if self.connected:
-            url = "http://localhost:" + self.props['port'] + "/RcadeServer/rest/game/"
+            url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
             data = requests.get(url)
         
-            #map rom name to associated game name
+            # Map rom name to associated game name
             romToName = {}
             for sublist in self.lsGames: 
                 romToName[sublist[1]] = sublist[0]
             
-            #Get a list of games already on the server
+            # Get a list of games already on the server
             data = fromstring(data.text)
             games_on_server = []
             for game in data.getiterator('game'):
                 games_on_server.append(game.find('romName').text)
     
-            #add games to the server if not on the server
+            # Add games to the server if not on the server
             for rom in self.supported_games:
                 if rom not in games_on_server and rom in romToName:
                     post_data = {"romName":rom, "gameName":romToName[rom]}
