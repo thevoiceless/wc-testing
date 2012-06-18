@@ -1726,8 +1726,10 @@ class WinMain(WahCade):
                 widget.modify_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse(textColor))
                 # BG color, transparency as appropriate
                 bgColor = w_lay['background-col']
+                if name is 'OverlayBG':
+                    widget.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(bgColor))
                 parent = widget.get_parent()
-                if parent.get_ancestor(gtk.EventBox): # Check if we have an EventBox ancester
+                if parent.get_ancestor(gtk.EventBox): # Check if we have an EventBox ancestor
                     if w_lay['transparent'] == True:
                         parent.set_visible_window(False)
                     else:

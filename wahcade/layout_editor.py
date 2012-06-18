@@ -170,7 +170,7 @@ class WinLayout(GladeSupport, WahCade):
         self.winMain.connect('size-allocate', self.on_winMain_size_allocate)
         self.winMain.show()
         #properties dialogs
-        self.dlg_props = DlgProps(LAYOUT_GLADE_FILE, 'dlgProps', self) # Glade error: deprecated call
+        self.dlg_props = DlgProps(LAYOUT_GLADE_FILE, 'dlgProps', self)
         self.dlg_props.populate_names(self._main_widgets)
         self.dlg_props.dlgProps.hide()
         self.dlg_screen = DlgScreenProps(LAYOUT_GLADE_FILE, 'dlgScreenProps', self)
