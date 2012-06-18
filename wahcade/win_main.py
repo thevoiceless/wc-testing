@@ -161,7 +161,7 @@ class WinMain(WahCade):
         self.splash_use = self.wahcade_ini.getint('splash_use',1)
         self.splash_show_text = self.wahcade_ini.getint('splash_show_text',1)
         self.splash_border_width = self.wahcade_ini.getint('splash_border_width',10)
- 
+        
         ### SETUP EMULATOR INI FILE       
         self.current_emu = self.wahcade_ini.get('current_emulator')
         self.emu_ini = MameWahIni(os.path.join(CONFIG_DIR, 'ini' + sep + self.current_emu + '.ini'))
@@ -391,7 +391,7 @@ class WinMain(WahCade):
         self.layout_file = ''
         self.load_emulator()
         
-                # Load list of games supported by HiToText
+        # Load list of games supported by HiToText
         self.supported_games = set()
         self.supported_game_file = open('supported_games.lst')
         for line in self.supported_game_file:
@@ -453,7 +453,6 @@ class WinMain(WahCade):
             self.splash.destroy()
         self.do_events()                # wc_common.py
         self.on_winMain_focus_in()
-
 
         #### Start intro movie
         if gst_media_imported and os.path.isfile(self.intro_movie):
@@ -2237,6 +2236,11 @@ class WinMain(WahCade):
         # Joystick
         elif timer_type == 'joystick' and (self.joyint == 1):
             self.joystick_timer = gobject.timeout_add(50, self.joy.poll, self.on_winMain_key_press)
+        # Video recording
+        elif timer_type == 'record':
+            self.timeout = 2; # Number of seconds till the video recorder times out
+            self.recorder_timer = gobject.timeout_add(self.timeout * 1000, self.stop_recording_video)
+
 
     def display_splash(self):
         """show splash screen"""
@@ -2458,8 +2462,10 @@ class WinMain(WahCade):
         self.wait_with_events(1.00)
         window_name = 'MAME: %s [%s]' % (self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME], rom)
         os.system('recordmydesktop --full-shots --fps 16 --no-frame --windowid $(xwininfo -name ' + "\'" + str(window_name) + "\'" + ' | awk \'/Window id:/ {print $4}\') -o \'recorded games\'/' + rom + '_highscore &')
+   #     self.start_timer('record') # Doesn't work at the moment
 
     def stop_recording_video(self):
+        print 'hi'
         return os.system('kill `ps -e | awk \'/recordmydesktop/{a=$1}END{print a}\'`')
 
 
