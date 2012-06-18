@@ -72,6 +72,7 @@ except:
 ### Project modules
 from constants import *
 from scrolled_list import ScrollList    # Transparent scrolled list widget
+from scroll_overlay import ScrollOverlay# Custom overlay text/image container
 from key_consts import mamewah_keys     # Keyboard constants
 from wc_common import WahCade           # Common functions for wahcade
 from win_options import WinOptions      # Options window
@@ -213,8 +214,6 @@ class WinMain(WahCade):
         self.imgArtwork8 = gtk.Image()
         self.imgArtwork9 = gtk.Image()
         self.imgArtwork10 = gtk.Image()
-        # Background for overlay scroll letters
-        self.overlayBG = gtk.Image()
         self.lblGameDescription = gtk.Label()
         self.lblRomName = gtk.Label()
         self.lblYearManufacturer = gtk.Label()
@@ -224,7 +223,9 @@ class WinMain(WahCade):
         self.lblCatVer = gtk.Label()
         self.lblHighScoreHeading = gtk.Label()
         self.lblHighScoreData = gtk.Label()
+        self.overlayBG = gtk.Image()
         self.lblOverlayScrollLetters = gtk.Label()
+        self.scrollOverlay = ScrollOverlay(self.lblOverlayScrollLetters, self.overlayBG)
 
         # create scroll list widget
         self.sclGames = ScrollList() 
@@ -341,8 +342,9 @@ class WinMain(WahCade):
             (255, self.lblControllerType, "ControllerType"),            # Controller
             (268, self.lblDriverStatus, "DriverStatus"),                # Driver
             (281, self.lblCatVer, "CatVer"),
-            (552, self.overlayBG, "OverlayBG"),                         # Overlay scroll letter background image
-            (552, self.lblOverlayScrollLetters, "OverlayScrollLetters"),# Overlay scroll letters
+            #(552, self.overlayBG, "OverlayBG"),                         # Overlay scroll letter background image
+            #(552, self.lblOverlayScrollLetters, "OverlayScrollLetters"),# Overlay scroll letters
+            (-1, self.scrollOverlay, "ScrollOverlay"),
             (-1, self.lblHighScoreHeading, "HighScoreHeading"),         # High score heading
             (-1, self.lblHighScoreData, "HighScoreData")]               # High score data
         self._options_items = [
@@ -373,17 +375,16 @@ class WinMain(WahCade):
         # Initialize and show primary Fixd containers, and populate approrpriately
         self.fixd.show()
         self.winMain.add(self.fixd)
-        # Add everything to the main Fixd object, wrapping in an EVB as appropriate
+        # Add everything to the main Fixd object
         for w_set_name in self._layout_items:
             for offset, widget, name in self._layout_items[w_set_name]:
                 if widget.get_parent():
                     pass
                 elif not (type(widget) is ScrollList):
                     self.fixd.add(widget)
-                    # Needed?
-                    #self.fixd.add(self.make_evb_widget(widget))
                 else:
                     self.fixd.add(widget.fixd)
+        #self.scrollOverlay.add_to_fixd(self.fixd)
             
         ### Load list
         self.current_list_ini = None
@@ -754,8 +755,8 @@ class WinMain(WahCade):
                                 (i + 1))
                             self.display_scaled_image(img, img_filename, self.keep_aspect, img.get_data('text-rotation'))
                 #self.lblOverlayScrollLetters.set_visible(False)
-                self.lblOverlayScrollLetters.hide()
-                self.overlayBG.hide()
+                self.scrollOverlay.hide()
+                self.scrollOverlay.hide()
                 # Keyboard released, update labels, images, etc
                 if widget == self.winMain:
                     # Only update if no further events pending
@@ -783,11 +784,11 @@ class WinMain(WahCade):
                 if current_window == 'main':
                     # Display first n letters of selected game when scrolling quickly
                     if self.keypress_count > self.showOverlayThresh:
-                        self.overlayBG.show()
-                        overlayLetters = self.lsGames[ self.sclGames.get_selected() ][ 0 ][ 0 : self.lblOverlayScrollLetters.charShowCount ]
-                        self.lblOverlayScrollLetters.set_markup( _('%s%s%s') % (self.overlayMarkupHead, overlayLetters, self.overlayMarkupTail) )
+                        self.scrollOverlay.show()
+                        overlayLetters = self.lsGames[ self.sclGames.get_selected() ][ 0 ][ 0 : self.scrollOverlay.charShowCount ]
+                        self.scrollOverlay.set_markup( _('%s%s%s') % (self.overlayMarkupHead, overlayLetters, self.overlayMarkupTail) )
                         #self.lblOverlayScrollLetters.set_visible(True)
-                        self.lblOverlayScrollLetters.show()
+                        self.scrollOverlay.show()
                     # Main form
                     if mw_func == 'UP_1_GAME':
                         self.play_clip('UP_1_GAME')
@@ -1643,7 +1644,7 @@ class WinMain(WahCade):
         self.highScoreDataMarkupHead = ('<span color="%s" size="%s">' % (hs_data_lay['text-col'], hs_data_lay['font-size']))
         self.highScoreDataMarkupTail = '</span>'
         # Formatting for the overlay letters
-        overlay_lay = layout_info['main']['OverlayScrollLetters']
+        overlay_lay = layout_info['main']['ScrollOverlay']
         self.overlayMarkupHead = ('<span color="%s" size="%s">' % (overlay_lay['text-col'], overlay_lay['font-size']))
         self.overlayMarkupTail = '</span>'
         
@@ -1726,8 +1727,6 @@ class WinMain(WahCade):
                 widget.modify_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse(textColor))
                 # BG color, transparency as appropriate
                 bgColor = w_lay['background-col']
-                if name is 'OverlayBG':
-                    widget.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(bgColor))
                 parent = widget.get_parent()
                 if parent.get_ancestor(gtk.EventBox): # Check if we have an EventBox ancestor
                     if w_lay['transparent'] == True:
@@ -1782,7 +1781,10 @@ class WinMain(WahCade):
                     widget = widget.get_parent()
                 # Add to fixed layout on correct window
                 if w_set_name == "main":
-                    self.fixd.move(widget, w_lay['x'], w_lay['y'])
+                    if isinstance(widget, gtk.Widget):
+                        self.fixd.move(widget, w_lay['x'], w_lay['y'])
+                    else:
+                        widget.move_in_fixd(self.fixd, w_lay['x'], w_lay['y'])
                 elif w_set_name == "options":
                     self.options.winOptions.move(widget, w_lay['x'], w_lay['y'])
                 elif w_set_name == "message":

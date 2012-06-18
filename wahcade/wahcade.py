@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-###A
+###
 # Application: wah!cade
 # File:        wahcade
 # Description: starts the wah!cade app

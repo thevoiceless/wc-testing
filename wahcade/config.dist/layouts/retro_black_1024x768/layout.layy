@@ -4,6 +4,7 @@ main:
     font: SF Atarian System Extended
     font-bold: false
     font-italic: false
+    font-name: SF Atarian System Extended 10.0
     font-size: 9.0
     height: 24
     text-align: 0.5
@@ -19,6 +20,7 @@ main:
     font: SF Atarian System Extended
     font-bold: false
     font-italic: false
+    font-name: SF Atarian System Extended 10.0
     font-size: 10.0
     height: 24
     text-align: 0.5
@@ -26,44 +28,15 @@ main:
     text-rotation: 0
     transparent: true
     visible: true
-    width: 381
-    x: 573
-    y: 623
-  HighScoreHeading:
-    background-col: '#000000'
-    font: SF Atarian System Extended
-    font-bold: false
-    font-italic: false
-    font-size: 14000
-    height: 40
-    text-align: 0.5
-    text-col: '#0099CC'
-    text-rotation: 0
-    transparent: false
-    visible: false
-    width: 510
-    x: 0
-    y: 510
-  HighScoreData:
-    background-col: '#000000'
-    font: SF Atarian System Extended
-    font-bold: false
-    font-italic: false
-    font-size: 10000
-    height: 170
-    text-align: 0.5
-    text-col: '#FFFFFF'
-    text-rotation: 0
-    transparent: false
-    visible: true
-    width: 510
-    x: 0
-    y: 525
+    width: 383
+    x: 571
+    y: 627
   DriverStatus:
     background-col: '#000000'
     font: SF Atarian System Extended
     font-bold: false
     font-italic: false
+    font-name: SF Atarian System Extended 10.0
     font-size: 10.0
     height: 24
     text-align: 0.5
@@ -71,20 +44,21 @@ main:
     text-rotation: 0
     transparent: true
     visible: true
-    width: 381
-    x: 573
-    y: 648
+    width: 383
+    x: 571
+    y: 653
   EmulatorName:
     background-col: '#000000'
     font: SF Atarian System Extended
     font-bold: false
     font-italic: false
+    font-name: SF Atarian System Extended 10.0
     font-size: 16.0
     height: 40
     text-align: 0.5
     text-col: '#0099CC'
     text-rotation: 0
-    transparent: false
+    transparent: true
     visible: true
     width: 506
     x: 515
@@ -94,6 +68,7 @@ main:
     font: SF Atarian System Extended
     font-bold: false
     font-italic: false
+    font-name: SF Atarian System Extended 10.0
     font-size: 10.0
     height: 24
     text-align: 0.5
@@ -101,31 +76,33 @@ main:
     text-rotation: 0
     transparent: true
     visible: true
-    width: 381
-    x: 573
-    y: 523
+    width: 383
+    x: 571
+    y: 524
   GameList:
     background-col: '#000000'
     font: SF Atarian System Extended
     font-bold: false
     font-italic: false
+    font-name: SF Atarian System Extended 10.0
     font-size: 12.0
     height: 340
     text-align: 0.5
-    text-col: '#C5C5C5'
-    text-rotation: 0
     text-bg-high: '#389a9a'
+    text-col: '#C5C5C5'
     text-fg-high: '#ffffff'
+    text-rotation: 0
     transparent: true
     visible: true
-    width: 370
-    x: 80
-    y: 86
+    width: 374
+    x: 78
+    y: 94
   GameListIndicator:
     background-col: '#000000'
     font: SF Atarian System Extended
     font-bold: false
     font-italic: false
+    font-name: SF Atarian System Extended 10.0
     font-size: 16.0
     height: 40
     text-align: 0.5
@@ -141,36 +118,71 @@ main:
     font: Sans
     font-bold: false
     font-italic: false
+    font-name: Sans 10.0
     font-size: 9.75
     height: 20
     text-align: 0.5
     text-col: '#00FFFF'
     text-rotation: 0
-    transparent: false
+    transparent: true
     visible: true
-    width: 383
-    x: 572
-    y: 673
-  MainArtwork1:
-    background-col: '#808080'
-    font: Sans
-    font-bold: true
+    width: 384
+    x: 571
+    y: 679
+  HighScoreData:
+    background-col: '#000000'
+    font: SF Atarian System Extended
+    font-bold: false
     font-italic: false
-    font-size: 9.75
-    height: 345
+    font-name: SF Atarian System Extended 10.0
+    font-size: 10000
+    height: 138
     text-align: 0.5
     text-col: '#FFFFFF'
     text-rotation: 0
     transparent: true
     visible: true
-    width: 378
+    width: 377
+    x: 76
+    y: 560
+  HighScoreHeading:
+    background-col: '#000000'
+    font: SF Atarian System Extended
+    font-bold: false
+    font-italic: false
+    font-name: SF Atarian System Extended 10.0
+    font-size: 14000
+    height: 31
+    text-align: 0.5
+    text-col: '#0099CC'
+    text-rotation: 0
+    transparent: true
+    visible: true
+    width: 377
+    x: 76
+    y: 526
+  MainArtwork1:
+    background-col: '#808080'
+    font: Sans
+    font-bold: true
+    font-italic: false
+    font-name: Sans Bold 10.0
+    font-size: 9.75
+    height: 340
+    text-align: 0.5
+    text-col: '#FFFFFF'
+    text-rotation: 0
+    transparent: true
+    visible: true
+    width: 377
     x: 574
-    y: 93
+    y: 94
   MainArtwork10:
     background-col: '#808080'
     font: Sans
     font-bold: true
     font-italic: false
+    font-name: Sans Bold 10.0
     font-size: 9.75
     height: 277
     text-align: 0.5
@@ -186,6 +198,7 @@ main:
     font: Sans
     font-bold: true
     font-italic: false
+    font-name: Sans Bold 10.0
     font-size: 9.75
     height: 120
     text-align: 0.5
@@ -201,6 +214,7 @@ main:
     font: Sans
     font-bold: true
     font-italic: false
+    font-name: Sans Bold 10.0
     font-size: 9.75
     height: 277
     text-align: 0.5
@@ -216,6 +230,7 @@ main:
     font: Sans
     font-bold: true
     font-italic: false
+    font-name: Sans Bold 10.0
     font-size: 9.75
     height: 277
     text-align: 0.5
@@ -231,6 +246,7 @@ main:
     font: Sans
     font-bold: true
     font-italic: false
+    font-name: Sans Bold 10.0
     font-size: 9.75
     height: 277
     text-align: 0.5
@@ -246,6 +262,7 @@ main:
     font: Sans
     font-bold: true
     font-italic: false
+    font-name: Sans Bold 10.0
     font-size: 9.75
     height: 277
     text-align: 0.5
@@ -261,6 +278,7 @@ main:
     font: Sans
     font-bold: true
     font-italic: false
+    font-name: Sans Bold 10.0
     font-size: 9.75
     height: 277
     text-align: 0.5
@@ -276,6 +294,7 @@ main:
     font: Sans
     font-bold: true
     font-italic: false
+    font-name: Sans Bold 10.0
     font-size: 9.75
     height: 277
     text-align: 0.5
@@ -291,6 +310,7 @@ main:
     font: Sans
     font-bold: true
     font-italic: false
+    font-name: Sans Bold 10.0
     font-size: 9.75
     height: 277
     text-align: 0.5
@@ -306,6 +326,7 @@ main:
     font: Sans
     font-bold: true
     font-italic: false
+    font-name: Sans Bold 10.0
     font-size: 9.75
     height: 36
     text-align: 0.5
@@ -316,43 +337,12 @@ main:
     width: 340
     x: 342
     y: 0
-  OverlayBG:
-    background-col: '#000000'
-    bg-image: scroll-overlay-70.png
-    font: SF Atarian System Extended
-    font-bold: false
-    font-italic: false
-    font-size: 9.0
-    height: 70
-    text-align: 0.5
-    text-col: '#FF5300'
-    text-rotation: 0
-    transparent: false
-    visible: false
-    width: 70
-    x: 100
-    y: 100
-  OverlayScrollLetters:
-    background-col: '#000000'
-    show-count: 2
-    font: SF Atarian System Extended
-    font-bold: false
-    font-italic: false
-    font-size: 20000
-    height: 54
-    text-align: 0.5
-    text-col: '#C5C5C5'
-    text-rotation: 0
-    transparent: false
-    visible: true
-    width: 54
-    x: 108
-    y: 108
   RomName:
     background-col: '#000000'
     font: SF Atarian System Extended
     font-bold: false
     font-italic: false
+    font-name: SF Atarian System Extended 10.0
     font-size: 10.0
     height: 24
     text-align: 0.5
@@ -360,14 +350,15 @@ main:
     text-rotation: 0
     transparent: true
     visible: true
-    width: 381
-    x: 573
-    y: 548
+    width: 383
+    x: 571
+    y: 549
   ScreenType:
     background-col: '#000000'
     font: SF Atarian System Extended
     font-bold: false
     font-italic: false
+    font-name: SF Atarian System Extended 10.0
     font-size: 10.0
     height: 24
     text-align: 0.5
@@ -375,14 +366,33 @@ main:
     text-rotation: 0
     transparent: true
     visible: true
-    width: 381
-    x: 573
-    y: 598
+    width: 383
+    x: 571
+    y: 601
+  ScrollOverlay:
+    background-col: '#000000'
+    bg-image: scroll-overlay-70.png
+    font: SF Atarian System Extended
+    font-bold: false
+    font-italic: false
+    font-name: SF Atarian System Extended 10.0
+    font-size: 20000
+    height: 70
+    show-count: 1
+    text-align: 0.5
+    text-col: '#FFFFFF'
+    text-rotation: 0
+    transparent: true
+    visible: true
+    width: 70
+    x: 85
+    y: 100
   YearManufacturer:
     background-col: '#000000'
     font: SF Atarian System Extended
     font-bold: false
     font-italic: false
+    font-name: SF Atarian System Extended 10.0
     font-size: 10.0
     height: 24
     text-align: 0.5
@@ -390,12 +400,14 @@ main:
     text-rotation: 0
     transparent: true
     visible: true
-    width: 381
-    x: 573
-    y: 573
+    width: 383
+    x: 571
+    y: 575
   fixdMain:
     background-col: '#000000'
     height: 768
+    image-available: true
+    name: Main
     unknown: 1
     use-image: main-scorebox.png
     width: 1024
@@ -405,6 +417,7 @@ message:
     font: SF Atarian System Extended
     font-bold: false
     font-italic: false
+    font-name: SF Atarian System Extended 10.0
     font-size: 12.0
     height: 127
     text-align: 0.5
@@ -420,6 +433,7 @@ message:
     font: SF Atarian System Extended
     font-bold: true
     font-italic: false
+    font-name: SF Atarian System Extended Bold 10.0
     font-size: 14.0
     height: 20
     text-align: 0.5
@@ -435,6 +449,7 @@ message:
     font: SF Atarian System Extended
     font-bold: false
     font-italic: false
+    font-name: SF Atarian System Extended 10.0
     font-size: 12.0
     height: 40
     text-align: 0.5
@@ -448,6 +463,8 @@ message:
   fixdMsg:
     background-col: '#000000'
     height: 260
+    image-available: true
+    name: Message
     unknown: 1
     use-image: message.png
     width: 337
@@ -457,75 +474,82 @@ options:
     font: SF Atarian System Extended
     font-bold: true
     font-italic: false
+    font-name: SF Atarian System Extended Bold 10.0
     font-size: 14.0
-    height: 20
+    height: 19
     text-align: 0.5
     text-col: '#00BC25'
     text-rotation: 0
     transparent: true
     visible: true
     width: 260
-    x: 23
-    y: 24
+    x: 18
+    y: 22
   OptionsList:
     background-col: '#000000'
     font: SF Atarian System Extended
     font-bold: false
     font-italic: false
+    font-name: SF Atarian System Extended 10.0
     font-size: 12.0
-    height: 170
+    height: 195
     text-align: 0.5
-    text-col: '#ABFF7C'
-    text-rotation: 0
     text-bg-high: '#126b00'
+    text-col: '#ABFF7C'
     text-fg-high: '#7cffab'
+    text-rotation: 0
     transparent: true
     visible: true
     width: 260
-    x: 23
-    y: 45
+    x: 18
+    y: 44
   SettingHeading:
     background-col: '#000000'
     font: SF Atarian System Extended
     font-bold: true
     font-italic: false
+    font-name: SF Atarian System Extended Bold 10.0
     font-size: 14.0
-    height: 20
+    height: 19
     text-align: 0.5
     text-col: '#008B22'
     text-rotation: 0
     transparent: true
     visible: true
     width: 260
-    x: 23
-    y: 245
+    x: 18
+    y: 241
   SettingValue:
     background-col: '#000000'
     font: SF Atarian System Extended
     font-bold: false
     font-italic: false
+    font-name: SF Atarian System Extended 10.0
     font-size: 12.0
-    height: 40
+    height: 39
     text-align: 0.5
     text-col: '#0099CC'
     text-rotation: 0
     transparent: true
     visible: true
     width: 260
-    x: 23
-    y: 267
+    x: 18
+    y: 262
   fixdOpt:
     background-col: '#000000'
-    height: 330
+    height: 324
+    image-available: true
+    name: Options
     unknown: 1
     use-image: options.png
-    width: 305
+    width: 295
 screensaver:
   GameDescription:
     background-col: '#000000'
     font: SF Atarian System Extended
     font-bold: false
     font-italic: false
+    font-name: SF Atarian System Extended 10.0
     font-size: 12.0
     height: 20
     text-align: 0.5
@@ -541,6 +565,7 @@ screensaver:
     font: SF Atarian System Extended
     font-bold: false
     font-italic: false
+    font-name: SF Atarian System Extended 10.0
     font-size: 12.0
     height: 20
     text-align: 0.5
@@ -556,6 +581,7 @@ screensaver:
     font: Sans
     font-bold: true
     font-italic: false
+    font-name: Sans Bold 10.0
     font-size: 9.75
     height: 720
     text-align: 0.5
@@ -571,6 +597,7 @@ screensaver:
     font: Sans
     font-bold: true
     font-italic: false
+    font-name: Sans Bold 10.0
     font-size: 9.75
     height: 430
     text-align: 0.5
@@ -586,6 +613,7 @@ screensaver:
     font: Sans
     font-bold: true
     font-italic: false
+    font-name: Sans Bold 10.0
     font-size: 9.75
     height: 400
     text-align: 0.5
@@ -601,6 +629,7 @@ screensaver:
     font: Sans
     font-bold: true
     font-italic: false
+    font-name: Sans Bold 10.0
     font-size: 9.75
     height: 87
     text-align: 0.5
@@ -616,6 +645,7 @@ screensaver:
     font: Sans
     font-bold: true
     font-italic: false
+    font-name: Sans Bold 10.0
     font-size: 9.75
     height: 430
     text-align: 0.5
@@ -631,6 +661,7 @@ screensaver:
     font: Sans
     font-bold: true
     font-italic: false
+    font-name: Sans Bold 10.0
     font-size: 9.75
     height: 430
     text-align: 0.5
@@ -646,6 +677,7 @@ screensaver:
     font: Sans
     font-bold: true
     font-italic: false
+    font-name: Sans Bold 10.0
     font-size: 9.75
     height: 430
     text-align: 0.5
@@ -661,6 +693,7 @@ screensaver:
     font: Sans
     font-bold: true
     font-italic: false
+    font-name: Sans Bold 10.0
     font-size: 9.75
     height: 430
     text-align: 0.5
@@ -676,6 +709,7 @@ screensaver:
     font: Sans
     font-bold: true
     font-italic: false
+    font-name: Sans Bold 10.0
     font-size: 9.75
     height: 430
     text-align: 0.5
@@ -691,6 +725,7 @@ screensaver:
     font: Sans
     font-bold: true
     font-italic: false
+    font-name: Sans Bold 10.0
     font-size: 9.75
     height: 430
     text-align: 0.5
