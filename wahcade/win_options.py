@@ -121,7 +121,8 @@ class WinOptions(WahCade):
                 [_('Previous Track'), 'previous_track'],
                 [_('Select Track / Directory'), 'show_music_dir']],
             'record_video':
-                [[_('On'), 'recording_on'],
+                [[_('On Game Launch'), 'recording_launch'],
+                [_('On Keypress (Not implemented)'), 'recording_keypress'],
                 [_('Off'), 'recording_off']],
             'exit':
                 [[_('Exit to Desktop'), 'exit_desktop'],
@@ -138,6 +139,7 @@ class WinOptions(WahCade):
         self.sclOptions.wrap_list = self.WinMain.wahcade_ini.getint('wrap_list')
         #self.lblHeading.set_ellipsize(pango.ELLIPSIZE_START)
         self.record = False
+        self.on_keypress = False
 
     def on_sclOptions_changed(self, *args):
         """options menu selected item changed"""
@@ -230,10 +232,12 @@ class WinOptions(WahCade):
                 #all other lists
                 [self.lsOptions.append(menu_item) for menu_item in self._menus[menu_level][:3]]
         elif menu_level == 'record_video':
-            [self.lsOptions.append(menu_item) for menu_item in self._menus[menu_level][:2]] # Generates list choices
+            [self.lsOptions.append(menu_item) for menu_item in self._menus[menu_level][:3]] # Generates list choices
             self.sclOptions.set_selected(0) # Sets which option is selected when opened
-            if self.record:
-                self.lblSettingValue.set_text('On')  # What "Current Setting:" says
+            if self.record and not self.on_keypress:
+                self.lblSettingValue.set_text('Record on game launch')  # What "Current Setting:" says
+            elif self.record and self.on_keypress:
+                self.lblSettingValue.set_text('Record on keypress')  # What "Current Setting:" says                
             else:
                 self.lblSettingValue.set_text('Off')  # What "Current Setting:" says
         elif menu_level == 'generate_list':
@@ -339,10 +343,15 @@ class WinOptions(WahCade):
             #show appropriate menu
             self.set_menu(menu_item, menu_desc)
         elif self.current_menu == 'record_video':
-            if menu_item == 'recording_on':
+            if menu_item == 'recording_launch':
                 self.record = True
+                self.on_keypress = False
+            elif menu_item == 'recording_keypress':
+                self.record = True
+                self.on_keypress = True
             elif menu_item == 'recording_off':
                 self.record = False
+                self.on_keypress = False
       #      self.WinMain.hide_window('options')
             self.WinMain.hide_window('options')
         elif self.current_menu == 'emu_list':
