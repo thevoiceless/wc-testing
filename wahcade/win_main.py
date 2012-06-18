@@ -84,6 +84,7 @@ from mamewah_ini import MameWahIni      # Reads mamewah-formatted ini file
 import joystick                         # joystick.py, joystick class, uses pygame package (SDL bindings for games in Python)
 import MySQLdb
 import requests #@UnresolvedImport
+import pygame
 from xml.etree.ElementTree import fromstring
 from dummy_db import DummyDB
 # Set gettext function
@@ -425,6 +426,13 @@ class WinMain(WahCade):
         if self.connected:
             self.user.set_text("Not Logged In")
             self.user.show()
+            
+        pygame.init()
+        
+        sound_files = os.listdir('sounds/')
+        self.sounds = []
+        for sound in sound_files:
+            self.sounds.append('sounds/' + sound)
 
         self.check_music_settings()
         
@@ -1162,6 +1170,11 @@ class WinMain(WahCade):
             
     def on_scrsave_timer(self):
         """timer event - check to see if we need to start video or screen saver"""
+        sound_time = random.randint((5*60), (15*60))
+        if int(time.time() - self.scrsave_time) >= sound_time:
+            pygame.mixer.music.load(self.sounds[random.randint(0, len(self.sounds))])
+            pygame.mixer.music.play()
+            self.scrsave_time = 0
         # Use timer for screen saver to log a person out after period of inactivity
         auto_log_out_delay = 60
         if int(time.time() - self.scrsave_time) >= auto_log_out_delay and self.logged_in:
