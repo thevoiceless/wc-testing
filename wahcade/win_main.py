@@ -584,7 +584,7 @@ class WinMain(WahCade):
                     #testString = commands.getoutput("wine HiToText.exe -r " + self.mame_dir + "nvram" + sep + self.current_rom + ".nv 2>/dev/null")
                     #testString = commands.getoutput("mono HiToText.exe -r " + self.mame_dir + "nvram" + sep + self.current_rom + ".nv")
                     testString = commands.getoutput(htt_command + "nvram" + sep + self.current_rom + ".nv")
-                if not 'Error' in testString:
+                if not 'Error' in testString and testString != '' and not 'Exception' in testString:
                     valid_string = ''
                     for i in testString:
                         if (ord(i)<128 and ord(i)>31) or ord(i) == 13 or ord(i) == 10:
@@ -662,10 +662,20 @@ class WinMain(WahCade):
                             url = "http://localhost:" + self.props['port'] + "/RcadeServer/rest/score/"
                             post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": '0', "game":self.current_rom, "player":self.user.get_text()}                         
                             r = requests.post(url, post_data)
+                            print r.status_code
 
     #TODO: Use RFID
     def log_in(self):
-        self.user.set_text("Scrumpulous Scrummers") #TODO
+        randNum = random.randint(1, 20)
+        if randNum % 4 == 0:
+            self.user.set_text("Riley")
+        elif randNum % 4 == 1:
+            self.user.set_text("John")
+        elif randNum % 4 == 2:
+            self.user.set_text("Terek")
+        elif randNum % 4 == 3:
+            self.user.set_text("Zach")
+        
         self.user.show()
         self.logged_in = True
         
@@ -1154,6 +1164,10 @@ class WinMain(WahCade):
             
     def on_scrsave_timer(self):
         """timer event - check to see if we need to start video or screen saver"""
+        # Use timer for screen saver to log a person out after period of inactivity
+        auto_log_out_delay = 60
+        if int(time.time() - self.scrsave_time) >= auto_log_out_delay and self.logged_in:
+            self.log_out()
         # Need to start screen saver?
         if int(time.time() - self.scrsave_time) >= self.scrsave_delay:
             # Yes, stop any vids playing
