@@ -958,7 +958,7 @@ class WinMain(WahCade):
                         self.play_clip('OP_MENU_BACK')
                         if self.options.current_menu == 'main':
                             self.hide_window('options')
-                        elif self.options.current_menu in ['emu_list', 'game_list', 'list_options', 'music', 'exit']:
+                        elif self.options.current_menu in ['emu_list', 'game_list', 'list_options', 'record_video', 'music', 'exit']:
                             self.options.set_menu('main')
                         elif self.options.current_menu == 'add_to_list':
                             self.options.set_menu('list_options')
