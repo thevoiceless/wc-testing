@@ -58,7 +58,7 @@ class WinIdentify(WahCade):
         self.lblPromptText.show()
         self.winID.show()
         # Build list
-        self.sclIDs = []
+        self.lsIDs = []
         self.sclIDs.auto_update = True
         self.sclIDs.display_limiters = self.WinMain.wahcade_ini.getint('show_list_arrows', 0)
         # Get keyboard & mouse events
@@ -71,7 +71,7 @@ class WinIdentify(WahCade):
         ## Exclude IDs already matched to RFID values
         
         # Init window
-        self.sclIDs.use_mouse = self.WinMain.ctrl_ini.getint('mouse')
+        self.sclIDs.use_mouse = self.WinMain.ctrlr_ini.getint('mouse')
         self.sclIDs.wrap_list = self.WinMain.wahcade_ini.getint('wrap_list')
         self.record = False
         self.on_keypress = False        

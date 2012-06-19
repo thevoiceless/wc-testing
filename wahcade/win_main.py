@@ -79,6 +79,7 @@ from win_message import WinMessage      # Message window
 from win_scrsaver import WinScrSaver    # Screen saver window
 from win_history import WinHistory      # History viewer
 from win_cpviewer import WinCPViewer    # Control panel viewer window
+from win_identify import WinIdentify    # Identify window
 import filters                          # filters.py, routines to read/write mamewah filters and lists
 from mamewah_ini import MameWahIni      # Reads mamewah-formatted ini file
 import joystick                         # joystick.py, joystick class, uses pygame package (SDL bindings for games in Python)
@@ -308,6 +309,10 @@ class WinMain(WahCade):
         self.histview = WinHistory(self)
         ### Create CP viewer window
         self.cpviewer = WinCPViewer(self)
+        ### Create identify window
+        self.identify = WinIdentify(self)
+        self.identify.winID.hide()
+        
         self.hide_window()
         
         ### Build list of emulators
@@ -371,10 +376,17 @@ class WinMain(WahCade):
             (513, self.scrsaver.imgArtwork10, "ScrArtwork10"),
             (526, self.scrsaver.lblGameDescription, "GameDescription"),
             (539, self.scrsaver.lblMP3Name, "MP3Name")]
-        self._layout_items = {'main': self._main_items, 'options': self._options_items,
-                              'message': self._message_items, 'screensaver': self._screensaver_items}
+        self._identify_items = [
+            (-1, self.identify.lblPrompt, "Prompt"),
+            (-1, self.identify.lblPromptText, "PromptText"),
+            (-1, self.identify.sclIDs, "IDsList")]
+        self._layout_items = {'main': self._main_items,
+                              'options': self._options_items,
+                              'message': self._message_items,
+                              'screensaver': self._screensaver_items,
+                              'identify' : self._identify_items}
           
-        # Initialize and show primary Fixd containers, and populate approrpriately
+        # Initialize and show primary Fixd containers, and populate appropriately
         self.fixd.show()
         self.winMain.add(self.fixd)
         # Add everything to the main Fixd object, wrapping in an EVB as appropriate
@@ -1730,7 +1742,7 @@ class WinMain(WahCade):
         msg = self.message
         msg_lay = layout_info['message']['fixdMsg']
         msg.winMessage.set_size_request(msg_lay['width'], msg_lay['height'])
-        msg.winMessage.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(opt_lay['background-col']))
+        msg.winMessage.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(msg_lay['background-col']))
         msg.winMessage.move(self.message.imgBackground, 0, 0)
         msg.imgBackground.set_size_request(msg_lay['width'], msg_lay['height'])
         msg_img = msg_lay['use-image']
@@ -1750,6 +1762,19 @@ class WinMain(WahCade):
         scr.winScrSaver.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('black'))
         scr.drwVideo.set_size_request(main_lay['width'], main_lay['height'])
         
+        # Set up Identify window
+        # Match sizes of main window
+        idtfy = self.identify
+        idtfy_lay = layout_info['identify']['fixdID']
+        self.fixd.move(idtfy.winID, 0, 0)
+        idtfy.winID.set_size_request(main_lay['width'], main_lay['height'])
+        idtfy.winID.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(idtfy_lay['background-col']))
+        idtfy.winID.move(self.identify.imgBackground, 0, 0)
+        idtfy.imgBackground.set_size_request(main_lay['width'], main_lay['height'])
+        idtfy_img = idtfy_lay['use-image']
+        if not os.path.dirname(idtfy_img):
+            idtfy_img = os.path.join(self.layout_path, idtfy_img)
+        idtfy.imgBackground.set_data('layout-image', idtfy_img)    
         
         # Set up all Widgets
         for w_set_name in self._layout_items.keys():
@@ -1819,6 +1844,8 @@ class WinMain(WahCade):
                     widget = self.sclGames.fixd
                 elif widget == self.options.sclOptions:
                     widget = self.options.sclOptions.fixd
+                elif widget == self.identify.sclIDs:
+                    widget = self.identify.sclIDs.fixd
                 elif parent.get_ancestor(gtk.EventBox):
                     widget = widget.get_parent()
                 # Add to fixed layout on correct window
@@ -1830,6 +1857,8 @@ class WinMain(WahCade):
                     self.message.winMessage.move(widget, w_lay['x'], w_lay['y'])
                 elif w_set_name == "screensaver":
                     self.scrsaver.winScrSaver.move(widget, w_lay['x'], w_lay['y'])
+                elif w_set_name == "identify":
+                    self.identify.winID.move(widget, w_lay['x'], w_lay['y'])
                 else:
                     print "Orphaned widget detected. Did not belong to one of [main/options/message/screensaver]"
        
@@ -2431,6 +2460,8 @@ class WinMain(WahCade):
         elif window_name == 'cpviewer':
             if self.cpviewer:
                 child_win = self.cpviewer.winCPViewer
+        elif window_name == 'identify':
+            child_win = self.identify.winID
         # Show given child window
         if child_win:
             self.stop_video()
@@ -2450,6 +2481,7 @@ class WinMain(WahCade):
         self.scrsaver.winScrSaver.hide()
         self.histview.winHistory.hide()
         self.cpviewer.winCPViewer.hide()
+        self.identify.winID.hide()
         # "show" main
         self.current_window = 'main'
         self.winMain.present()
