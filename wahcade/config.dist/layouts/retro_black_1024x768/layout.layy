@@ -753,17 +753,17 @@ identify:
     font-bold: false
     font-italic: false
     font-size: 12.0
-    height: 340
+    height: 600
     text-align: 0.5
     text-col: '#C5C5C5'
     text-rotation: 0
-    text-bg-high: '#389a9a'
+    text-bg-high: '#ED0B0B'
     text-fg-high: '#ffffff'
     transparent: true
     visible: true
     width: 370
-    x: 0
-    y: 0
+    x: 550
+    y: 85
   fixdID:
     background-col: '#000000'
     height: 768

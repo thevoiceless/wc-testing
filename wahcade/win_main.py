@@ -905,9 +905,10 @@ class WinMain(WahCade):
                         self.launch_auto_apps_then_game(
                             self.emu_ini.get('alt_commandline_format_2'))
                     elif mw_func == 'MENU_SHOW':
-                        self.play_clip('MENU_SHOW')
-                        self.options.set_menu('main')
-                        self.show_window('options')
+#                        self.play_clip('MENU_SHOW')
+#                        self.options.set_menu('main')
+#                        self.show_window('options')
+                        self.show_window('identify')
                     elif mw_func == 'SELECT_EMULATOR':
                         self.play_clip('SELECT_EMULATOR')
                         self.options.set_menu('emu_list')
@@ -1063,6 +1064,10 @@ class WinMain(WahCade):
                 elif current_window == 'message':
                     if self.message.wait_for_key:
                         self.message.hide()
+                # Identify window
+                elif current_window == 'identify':
+                    print "Return from identify window"
+                    self.hide_window('identify')
             # Force games list update if using mouse scroll wheel
             if 'MOUSE_SCROLLUP' in mw_keys or 'MOUSE_SCROLLDOWN' in mw_keys:
                 if widget == self.winMain:
@@ -1183,11 +1188,12 @@ class WinMain(WahCade):
             
     def on_scrsave_timer(self):
         """timer event - check to see if we need to start video or screen saver"""
-        sound_time = random.randint((5*60), (15*60))
+        #sound_time = random.randint((5*60), (15*60))
+        sound_time = random.randint((5), (15))
         if int(time.time() - self.scrsave_time) >= sound_time:
             pygame.mixer.music.load(self.sounds[random.randint(0, len(self.sounds))])
             pygame.mixer.music.play()
-            self.scrsave_time = 0
+            #self.scrsave_time = 0    # Uncomment to play Portal sounds without screensaver
         # Use timer for screen saver to log a person out after period of inactivity
         auto_log_out_delay = 60
         if int(time.time() - self.scrsave_time) >= auto_log_out_delay and self.logged_in:
@@ -1774,8 +1780,9 @@ class WinMain(WahCade):
         idtfy_img = idtfy_lay['use-image']
         if not os.path.dirname(idtfy_img):
             idtfy_img = os.path.join(self.layout_path, idtfy_img)
-        idtfy.imgBackground.set_data('layout-image', idtfy_img)    
-        
+        #idtfy.imgBackground.set_data('layout-image', idtfy_img)
+        idtfy.imgBackground.set_from_file(idtfy_img)
+            
         # Set up all Widgets
         for w_set_name in self._layout_items.keys():
             wset_layout_info = layout_info[w_set_name]
@@ -1803,6 +1810,10 @@ class WinMain(WahCade):
                         parent.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(bgColor))
                 # Highlight colors (only for scroll lists)
                 if type(widget) is ScrollList:
+                    print name
+                    print widget.get_parent()
+                    print gtk.gdk.color_parse(w_lay['text-bg-high'])
+                    print gtk.gdk.color_parse(w_lay['text-fg-high'])
                     widget.modify_highlight_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(w_lay['text-bg-high']))
                     widget.modify_highlight_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse(w_lay['text-fg-high']))
                 # Alignment of text
@@ -2463,7 +2474,7 @@ class WinMain(WahCade):
         elif window_name == 'identify':
             child_win = self.identify.winID
         # Show given child window
-        if child_win:
+        if child_win:            
             self.stop_video()
             child_win.show()
             try:
