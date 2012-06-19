@@ -151,7 +151,7 @@ main:
     font-italic: false
     font-name: SF Atarian System Extended 10.0
     font-size: 10000
-    height: 138
+    height: 175
     text-align: 0.5
     text-col: '#FFFFFF'
     text-rotation: 0
@@ -159,23 +159,7 @@ main:
     visible: true
     width: 377
     x: 76
-    y: 560
-  HighScoreHeading:
-    background-col: '#000000'
-    font: SF Atarian System Extended
-    font-bold: false
-    font-italic: false
-    font-name: SF Atarian System Extended 10.0
-    font-size: 14000
-    height: 31
-    text-align: 0.5
-    text-col: '#0099CC'
-    text-rotation: 0
-    transparent: true
-    visible: true
-    width: 377
-    x: 76
-    y: 526
+    y: 527
   MainArtwork1:
     background-col: '#808080'
     font: Sans
