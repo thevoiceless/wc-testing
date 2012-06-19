@@ -162,7 +162,7 @@ class WinMain(WahCade):
         self.splash_use = self.wahcade_ini.getint('splash_use',1)
         self.splash_show_text = self.wahcade_ini.getint('splash_show_text',1)
         self.splash_border_width = self.wahcade_ini.getint('splash_border_width',10)
- 
+        
         ### SETUP EMULATOR INI FILE       
         self.current_emu = self.wahcade_ini.get('current_emulator')
         self.emu_ini = MameWahIni(os.path.join(CONFIG_DIR, 'ini' + sep + self.current_emu + '.ini'))
@@ -226,6 +226,7 @@ class WinMain(WahCade):
         self.overlayBG = gtk.Image()
         self.lblOverlayScrollLetters = gtk.Label()
         self.scrollOverlay = ScrollOverlay(self.lblOverlayScrollLetters, self.overlayBG)
+        self.user = gtk.Label()
 
         # create scroll list widget
         self.sclGames = ScrollList() 
@@ -346,7 +347,8 @@ class WinMain(WahCade):
             #(552, self.lblOverlayScrollLetters, "OverlayScrollLetters"),# Overlay scroll letters
             (-1, self.scrollOverlay, "ScrollOverlay"),
             (-1, self.lblHighScoreHeading, "HighScoreHeading"),         # High score heading
-            (-1, self.lblHighScoreData, "HighScoreData")]               # High score data
+            (-1, self.lblHighScoreData, "HighScoreData"),               # High score data
+            (-1, self.user, "UserName")]                                # Currently logged in user
         self._options_items = [
             (301, self.options.lblHeading, "OptHeading"),               # Options window title
             (314, self.options.sclOptions, "OptionsList"),              # Options list
@@ -392,17 +394,12 @@ class WinMain(WahCade):
         self.layout_file = ''
         self.load_emulator()
         
-                # Load list of games supported by HiToText
+        # Load list of games supported by HiToText
         self.supported_games = set()
         self.supported_game_file = open('supported_games.lst')
         for line in self.supported_game_file:
-            self.supported_games.add(line[:-2])
-        
-        # Temporary high score stuff
-        # TODO: finalize this
-        self.lblHighScoreData.set_markup('<span color="white" size="13000">1. \tName\t\t\tScore</span>')
-        self.lblHighScoreData.show()
-        
+            self.supported_games.add(line.strip())
+                
         #Get a list of games already on the server
         if self.connected:
             url = "http://localhost:" + self.props['port'] + "/RcadeServer/rest/game/"
@@ -424,6 +421,11 @@ class WinMain(WahCade):
                 if rom not in games_on_server and rom in romToName:
                     post_data = {"romName":rom, "gameName":romToName[rom]}
                     requests.post(url, post_data)
+
+        self.logged_in = False
+        if self.connected:
+            self.user.set_text("Not Logged In")
+            self.user.show()
 
         self.check_music_settings()
         
@@ -454,7 +456,6 @@ class WinMain(WahCade):
             self.splash.destroy()
         self.do_events()                # wc_common.py
         self.on_winMain_focus_in()
-
 
         #### Start intro movie
         if gst_media_imported and os.path.isfile(self.intro_movie):
@@ -571,7 +572,7 @@ class WinMain(WahCade):
         if self.launched_game:
             self.launched_game = False
             # If the game supports high scores run the HiToText executions
-            if self.current_rom in self.supported_games:
+            if self.current_rom in self.supported_games and self.logged_in:
                 htt_command = self.htt_read
                 if not onWindows:
                     htt_command = "mono " + self.htt_read
@@ -649,18 +650,27 @@ class WinMain(WahCade):
                     for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
                         high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
                     
-                    if 'NAME' in high_score_table and 'SCORE' in high_score_table: # Add to DB if score not zero
+                    if 'SCORE' in high_score_table: # Add to DB if score not zero
                         if high_score_table['SCORE'] is not '0':
                             url = "http://localhost:" + self.props['port'] + "/RcadeServer/rest/player/"
-                            r = requests.get(url + high_score_table['NAME'])
+                            r = requests.get(url + self.user.get_text())
                             if r.text == 'null': #check if player exists and add them if they don't
                                 randNum = random.randint(1, 5000) #TODO: replacing RFID for now
-                                post_data = {"name":high_score_table['NAME'], "playerID":randNum}
+                                post_data = {"name":self.user.get_text(), "playerID":randNum}
                                 r = requests.post(url, post_data)
                             url = "http://localhost:" + self.props['port'] + "/RcadeServer/rest/score/"
-                            post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": '0', "game":self.current_rom, "player":high_score_table['NAME']}                         
+                            post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": '0', "game":self.current_rom, "player":self.user.get_text()}                         
                             r = requests.post(url, post_data)
 
+    #TODO: Use RFID
+    def log_in(self):
+        self.user.set_text("Scrumpulous Scrummers") #TODO
+        self.user.show()
+        self.logged_in = True
+        
+    def log_out(self):
+        self.user.set_text("Not Logged In")
+        self.logged_in = False
 
 
     def on_winMain_key_press(self, widget, event, *args):
@@ -733,6 +743,14 @@ class WinMain(WahCade):
                 else:
                     # Keyboard pressed, get GTK keyname
                     keyname = gtk.gdk.keyval_name(event.keyval).lower()
+                    
+                    #special character to log in
+                    if keyname == 'bracketright':
+                        if not self.logged_in:
+                            self.log_in()
+                        else:
+                            self.log_out()
+                            
                     # Got something?
                     if keyname not in mamewah_keys:
                         return
@@ -960,7 +978,7 @@ class WinMain(WahCade):
                         self.play_clip('OP_MENU_BACK')
                         if self.options.current_menu == 'main':
                             self.hide_window('options')
-                        elif self.options.current_menu in ['emu_list', 'game_list', 'list_options', 'music', 'exit']:
+                        elif self.options.current_menu in ['emu_list', 'game_list', 'list_options', 'record_video', 'music', 'exit']:
                             self.options.set_menu('main')
                         elif self.options.current_menu == 'add_to_list':
                             self.options.set_menu('list_options')
@@ -1382,18 +1400,15 @@ class WinMain(WahCade):
             p = Popen(cmd, shell=False)
         else:
             p = Popen(cmd, shell=True)
-
+        
         # Begins video recording of game
-        #self.wait_with_events(1.00)
-        #window_name = 'MAME: %s [%s]' % (self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME], rom)
-        #os.system('recordmydesktop --full-shots --fps 16 --no-frame --windowid $(xwininfo -name ' + "\'" + str(window_name) + "\'" + ' | awk \'/Window id:/ {print $4}\') -o \'recorded games\'/' + rom + '_highscore &')
-
+        if self.options.record:
+            self.start_recording_video(rom)
         sts = p.wait()
         self.launched_game = True
-        
-        # Stops video recording 
-        #os.system('kill `ps -e | awk \'/recordmydesktop/{a=$1}END{print a}\'`')
-
+        # Stops video recording
+        if self.options.record:
+            self.stop_recording_video()
         self.log_msg("Child Process Returned: " + `sts`, "debug")
         # Minimize wahcade
         if game_opts['minimize_wahcade']:
@@ -2244,6 +2259,11 @@ class WinMain(WahCade):
         # Joystick
         elif timer_type == 'joystick' and (self.joyint == 1):
             self.joystick_timer = gobject.timeout_add(50, self.joy.poll, self.on_winMain_key_press)
+        # Video recording
+        elif timer_type == 'record':
+            self.timeout = 2; # Number of seconds till the video recorder times out
+            self.recorder_timer = gobject.timeout_add(self.timeout * 1000, self.stop_recording_video)
+
 
     def display_splash(self):
         """show splash screen"""
@@ -2460,3 +2480,15 @@ class WinMain(WahCade):
                 self.gstSound.set_volume(self.sound_vol)
                 self.gstSound.play(theclip)
             break
+        
+    def start_recording_video(self, rom):
+        self.wait_with_events(1.00)
+        window_name = 'MAME: %s [%s]' % (self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME], rom)
+        os.system('recordmydesktop --full-shots --fps 16 --no-frame --windowid $(xwininfo -name ' + "\'" + str(window_name) + "\'" + ' | awk \'/Window id:/ {print $4}\') -o \'recorded games\'/' + rom + '_highscore &')
+   #     self.start_timer('record') # Doesn't work at the moment
+
+    def stop_recording_video(self):
+        print 'hi'
+        return os.system('kill `ps -e | awk \'/recordmydesktop/{a=$1}END{print a}\'`')
+
+
