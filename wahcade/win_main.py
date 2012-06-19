@@ -775,7 +775,8 @@ class WinMain(WahCade):
                     # Keyboard pressed, get GTK keyname
                     keyname = gtk.gdk.keyval_name(event.keyval).lower()
                     
-                    #special character to log in
+                    # TODO: Integrate this with wahcade-setup, wahcade.ini, etc
+                    # Special character to log in
                     if keyname == 'bracketright':
                         if not self.logged_in:
                             self.log_in()
@@ -787,6 +788,7 @@ class WinMain(WahCade):
                         return
                     # Get mamewah keyname
                     mw_keys = mamewah_keys[keyname]
+                    print mw_keys
                     if mw_keys == []:
                         return
             elif event.type == gtk.gdk.KEY_RELEASE:
@@ -830,6 +832,9 @@ class WinMain(WahCade):
                     break
             for mw_func in mw_functions:
                 # Which function?
+                if mw_func == 'IDENTIFY_SHOW':
+                    print "yay"
+                    self.show_window('identify')
                 if current_window == 'main':
                     # Display first n letters of selected game when scrolling quickly
                     if self.keypress_count > self.showOverlayThresh:
@@ -906,10 +911,9 @@ class WinMain(WahCade):
                         self.launch_auto_apps_then_game(
                             self.emu_ini.get('alt_commandline_format_2'))
                     elif mw_func == 'MENU_SHOW':
-#                        self.play_clip('MENU_SHOW')
-#                        self.options.set_menu('main')
-#                        self.show_window('options')
-                        self.show_window('identify')
+                        self.play_clip('MENU_SHOW')
+                        self.options.set_menu('main')
+                        self.show_window('options')
                     elif mw_func == 'SELECT_EMULATOR':
                         self.play_clip('SELECT_EMULATOR')
                         self.options.set_menu('emu_list')
@@ -1067,8 +1071,9 @@ class WinMain(WahCade):
                         self.message.hide()
                 # Identify window
                 elif current_window == 'identify':
-                    print "Return from identify window"
-                    self.hide_window('identify')
+                    if mw_func in ['IDENTIFY_BACK']:
+                        print "Return from identify window"
+                        self.hide_window('identify')
             # Force games list update if using mouse scroll wheel
             if 'MOUSE_SCROLLUP' in mw_keys or 'MOUSE_SCROLLDOWN' in mw_keys:
                 if widget == self.winMain:
@@ -1811,10 +1816,6 @@ class WinMain(WahCade):
                         parent.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(bgColor))
                 # Highlight colors (only for scroll lists)
                 if type(widget) is ScrollList:
-                    print name
-                    print widget.get_parent()
-                    print gtk.gdk.color_parse(w_lay['text-bg-high'])
-                    print gtk.gdk.color_parse(w_lay['text-fg-high'])
                     widget.modify_highlight_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(w_lay['text-bg-high']))
                     widget.modify_highlight_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse(w_lay['text-fg-high']))
                 # Alignment of text
