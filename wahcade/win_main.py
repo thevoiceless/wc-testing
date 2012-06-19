@@ -2560,7 +2560,6 @@ class WinMain(WahCade):
    #     self.start_timer('record') # Doesn't work at the moment
 
     def stop_recording_video(self):
-        print 'hi'
         return os.system('kill `ps -e | awk \'/recordmydesktop/{a=$1}END{print a}\'`')
 
 
