@@ -80,11 +80,13 @@ from win_message import WinMessage      # Message window
 from win_scrsaver import WinScrSaver    # Screen saver window
 from win_history import WinHistory      # History viewer
 from win_cpviewer import WinCPViewer    # Control panel viewer window
+from win_identify import WinIdentify    # Identify window
 import filters                          # filters.py, routines to read/write mamewah filters and lists
 from mamewah_ini import MameWahIni      # Reads mamewah-formatted ini file
 import joystick                         # joystick.py, joystick class, uses pygame package (SDL bindings for games in Python)
 import MySQLdb
 import requests #@UnresolvedImport
+import pygame
 from xml.etree.ElementTree import fromstring
 from dummy_db import DummyDB
 # Set gettext function
@@ -104,9 +106,10 @@ class WinMain(WahCade):
                 for line in f.readlines():
                     val = line.split('=')
                     self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
-                requests.get("http://localhost:" + self.props['port'] + "/RcadeServer") #attempt to make connection to server
+                #requests.get("http://localhost:" + self.props['port'] + "/RcadeServer")
+                requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']) # Attempt to make connection to server
                 self.connected = True
-        except: #any exeption would mean some sort of failed server connection
+        except: # Any exception would mean some sort of failed server connection
             self.connected = False
         
         ### Set Global Variables
@@ -307,6 +310,10 @@ class WinMain(WahCade):
         self.histview = WinHistory(self)
         ### Create CP viewer window
         self.cpviewer = WinCPViewer(self)
+        ### Create identify window
+        self.identify = WinIdentify(self)
+        self.identify.winID.hide()
+        
         self.hide_window()
         
         ### Build list of emulators
@@ -371,10 +378,17 @@ class WinMain(WahCade):
             (513, self.scrsaver.imgArtwork10, "ScrArtwork10"),
             (526, self.scrsaver.lblGameDescription, "GameDescription"),
             (539, self.scrsaver.lblMP3Name, "MP3Name")]
-        self._layout_items = {'main': self._main_items, 'options': self._options_items,
-                              'message': self._message_items, 'screensaver': self._screensaver_items}
+        self._identify_items = [
+            (-1, self.identify.lblPrompt, "Prompt"),
+            (-1, self.identify.lblPromptText, "PromptText"),
+            (-1, self.identify.sclIDs, "IDsList")]
+        self._layout_items = {'main': self._main_items,
+                              'options': self._options_items,
+                              'message': self._message_items,
+                              'screensaver': self._screensaver_items,
+                              'identify' : self._identify_items}
           
-        # Initialize and show primary Fixd containers, and populate approrpriately
+        # Initialize and show primary Fixd containers, and populate appropriately
         self.fixd.show()
         self.winMain.add(self.fixd)
         # Add everything to the main Fixd object
@@ -400,23 +414,23 @@ class WinMain(WahCade):
         for line in self.supported_game_file:
             self.supported_games.add(line.strip())
                 
-        #Get a list of games already on the server
+        # Get a list of games already on the server
         if self.connected:
-            url = "http://localhost:" + self.props['port'] + "/RcadeServer/rest/game/"
+            url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
             data = requests.get(url)
         
-            #map rom name to associated game name
+            # Map rom name to associated game name
             romToName = {}
             for sublist in self.lsGames: 
                 romToName[sublist[1]] = sublist[0]
             
-            #Get a list of games already on the server
+            # Get a list of games already on the server
             data = fromstring(data.text)
             games_on_server = []
             for game in data.getiterator('game'):
                 games_on_server.append(game.find('romName').text)
     
-            #add games to the server if not on the server
+            # Add games to the server if not on the server
             for rom in self.supported_games:
                 if rom not in games_on_server and rom in romToName:
                     post_data = {"romName":rom, "gameName":romToName[rom]}
@@ -426,6 +440,13 @@ class WinMain(WahCade):
         if self.connected:
             self.user.set_text("Not Logged In")
             self.user.show()
+            
+        pygame.init()
+        
+        sound_files = os.listdir('sounds/')
+        self.sounds = []
+        for sound in sound_files:
+            self.sounds.append('sounds/' + sound)
 
         self.check_music_settings()
         
@@ -583,7 +604,7 @@ class WinMain(WahCade):
                     #testString = commands.getoutput("wine HiToText.exe -r " + self.mame_dir + "nvram" + sep + self.current_rom + ".nv 2>/dev/null")
                     #testString = commands.getoutput("mono HiToText.exe -r " + self.mame_dir + "nvram" + sep + self.current_rom + ".nv")
                     testString = commands.getoutput(htt_command + "nvram" + sep + self.current_rom + ".nv")
-                if not 'Error' in testString:
+                if not 'Error' in testString and testString != '' and not 'Exception' in testString:
                     valid_string = ''
                     for i in testString:
                         if (ord(i)<128 and ord(i)>31) or ord(i) == 13 or ord(i) == 10:
@@ -661,10 +682,20 @@ class WinMain(WahCade):
                             url = "http://localhost:" + self.props['port'] + "/RcadeServer/rest/score/"
                             post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": '0', "game":self.current_rom, "player":self.user.get_text()}                         
                             r = requests.post(url, post_data)
+                            print r.status_code
 
     #TODO: Use RFID
     def log_in(self):
-        self.user.set_text("Scrumpulous Scrummers") #TODO
+        randNum = random.randint(1, 20)
+        if randNum % 4 == 0:
+            self.user.set_text("Riley")
+        elif randNum % 4 == 1:
+            self.user.set_text("John")
+        elif randNum % 4 == 2:
+            self.user.set_text("Terek")
+        elif randNum % 4 == 3:
+            self.user.set_text("Zach")
+        
         self.user.show()
         self.logged_in = True
         
@@ -1153,6 +1184,15 @@ class WinMain(WahCade):
             
     def on_scrsave_timer(self):
         """timer event - check to see if we need to start video or screen saver"""
+        sound_time = random.randint((5*60), (15*60))
+        if int(time.time() - self.scrsave_time) >= sound_time:
+            pygame.mixer.music.load(self.sounds[random.randint(0, len(self.sounds))])
+            pygame.mixer.music.play()
+            self.scrsave_time = 0
+        # Use timer for screen saver to log a person out after period of inactivity
+        auto_log_out_delay = 60
+        if int(time.time() - self.scrsave_time) >= auto_log_out_delay and self.logged_in:
+            self.log_out()
         # Need to start screen saver?
         if int(time.time() - self.scrsave_time) >= self.scrsave_delay:
             # Yes, stop any vids playing
@@ -1703,7 +1743,7 @@ class WinMain(WahCade):
         msg = self.message
         msg_lay = layout_info['message']['fixdMsg']
         msg.winMessage.set_size_request(msg_lay['width'], msg_lay['height'])
-        msg.winMessage.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(opt_lay['background-col']))
+        msg.winMessage.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(msg_lay['background-col']))
         msg.winMessage.move(self.message.imgBackground, 0, 0)
         msg.imgBackground.set_size_request(msg_lay['width'], msg_lay['height'])
         msg_img = msg_lay['use-image']
@@ -1723,6 +1763,19 @@ class WinMain(WahCade):
         scr.winScrSaver.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('black'))
         scr.drwVideo.set_size_request(main_lay['width'], main_lay['height'])
         
+        # Set up Identify window
+        # Match sizes of main window
+        idtfy = self.identify
+        idtfy_lay = layout_info['identify']['fixdID']
+        self.fixd.move(idtfy.winID, 0, 0)
+        idtfy.winID.set_size_request(main_lay['width'], main_lay['height'])
+        idtfy.winID.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(idtfy_lay['background-col']))
+        idtfy.winID.move(self.identify.imgBackground, 0, 0)
+        idtfy.imgBackground.set_size_request(main_lay['width'], main_lay['height'])
+        idtfy_img = idtfy_lay['use-image']
+        if not os.path.dirname(idtfy_img):
+            idtfy_img = os.path.join(self.layout_path, idtfy_img)
+        idtfy.imgBackground.set_data('layout-image', idtfy_img)    
         
         # Set up all Widgets
         for w_set_name in self._layout_items.keys():
@@ -1792,6 +1845,8 @@ class WinMain(WahCade):
                     widget = self.sclGames.fixd
                 elif widget == self.options.sclOptions:
                     widget = self.options.sclOptions.fixd
+                elif widget == self.identify.sclIDs:
+                    widget = self.identify.sclIDs.fixd
                 elif parent.get_ancestor(gtk.EventBox):
                     widget = widget.get_parent()
                 # Add to fixed layout on correct window
@@ -1806,6 +1861,8 @@ class WinMain(WahCade):
                     self.message.winMessage.move(widget, w_lay['x'], w_lay['y'])
                 elif w_set_name == "screensaver":
                     self.scrsaver.winScrSaver.move(widget, w_lay['x'], w_lay['y'])
+                elif w_set_name == "identify":
+                    self.identify.winID.move(widget, w_lay['x'], w_lay['y'])
                 else:
                     print "Orphaned widget detected. Did not belong to one of [main/options/message/screensaver]"
        
@@ -2407,6 +2464,8 @@ class WinMain(WahCade):
         elif window_name == 'cpviewer':
             if self.cpviewer:
                 child_win = self.cpviewer.winCPViewer
+        elif window_name == 'identify':
+            child_win = self.identify.winID
         # Show given child window
         if child_win:
             self.stop_video()
@@ -2426,6 +2485,7 @@ class WinMain(WahCade):
         self.scrsaver.winScrSaver.hide()
         self.histview.winHistory.hide()
         self.cpviewer.winCPViewer.hide()
+        self.identify.winID.hide()
         # "show" main
         self.current_window = 'main'
         self.winMain.present()

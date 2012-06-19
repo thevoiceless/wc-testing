@@ -751,3 +751,57 @@ screensaver:
     width: 640
     x: 80
     y: 0
+identify:
+  Prompt:
+    background-col: '#000000'
+    font: SF Atarian System Extended
+    font-bold: false
+    font-italic: false
+    font-size: 16.0
+    height: 40
+    text-align: 0.5
+    text-col: '#0099CC'
+    text-rotation: 0
+    transparent: false
+    visible: false
+    width: 510
+    x: 0
+    y: 0
+  PromptText:
+    background-col: '#000000'
+    font: SF Atarian System Extended
+    font-bold: false
+    font-italic: false
+    font-size: 16.0
+    height: 40
+    text-align: 0.5
+    text-col: '#0099CC'
+    text-rotation: 0
+    transparent: false
+    visible: false
+    width: 510
+    x: 0
+    y: 0
+  IDsList:
+    background-col: '#000000'
+    font: SF Atarian System Extended
+    font-bold: false
+    font-italic: false
+    font-size: 12.0
+    height: 340
+    text-align: 0.5
+    text-col: '#C5C5C5'
+    text-rotation: 0
+    text-bg-high: '#389a9a'
+    text-fg-high: '#ffffff'
+    transparent: true
+    visible: true
+    width: 370
+    x: 0
+    y: 0
+  fixdID:
+    background-col: '#000000'
+    height: 768
+    unknown: 1
+    use-image: identify.png
+    width: 1024
