@@ -84,6 +84,7 @@ class WinLayout(GladeSupport, WahCade):
         self.fixdScr = gtk.Fixed()
         self.fixdCpv = gtk.Fixed()
         self.fixdHist = gtk.Fixed()
+        self.fixdID = gtk.Fixed()
         self.fixd = self.fixdMain
         #background
         self.fixdBg = gtk.Fixed()
@@ -115,6 +116,7 @@ class WinLayout(GladeSupport, WahCade):
             'Spinner1', 'Spinner2']
         self._hist_widgets = [
             'Heading', 'Game History']
+        self._identify_widgets = ['Prompt', 'Prompt Text', 'IDs List']
         #labels
         main_widgets = {}
         opt_widgets = {}
@@ -122,6 +124,7 @@ class WinLayout(GladeSupport, WahCade):
         scr_widgets = {}
         cpv_widgets = {}
         hist_widgets = {}
+        id_widgets = {}
         for i, widget_name in enumerate(self._main_widgets):
             evb = self._make_label(widget_name)
             main_widgets[widget_name] = evb
@@ -146,9 +149,13 @@ class WinLayout(GladeSupport, WahCade):
             evb = self._make_label(widget_name)
             hist_widgets[widget_name] = evb
             self.fixdHist.put(evb, 100, 10 + (i * 30))
+        for i, widget_name in enumerate(self._identify_widgets):
+            evb = self._make_label(widget_name)
+            main_widgets[widget_name] = evb
+            self.fixdID.put(evb, 100, 10 + (i * 30))
         #fixed pos widgets
         self._fixed_widgets = [self.fixdMain, self.fixdOpt, self.fixdMsg,
-                self.fixdScr, self.fixdCpv, self.fixdHist]
+                self.fixdScr, self.fixdCpv, self.fixdHist, self.fixdID]
         for fixd in self._fixed_widgets:
             fixd.connect('expose-event', self.on_fixd_expose_event)
             fixd.connect('drag-data-received', self.on_fixd_drag_data_received)
@@ -187,7 +194,8 @@ class WinLayout(GladeSupport, WahCade):
             (1, self.fixdMain, "fixdMain"),
             (294, self.fixdOpt, "fixdOpt"),
             (353, self.fixdMsg, "fixdMsg"),
-            (-1, self.fixdScr, "fixdScr")]
+            (-1, self.fixdScr, "fixdScr"),
+            (-1, self.fixdID, "fixdID")]
         self._layout_items = [
             (8, main_widgets['Main Logo'], "MainLogo"),
             (21, main_widgets['Game List Indicator'], "GameListIndicator"),
@@ -233,7 +241,10 @@ class WinLayout(GladeSupport, WahCade):
             (500, scr_widgets['Artwork9'], "ScrArtwork9"),
             (513, scr_widgets['Artwork10'], "ScrArtwork10"),
             (526, scr_widgets['Game Description'], "GameDescription"),
-            (539, scr_widgets['MP3 Name'], "MP3Name")]
+            (539, scr_widgets['MP3 Name'], "MP3Name"),
+            (-1, id_widgets['Prompt'], 'Prompt'),
+            (-1, id_widgets['Prompt Text'], 'PromptText'),
+            (-1, id_widgets['IDs List'], 'IDsList')]
         self._histview_items = [
             (8, hist_widgets['Heading'], "Heading"),
             (21, hist_widgets['Game History'], "GameHistory")]
@@ -243,6 +254,7 @@ class WinLayout(GladeSupport, WahCade):
         self.scr_widgets = scr_widgets
         self.cpv_widgets = cpv_widgets
         self.hist_widgets = hist_widgets
+        self.id_widgets = id_widgets
         #setup view menu / toolbar
         self.view_updating = True
         self.view_menu = [self.mnuVMain, self.mnuVOpt, self.mnuVMsg, self.mnuVScr,
@@ -487,6 +499,7 @@ class WinLayout(GladeSupport, WahCade):
     def on_rbWindow_toggled(self, widget, *args):
         """Changes active window and updates display to match"""
         #print "on_rbWindow_toggled: ",widget.get_name(), widget.get_active()
+        print "Toggle"
         if self.view_updating:
             return
         if widget not in self.view_menu:
@@ -820,6 +833,9 @@ class WinLayout(GladeSupport, WahCade):
         layout_path = os.path.dirname(layout_filename)
         lay_info = yaml.load(open(layout_filename, 'r'))
         
+        # Stash the original file data for writing out later
+        self.ylines = lay_info
+        
         # Initialize main window stuff
         main_lay = lay_info['main']
         fixdm_lay = main_lay['fixdMain']
@@ -1098,7 +1114,7 @@ class WinLayout(GladeSupport, WahCade):
         if layout_filename:
             self.layout_filename = layout_filename
         # YAML setup
-        ylines = {}
+        ylines = self.ylines
         main = {}
         options = {}
         message = {}

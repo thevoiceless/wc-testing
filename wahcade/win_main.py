@@ -107,7 +107,7 @@ class WinMain(WahCade):
                     val = line.split('=')
                     self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
                 #requests.get("http://localhost:" + self.props['port'] + "/RcadeServer")
-                requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']) # Attempt to make connection to server
+                r = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']) # Attempt to make connection to server
                 self.connected = True
         except: # Any exception would mean some sort of failed server connection
             self.connected = False
@@ -682,7 +682,6 @@ class WinMain(WahCade):
                             url = "http://localhost:" + self.props['port'] + "/RcadeServer/rest/score/"
                             post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": '0', "game":self.current_rom, "player":self.user.get_text()}                         
                             r = requests.post(url, post_data)
-                            print r.status_code
 
     #TODO: Use RFID
     def log_in(self):
@@ -788,7 +787,6 @@ class WinMain(WahCade):
                         return
                     # Get mamewah keyname
                     mw_keys = mamewah_keys[keyname]
-                    print mw_keys
                     if mw_keys == []:
                         return
             elif event.type == gtk.gdk.KEY_RELEASE:
@@ -1197,7 +1195,7 @@ class WinMain(WahCade):
         #sound_time = random.randint((5*60), (15*60))
         sound_time = random.randint((5), (15))
         if int(time.time() - self.scrsave_time) >= sound_time:
-            pygame.mixer.music.load(self.sounds[random.randint(0, len(self.sounds))])
+            pygame.mixer.music.load(self.sounds[random.randrange(0, len(self.sounds))])
             pygame.mixer.music.play()
             #self.scrsave_time = 0    # Uncomment to play Portal sounds without screensaver
         # Use timer for screen saver to log a person out after period of inactivity
