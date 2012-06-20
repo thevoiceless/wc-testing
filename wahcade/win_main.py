@@ -829,6 +829,7 @@ class WinMain(WahCade):
             for mw_func in mw_functions:
                 # Which function?
                 if mw_func == 'ID_SHOW' and current_window != 'identify':   # Show identify window any time
+                    self.identify.sclIDs._update_display()
                     self.show_window('identify')
                 if current_window == 'main':
                     # Display first n letters of selected game when scrolling quickly
@@ -1068,15 +1069,12 @@ class WinMain(WahCade):
                 elif current_window == 'identify':
                     # Exit from identity window
                     if mw_func in ['ID_BACK']:
-                        print "Return from identify window"
                         self.hide_window('identify')
                     # Scroll up 1 name
                     elif mw_func in ['ID_UP_1_NAME']:
-                        print "Scroll up 1 name"
                         self.identify.sclIDs.scroll((int(self.keypress_count / 20) * -1) - 1)
                     # Scroll down 1 name
                     elif mw_func in ['ID_DOWN_1_NAME']:
-                        print "Scroll down 1 name"
                         self.identify.sclIDs.scroll(int(self.keypress_count / 20) + 1)
             # Force games list update if using mouse scroll wheel
             if 'MOUSE_SCROLLUP' in mw_keys or 'MOUSE_SCROLLDOWN' in mw_keys:

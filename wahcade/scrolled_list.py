@@ -324,8 +324,8 @@ class ScrollList(object):
             if self.auto_update:
                 self.update()
             return
-        # Wrap list?
         if idx_to_select < 0:
+            # Wrap list?
             if self.wrap_list:
                 idx_to_select = len_ls - 1
             else:

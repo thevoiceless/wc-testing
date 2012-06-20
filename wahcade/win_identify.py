@@ -72,9 +72,7 @@ class WinIdentify(WahCade):
         # Set up IDs
         self.sclIDs.ls = [l for l in self.lsIDs]
         self.sclIDs.ls.sort()
-        #print "List contents:", self.sclIDs.ls
-        self.sclIDs.update()
-        self.sclIDs.set_selected(0)
+        print self.sclIDs.ls
         
         ## TODO: Exclude IDs already matched to RFID values
         
@@ -88,6 +86,7 @@ class WinIdentify(WahCade):
         """Selected user identity changed"""
         # Update list widget
         self.sclIDs._update_display()
+        print self.sclIDs.ls[self.sclIDs.get_selected()]
         return
     
     def ID_selected(self, *args):
