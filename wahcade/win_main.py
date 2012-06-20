@@ -1174,7 +1174,7 @@ class WinMain(WahCade):
         if int(time.time() - self.scrsave_time) >= sound_time:
             pygame.mixer.music.load(self.sounds[random.randint(0, len(self.sounds))])
             pygame.mixer.music.play()
-            self.scrsave_time = 0
+            self.scrsave_time = time.time()
         # Use timer for screen saver to log a person out after period of inactivity
         auto_log_out_delay = 60
         if int(time.time() - self.scrsave_time) >= auto_log_out_delay and self.logged_in:
