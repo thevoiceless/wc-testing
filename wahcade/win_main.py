@@ -72,6 +72,7 @@ except:
 ### Project modules
 from constants import *
 from scrolled_list import ScrollList    # Transparent scrolled list widget
+from scroll_overlay import ScrollOverlay# Custom overlay text/image container
 from key_consts import mamewah_keys     # Keyboard constants
 from wc_common import WahCade           # Common functions for wahcade
 from win_options import WinOptions      # Options window
@@ -79,6 +80,7 @@ from win_message import WinMessage      # Message window
 from win_scrsaver import WinScrSaver    # Screen saver window
 from win_history import WinHistory      # History viewer
 from win_cpviewer import WinCPViewer    # Control panel viewer window
+from win_identify import WinIdentify    # Identify window
 import filters                          # filters.py, routines to read/write mamewah filters and lists
 from mamewah_ini import MameWahIni      # Reads mamewah-formatted ini file
 import joystick                         # joystick.py, joystick class, uses pygame package (SDL bindings for games in Python)
@@ -104,9 +106,12 @@ class WinMain(WahCade):
                 for line in f.readlines():
                     val = line.split('=')
                     self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
-                requests.get("http://localhost:" + self.props['port'] + "/RcadeServer") #attempt to make connection to server
+                #requests.get("http://localhost:" + self.props['port'] + "/RcadeServer")
+                #print self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
+                r = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']) # Attempt to make connection to server
+                #print r.status_code
                 self.connected = True
-        except: #any exeption would mean some sort of failed server connection
+        except: # Any exception would mean some sort of failed server connection
             self.connected = False
         
         ### Set Global Variables
@@ -214,8 +219,6 @@ class WinMain(WahCade):
         self.imgArtwork8 = gtk.Image()
         self.imgArtwork9 = gtk.Image()
         self.imgArtwork10 = gtk.Image()
-        # Background for overlay scroll letters
-        self.overlayBG = gtk.Image()
         self.lblGameDescription = gtk.Label()
         self.lblRomName = gtk.Label()
         self.lblYearManufacturer = gtk.Label()
@@ -223,9 +226,10 @@ class WinMain(WahCade):
         self.lblControllerType = gtk.Label()
         self.lblDriverStatus = gtk.Label()
         self.lblCatVer = gtk.Label()
-        self.lblHighScoreHeading = gtk.Label()
         self.lblHighScoreData = gtk.Label()
+        self.overlayBG = gtk.Image()
         self.lblOverlayScrollLetters = gtk.Label()
+        self.scrollOverlay = ScrollOverlay(self.lblOverlayScrollLetters, self.overlayBG)
         self.user = gtk.Label()
 
         # create scroll list widget
@@ -307,6 +311,10 @@ class WinMain(WahCade):
         self.histview = WinHistory(self)
         ### Create CP viewer window
         self.cpviewer = WinCPViewer(self)
+        ### Create identify window
+        self.identify = WinIdentify(self)
+        self.identify.winID.hide()
+        
         self.hide_window()
         
         ### Build list of emulators
@@ -343,9 +351,9 @@ class WinMain(WahCade):
             (255, self.lblControllerType, "ControllerType"),            # Controller
             (268, self.lblDriverStatus, "DriverStatus"),                # Driver
             (281, self.lblCatVer, "CatVer"),
-            (552, self.overlayBG, "OverlayBG"),                         # Overlay scroll letter background image
-            (552, self.lblOverlayScrollLetters, "OverlayScrollLetters"),# Overlay scroll letters
-            (-1, self.lblHighScoreHeading, "HighScoreHeading"),         # High score heading
+            #(552, self.overlayBG, "OverlayBG"),                         # Overlay scroll letter background image
+            #(552, self.lblOverlayScrollLetters, "OverlayScrollLetters"),# Overlay scroll letters
+            (-1, self.scrollOverlay, "ScrollOverlay"),
             (-1, self.lblHighScoreData, "HighScoreData"),               # High score data
             (-1, self.user, "UserName")]                                # Currently logged in user
         self._options_items = [
@@ -370,23 +378,29 @@ class WinMain(WahCade):
             (513, self.scrsaver.imgArtwork10, "ScrArtwork10"),
             (526, self.scrsaver.lblGameDescription, "GameDescription"),
             (539, self.scrsaver.lblMP3Name, "MP3Name")]
-        self._layout_items = {'main': self._main_items, 'options': self._options_items,
-                              'message': self._message_items, 'screensaver': self._screensaver_items}
+        self._identify_items = [
+            (-1, self.identify.lblPrompt, "Prompt"),
+            (-1, self.identify.lblPromptText, "PromptText"),
+            (-1, self.identify.sclIDs, "IDsList")]
+        self._layout_items = {'main': self._main_items,
+                              'options': self._options_items,
+                              'message': self._message_items,
+                              'screensaver': self._screensaver_items,
+                              'identify' : self._identify_items}
           
-        # Initialize and show primary Fixd containers, and populate approrpriately
+        # Initialize and show primary Fixd containers, and populate appropriately
         self.fixd.show()
         self.winMain.add(self.fixd)
-        # Add everything to the main Fixd object, wrapping in an EVB as appropriate
+        # Add everything to the main Fixd object
         for w_set_name in self._layout_items:
             for offset, widget, name in self._layout_items[w_set_name]:
                 if widget.get_parent():
                     pass
                 elif not (type(widget) is ScrollList):
                     self.fixd.add(widget)
-                    # Needed?
-                    #self.fixd.add(self.make_evb_widget(widget))
                 else:
                     self.fixd.add(widget.fixd)
+        #self.scrollOverlay.add_to_fixd(self.fixd)
             
         ### Load list
         self.current_list_ini = None
@@ -400,23 +414,23 @@ class WinMain(WahCade):
         for line in self.supported_game_file:
             self.supported_games.add(line.strip())
                 
-        #Get a list of games already on the server
+        # Get a list of games already on the server
         if self.connected:
-            url = "http://localhost:" + self.props['port'] + "/RcadeServer/rest/game/"
+            url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
             data = requests.get(url)
         
-            #map rom name to associated game name
+            # Map rom name to associated game name
             romToName = {}
             for sublist in self.lsGames: 
                 romToName[sublist[1]] = sublist[0]
             
-            #Get a list of games already on the server
+            # Get a list of games already on the server
             data = fromstring(data.text)
             games_on_server = []
             for game in data.getiterator('game'):
                 games_on_server.append(game.find('romName').text)
     
-            #add games to the server if not on the server
+            # Add games to the server if not on the server
             for rom in self.supported_games:
                 if rom not in games_on_server and rom in romToName:
                     post_data = {"romName":rom, "gameName":romToName[rom]}
@@ -439,7 +453,6 @@ class WinMain(WahCade):
         self.winMain.show()
 
         self.drwVideo.set_property('visible', False)
-
 
         if not self.showcursor:
             self.hide_mouse_cursor(self.winMain)
@@ -659,18 +672,18 @@ class WinMain(WahCade):
                     
                     if 'SCORE' in high_score_table: # Add to DB if score not zero
                         if high_score_table['SCORE'] is not '0':
-                            url = "http://localhost:" + self.props['port'] + "/RcadeServer/rest/player/"
+                            url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/"
                             r = requests.get(url + self.user.get_text())
                             if r.text == 'null': #check if player exists and add them if they don't
                                 randNum = random.randint(1, 5000) #TODO: replacing RFID for now
                                 post_data = {"name":self.user.get_text(), "playerID":randNum}
                                 r = requests.post(url, post_data)
-                            url = "http://localhost:" + self.props['port'] + "/RcadeServer/rest/score/"
+                            url = self.props['host'] + ":" + self.props['port'] + self.props['db'] + "/rest/score/"
                             post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": '0', "game":self.current_rom, "player":self.user.get_text()}                         
                             r = requests.post(url, post_data)
                             print r.status_code
 
-    #TODO: Use RFID
+    # TODO: Use RFID
     def log_in(self):
         randNum = random.randint(1, 20)
         if randNum % 4 == 0:
@@ -761,7 +774,8 @@ class WinMain(WahCade):
                     # Keyboard pressed, get GTK keyname
                     keyname = gtk.gdk.keyval_name(event.keyval).lower()
                     
-                    #special character to log in
+                    # TODO: Integrate this with wahcade-setup, wahcade.ini, etc
+                    # Special character to log in
                     if keyname == 'bracketright':
                         if not self.logged_in:
                             self.log_in()
@@ -790,8 +804,8 @@ class WinMain(WahCade):
                                 (i + 1))
                             self.display_scaled_image(img, img_filename, self.keep_aspect, img.get_data('text-rotation'))
                 #self.lblOverlayScrollLetters.set_visible(False)
-                self.lblOverlayScrollLetters.hide()
-                self.overlayBG.hide()
+                self.scrollOverlay.hide()
+                self.scrollOverlay.hide()
                 # Keyboard released, update labels, images, etc
                 if widget == self.winMain:
                     # Only update if no further events pending
@@ -816,14 +830,16 @@ class WinMain(WahCade):
                     break
             for mw_func in mw_functions:
                 # Which function?
+                if mw_func == 'IDENTIFY_SHOW':
+                    self.show_window('identify')
                 if current_window == 'main':
                     # Display first n letters of selected game when scrolling quickly
                     if self.keypress_count > self.showOverlayThresh:
-                        self.overlayBG.show()
-                        overlayLetters = self.lsGames[ self.sclGames.get_selected() ][ 0 ][ 0 : self.lblOverlayScrollLetters.charShowCount ]
-                        self.lblOverlayScrollLetters.set_markup( _('%s%s%s') % (self.overlayMarkupHead, overlayLetters, self.overlayMarkupTail) )
+                        self.scrollOverlay.show()
+                        overlayLetters = self.lsGames[ self.sclGames.get_selected() ][ 0 ][ 0 : self.scrollOverlay.charShowCount ]
+                        self.scrollOverlay.set_markup( _('%s%s%s') % (self.overlayMarkupHead, overlayLetters, self.overlayMarkupTail) )
                         #self.lblOverlayScrollLetters.set_visible(True)
-                        self.lblOverlayScrollLetters.show()
+                        self.scrollOverlay.show()
                     # Main form
                     if mw_func == 'UP_1_GAME':
                         self.play_clip('UP_1_GAME')
@@ -1050,6 +1066,11 @@ class WinMain(WahCade):
                 elif current_window == 'message':
                     if self.message.wait_for_key:
                         self.message.hide()
+                # Identify window
+                elif current_window == 'identify':
+                    if mw_func in ['IDENTIFY_BACK']:
+                        print "Return from identify window"
+                        self.hide_window('identify')
             # Force games list update if using mouse scroll wheel
             if 'MOUSE_SCROLLUP' in mw_keys or 'MOUSE_SCROLLDOWN' in mw_keys:
                 if widget == self.winMain:
@@ -1170,7 +1191,8 @@ class WinMain(WahCade):
             
     def on_scrsave_timer(self):
         """timer event - check to see if we need to start video or screen saver"""
-        sound_time = random.randint((5*60), (15*60))
+        #sound_time = random.randint((5*60), (15*60))
+        sound_time = random.randint((5), (15))
         if int(time.time() - self.scrsave_time) >= sound_time:
             pygame.mixer.music.load(self.sounds[random.randint(0, len(self.sounds))])
             pygame.mixer.music.play()
@@ -1672,20 +1694,16 @@ class WinMain(WahCade):
         # Okay to setup
         self.layout_file = layout_file
         layout_info = yaml.load(open(self.layout_file, 'r'))
-
+        
         # Temp for displaying high score data
         # TODO: Finalize this
-        hs_heading_lay = layout_info['main']['HighScoreHeading']
-        self.lblHighScoreHeading.set_markup('<span color="%s" size="%s">High Scores</span>' % (hs_heading_lay['text-col'], hs_heading_lay['font-size']))
-        #self.fixd.put(self.lblHighScoreHeading, 200, 510)
-        self.lblHighScoreHeading.show()
-        
         # Formatting for the high score labels
         hs_data_lay = layout_info['main']['HighScoreData']
         self.highScoreDataMarkupHead = ('<span color="%s" size="%s">' % (hs_data_lay['text-col'], hs_data_lay['font-size']))
         self.highScoreDataMarkupTail = '</span>'
+        
         # Formatting for the overlay letters
-        overlay_lay = layout_info['main']['OverlayScrollLetters']
+        overlay_lay = layout_info['main']['ScrollOverlay']
         self.overlayMarkupHead = ('<span color="%s" size="%s">' % (overlay_lay['text-col'], overlay_lay['font-size']))
         self.overlayMarkupTail = '</span>'
         
@@ -1729,7 +1747,7 @@ class WinMain(WahCade):
         msg = self.message
         msg_lay = layout_info['message']['fixdMsg']
         msg.winMessage.set_size_request(msg_lay['width'], msg_lay['height'])
-        msg.winMessage.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(opt_lay['background-col']))
+        msg.winMessage.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(msg_lay['background-col']))
         msg.winMessage.move(self.message.imgBackground, 0, 0)
         msg.imgBackground.set_size_request(msg_lay['width'], msg_lay['height'])
         msg_img = msg_lay['use-image']
@@ -1749,7 +1767,21 @@ class WinMain(WahCade):
         scr.winScrSaver.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('black'))
         scr.drwVideo.set_size_request(main_lay['width'], main_lay['height'])
         
-        
+        # Set up Identify window
+        # Match sizes of main window
+        idtfy = self.identify
+        idtfy_lay = layout_info['identify']['fixdID']
+        self.fixd.move(idtfy.winID, 0, 0)
+        idtfy.winID.set_size_request(main_lay['width'], main_lay['height'])
+        idtfy.winID.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(idtfy_lay['background-col']))
+        idtfy.winID.move(self.identify.imgBackground, 0, 0)
+        idtfy.imgBackground.set_size_request(main_lay['width'], main_lay['height'])
+        idtfy_img = idtfy_lay['use-image']
+        if not os.path.dirname(idtfy_img):
+            idtfy_img = os.path.join(self.layout_path, idtfy_img)
+        #idtfy.imgBackground.set_data('layout-image', idtfy_img)
+        idtfy.imgBackground.set_from_file(idtfy_img)
+            
         # Set up all Widgets
         for w_set_name in self._layout_items.keys():
             wset_layout_info = layout_info[w_set_name]
@@ -1769,7 +1801,7 @@ class WinMain(WahCade):
                 # BG color, transparency as appropriate
                 bgColor = w_lay['background-col']
                 parent = widget.get_parent()
-                if parent.get_ancestor(gtk.EventBox): # Check if we have an EventBox ancester
+                if parent.get_ancestor(gtk.EventBox): # Check if we have an EventBox ancestor
                     if w_lay['transparent'] == True:
                         parent.set_visible_window(False)
                     else:
@@ -1818,17 +1850,24 @@ class WinMain(WahCade):
                     widget = self.sclGames.fixd
                 elif widget == self.options.sclOptions:
                     widget = self.options.sclOptions.fixd
+                elif widget == self.identify.sclIDs:
+                    widget = self.identify.sclIDs.fixd
                 elif parent.get_ancestor(gtk.EventBox):
                     widget = widget.get_parent()
                 # Add to fixed layout on correct window
                 if w_set_name == "main":
-                    self.fixd.move(widget, w_lay['x'], w_lay['y'])
+                    if isinstance(widget, gtk.Widget):
+                        self.fixd.move(widget, w_lay['x'], w_lay['y'])
+                    else:
+                        widget.move_in_fixd(self.fixd, w_lay['x'], w_lay['y'])
                 elif w_set_name == "options":
                     self.options.winOptions.move(widget, w_lay['x'], w_lay['y'])
                 elif w_set_name == "message":
                     self.message.winMessage.move(widget, w_lay['x'], w_lay['y'])
                 elif w_set_name == "screensaver":
                     self.scrsaver.winScrSaver.move(widget, w_lay['x'], w_lay['y'])
+                elif w_set_name == "identify":
+                    self.identify.winID.move(widget, w_lay['x'], w_lay['y'])
                 else:
                     print "Orphaned widget detected. Did not belong to one of [main/options/message/screensaver]"
        
@@ -2430,8 +2469,10 @@ class WinMain(WahCade):
         elif window_name == 'cpviewer':
             if self.cpviewer:
                 child_win = self.cpviewer.winCPViewer
+        elif window_name == 'identify':
+            child_win = self.identify.winID
         # Show given child window
-        if child_win:
+        if child_win:            
             self.stop_video()
             child_win.show()
             try:
@@ -2449,6 +2490,7 @@ class WinMain(WahCade):
         self.scrsaver.winScrSaver.hide()
         self.histview.winHistory.hide()
         self.cpviewer.winCPViewer.hide()
+        self.identify.winID.hide()
         # "show" main
         self.current_window = 'main'
         self.winMain.present()
@@ -2511,7 +2553,6 @@ class WinMain(WahCade):
    #     self.start_timer('record') # Doesn't work at the moment
 
     def stop_recording_video(self):
-        print 'hi'
         return os.system('kill `ps -e | awk \'/recordmydesktop/{a=$1}END{print a}\'`')
 
 
