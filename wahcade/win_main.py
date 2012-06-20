@@ -805,7 +805,6 @@ class WinMain(WahCade):
                             self.display_scaled_image(img, img_filename, self.keep_aspect, img.get_data('text-rotation'))
                 #self.lblOverlayScrollLetters.set_visible(False)
                 self.scrollOverlay.hide()
-                self.scrollOverlay.hide()
                 # Keyboard released, update labels, images, etc
                 if widget == self.winMain:
                     # Only update if no further events pending
@@ -830,7 +829,7 @@ class WinMain(WahCade):
                     break
             for mw_func in mw_functions:
                 # Which function?
-                if mw_func == 'IDENTIFY_SHOW':
+                if mw_func == 'ID_SHOW' and current_window != 'identify':   # Show identify window any time
                     self.show_window('identify')
                 if current_window == 'main':
                     # Display first n letters of selected game when scrolling quickly
@@ -1068,9 +1067,18 @@ class WinMain(WahCade):
                         self.message.hide()
                 # Identify window
                 elif current_window == 'identify':
-                    if mw_func in ['IDENTIFY_BACK']:
+                    # Exit from identity window
+                    if mw_func in ['ID_BACK']:
                         print "Return from identify window"
                         self.hide_window('identify')
+                    # Scroll up 1 name
+                    elif mw_func in ['ID_UP_1_NAME']:
+                        print "Scroll up 1 name"
+                        self.identify.sclIDs.scroll((int(self.keypress_count / 20) * -1) - 1)
+                    # Scroll down 1 name
+                    elif mw_func in ['ID_DOWN_1_NAME']:
+                        print "Scroll down 1 name"
+                        self.identify.sclIDs.scroll(int(self.keypress_count / 20) + 1)
             # Force games list update if using mouse scroll wheel
             if 'MOUSE_SCROLLUP' in mw_keys or 'MOUSE_SCROLLDOWN' in mw_keys:
                 if widget == self.winMain:
@@ -1809,6 +1817,7 @@ class WinMain(WahCade):
                         parent.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(bgColor))
                 # Highlight colors (only for scroll lists)
                 if type(widget) is ScrollList:
+                    print "Font description:", fontDesc
                     widget.modify_highlight_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(w_lay['text-bg-high']))
                     widget.modify_highlight_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse(w_lay['text-fg-high']))
                 # Alignment of text
@@ -1827,6 +1836,7 @@ class WinMain(WahCade):
                     if parent.get_ancestor(gtk.EventBox):
                         parent.show()
                 # Size
+                if type(widget) is ScrollList: print "**********Scroll List***********", name
                 widget.set_size_request(w_lay['width'], w_lay['height'])
                 # Overlay stuff
                 if 'bg-image' in w_lay:
