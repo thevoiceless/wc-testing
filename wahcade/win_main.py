@@ -109,7 +109,6 @@ class WinMain(WahCade):
                 #requests.get("http://localhost:" + self.props['port'] + "/RcadeServer")
                 #print self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
                 r = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']) # Attempt to make connection to server
-                #print r.status_code
                 self.connected = True
         except: # Any exception would mean some sort of failed server connection
             self.connected = False
@@ -678,7 +677,7 @@ class WinMain(WahCade):
                                 randNum = random.randint(1, 5000) #TODO: replacing RFID for now
                                 post_data = {"name":self.user.get_text(), "playerID":randNum}
                                 r = requests.post(url, post_data)
-                            url = self.props['host'] + ":" + self.props['port'] + self.props['db'] + "/rest/score/"
+                            url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/score/"
                             post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": '0', "game":self.current_rom, "player":self.user.get_text()}                         
                             r = requests.post(url, post_data)
                             print r.status_code
@@ -1154,7 +1153,7 @@ class WinMain(WahCade):
         if score_string != '[]' and "Could not find" not in score_string:
             score_string = score_string[1:-1] #trim leading and trailing [] from string
             score_list = score_string.split(",")
-            name, score = zip(*(s.split(":") for s in score_list)) #split the list into name's and scores
+            score, name = zip(*(s.split(":") for s in score_list)) #split the list into name's and scores
             score_list[:]=[]
             score_string = ''
             
@@ -1162,7 +1161,7 @@ class WinMain(WahCade):
                 paring = (name[pair].encode('utf8').strip(), score[pair].encode('utf8'))
                 score_list.append(paring)
             
-            score_list = sorted(score_list, key=lambda score: score[1], reverse=True)            
+            score_list = sorted(score_list, key=lambda score: int(score[1]), reverse=True) 
             
             for name, score in score_list: #42 chars in a line
                 if index < 10: #format for leading spaces by numbers. Makes 1. match up with 10.
