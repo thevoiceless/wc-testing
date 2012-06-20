@@ -174,7 +174,7 @@ class ScrollList(object):
             # Scroll arrows
             self.arwScrollTop.set_size_request(width, font_size)
             self.arwScrollBottom.set_size_request(width, font_size)
-            self.arwScrollTop.set_alignment(0.5, 1)
+            self.arwScrollTop.set_alignment(0.5, 0)
             self.arwScrollBottom.set_alignment(0.5, 1)
             if self.angle == 0:
                 self.arwScrollTop.set(gtk.ARROW_UP, gtk.SHADOW_NONE)

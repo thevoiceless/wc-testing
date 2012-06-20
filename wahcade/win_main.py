@@ -1201,7 +1201,7 @@ class WinMain(WahCade):
         #sound_time = random.randint((5*60), (15*60))
         sound_time = random.randint((5), (15))
         if int(time.time() - self.scrsave_time) >= sound_time:
-            pygame.mixer.music.load(self.sounds[random.randint(0, len(self.sounds))])
+            pygame.mixer.music.load(self.sounds[random.randrange(0, len(self.sounds))])
             pygame.mixer.music.play()
             self.scrsave_time = time.time()
         # Use timer for screen saver to log a person out after period of inactivity
@@ -1816,7 +1816,6 @@ class WinMain(WahCade):
                         parent.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(bgColor))
                 # Highlight colors (only for scroll lists)
                 if type(widget) is ScrollList:
-                    print "Font description:", fontDesc
                     widget.modify_highlight_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(w_lay['text-bg-high']))
                     widget.modify_highlight_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse(w_lay['text-fg-high']))
                 # Alignment of text
@@ -1835,7 +1834,6 @@ class WinMain(WahCade):
                     if parent.get_ancestor(gtk.EventBox):
                         parent.show()
                 # Size
-                if type(widget) is ScrollList: print "**********Scroll List***********", name
                 widget.set_size_request(w_lay['width'], w_lay['height'])
                 # Overlay stuff
                 if 'bg-image' in w_lay:
