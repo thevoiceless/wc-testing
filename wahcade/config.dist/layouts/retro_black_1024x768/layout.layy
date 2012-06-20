@@ -377,7 +377,7 @@ main:
     font-name: SF Atarian System Extended 10.0
     font-size: 20000
     height: 70
-    show-count: 1
+    show-count: 2
     text-align: 0.5
     text-col: '#FFFFFF'
     text-rotation: 0
