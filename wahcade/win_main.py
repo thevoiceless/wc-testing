@@ -106,7 +106,9 @@ class WinMain(WahCade):
                 for line in f.readlines():
                     val = line.split('=')
                     self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
+                #requests.get("http://localhost:" + self.props['port'] + "/RcadeServer")
                 r = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']) # Attempt to make connection to server
+               # print r.status_code
                 self.connected = True
         except: # Any exception would mean some sort of failed server connection
             self.connected = False
@@ -230,7 +232,7 @@ class WinMain(WahCade):
         self.user = gtk.Label()
 
         # create scroll list widget
-        self.sclGames = ScrollList() 
+        self.sclGames = ScrollList(self) 
         self._main_images = [
             self.imgArtwork1,
             self.imgArtwork2,
@@ -413,8 +415,10 @@ class WinMain(WahCade):
                 
         # Get a list of games already on the server
         if self.connected:
-            url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
-            data = requests.get(url)
+            self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
+            self.player_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/"
+            self.score_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/score/"
+            data = requests.get(self.game_url)
         
             # Map rom name to associated game name
             romToName = {}
@@ -431,12 +435,18 @@ class WinMain(WahCade):
             for rom in self.supported_games:
                 if rom not in games_on_server and rom in romToName:
                     post_data = {"romName":rom, "gameName":romToName[rom]}
-                    requests.post(url, post_data)
+                    requests.post(self.game_url, post_data)                    
 
-        self.logged_in = False
+        # Setup login
+        self.current_players = []
+        self.unregistered_users = []
         if self.connected:
             self.user.set_text("Not Logged In")
             self.user.show()
+            
+            
+            
+            
             
         pygame.init()
         
@@ -489,7 +499,7 @@ class WinMain(WahCade):
         # Input defaults
         self.pointer_grabbed = False
        
-        # Get keyboard & mouse events
+        # Get keyboard, mouse & arduino events
         self.sclGames.connect('update', self.on_sclGames_changed)           # scrolled_list.py
         self.sclGames.connect('mouse-left-click', self.on_sclGames_changed)
         self.sclGames.connect('mouse-right-click', self.on_winMain_key_press)
@@ -497,6 +507,7 @@ class WinMain(WahCade):
         self.winMain.connect('destroy', self.on_winMain_destroy)
         self.winMain.connect('focus-in-event', self.on_winMain_focus_in)
         self.winMain.connect('focus-out-event', self.on_winMain_focus_out)
+#        self.winMain.connect('rfid-read', self.log_in) # RFID swiped
         self.winMain.add_events(
             gtk.gdk.POINTER_MOTION_MASK |
             gtk.gdk.SCROLL_MASK |
@@ -589,7 +600,7 @@ class WinMain(WahCade):
         if self.launched_game:
             self.launched_game = False
             # If the game supports high scores run the HiToText executions
-            if self.current_rom in self.supported_games and self.logged_in:
+            if self.current_rom in self.supported_games and self.current_players != '':
                 htt_command = self.htt_read
                 if not onWindows:
                     htt_command = "mono " + self.htt_read
@@ -666,43 +677,57 @@ class WinMain(WahCade):
                 else:
                     for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
                         high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
-                    
                     if 'SCORE' in high_score_table: # If high score table has score
                         if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB
-                            url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/"
-                            r = requests.get(url + self.user.get_text())
-                            if r.text == 'null': # if player doesn't exist and add them to DB
+                            r = requests.get(self.player_url) #get all players                          
+                            players = []
+                            data = fromstring(r.text)
+                            for player in data.getiterator('player'):
+                                players.append(player.find('name').text) # parse player name from xml
+                            if not self.user.get_text() in players: # if player doesn't exist and add them to DB
                                 randNum = random.randint(1, 5000) #TODO: replacing RFID for now
                                 post_data = {"name":self.user.get_text(), "playerID":randNum}
-                                r = requests.post(url, post_data)
-                                
-                            url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/score/"
+                                r = requests.post(self.player_url, post_data)
+                            del players[:]
                             if 'NAME' in high_score_table:
                                 post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": '0', "game":self.current_rom, "player":self.user.get_text()}                         
                             else:
                                 post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": '0', "game":self.current_rom, "player":self.user.get_text()}
+                            r = requests.post(self.score_url, post_data)
                             
-                            r = requests.post(url, post_data)
-
     # TODO: Use RFID
     def log_in(self):
-        randNum = random.randint(1, 20)
-        if randNum % 4 == 0:
-            self.user.set_text("Riley")
-        elif randNum % 4 == 1:
-            self.user.set_text("John")
-        elif randNum % 4 == 2:
-            self.user.set_text("Terek")
-        elif randNum % 4 == 3:
-            self.user.set_text("Zach")
-        
-        self.user.show()
-        self.logged_in = True
-        
-    def log_out(self):
-        self.user.set_text("Not Logged In")
-        self.logged_in = False
+        self.rfid_value = 7#get_rfid_value() #Fetch RFID value 
+        name_from_rfid = requests.get(self.player_url + self.rfid_value) #Use this for checking people  
+        if not name_from_rfid:
+            self.identify.sclIDs._update_display()
+            self.show_window('identify')
+            new_player = name_from_rfid               
+        elif name_from_rfid in self.current_players: # If passed a player name and if that player is logged in, log them out
+            self.log_out(name_from_rfid)
+        else:
+            new_player = name_from_rfid
+        self.current_players.append(new_player) # Add current player to list 
+        self.user.set_text(self.current_players) # Show who is currently logged in
+            
+    def log_out(self, player_name = ""):
+        if not player_name:
+            self.current_players = []
+            self.user.set_text("Not logged in")
+        else:
+            self.current_players.remove(player_name)
+            self.user.set_text(self.current_players)
 
+    def register_new_player(self, player_name):
+        # TODO: Do this check before displaying the identify window in on_winMain_key_press
+        if not self.connected:
+            return
+        self.rfid_value = 8 # TODO: remove this once integrated
+        post_data = {"name":player_name, "playerID":self.rfid_value}
+        r = requests.post(self.player_url, post_data)
+#        self.ldap.remove(player_name) # Take them out of the unregistered people list
+        self.current_players.append(player_name) # TODO: remove this once integrated
+        self.user.set_text(player_name) # TODO: remove this once integrated
 
     def on_winMain_key_press(self, widget, event, *args):
         """key pressed - translate to mamewah setup"""
@@ -774,15 +799,11 @@ class WinMain(WahCade):
                 else:
                     # Keyboard pressed, get GTK keyname
                     keyname = gtk.gdk.keyval_name(event.keyval).lower()
-                    
                     # TODO: Integrate this with wahcade-setup, wahcade.ini, etc
                     # Special character to log in
                     if keyname == 'bracketright':
-                        if not self.logged_in:
-                            self.log_in()
-                        else:
+                        if self.current_players:
                             self.log_out()
-                            
                     # Got something?
                     if keyname not in mamewah_keys:
                         return
@@ -830,7 +851,7 @@ class WinMain(WahCade):
                     break
             for mw_func in mw_functions:
                 # Which function?
-                if mw_func == 'ID_SHOW' and current_window != 'identify':   # Show identify window any time
+                if mw_func == 'ID_SHOW' and current_window != 'identify': #and self.connected:   # Show identify window any time
                     self.identify.sclIDs._update_display()
                     self.show_window('identify')
                 if current_window == 'main':
@@ -856,33 +877,10 @@ class WinMain(WahCade):
                         self.sclGames.scroll(+self.sclGames.num_rows)
                     elif mw_func == 'UP_1_LETTER':
                         self.play_clip('UP_1_LETTER')
-                        if self.lsGames_len == 0:
-                            break
-                        toLetter = self.lsGames[self.sclGames.get_selected()][0][0]
-                        games = [r[0] for r in self.lsGames]
-                        games = games[:self.sclGames.get_selected()]
-                        games.reverse()
-                        i = 0
-                        for row in games:
-                            i += 1
-                            if row[0] != toLetter:
-                                self.sclGames.scroll(-i)
-                                break
-                            if i >= len(games):
-                                self.sclGames.scroll(-i)
+                        self.sclGames.jumpToLetter(mw_func)
                     elif mw_func == 'DOWN_1_LETTER':
                         self.play_clip('DOWN_1_LETTER')
-                        if self.lsGames_len == 0:
-                            break
-                        toLetter = self.lsGames[self.sclGames.get_selected()][0][0]
-                        games = [r[0] for r in self.lsGames]
-                        games = games[self.sclGames.get_selected():]
-                        i = -1
-                        for row in games:
-                            i += 1
-                            if row[0] != toLetter:
-                                self.sclGames.scroll(+i)
-                                break
+                        self.sclGames.jumpToLetter(mw_func)
                     elif mw_func == 'RANDOM_GAME':
                         self.play_clip('RANDOM_GAME')
                         self.sclGames.set_selected(self.get_random_game_idx())
@@ -1072,12 +1070,21 @@ class WinMain(WahCade):
                     # Exit from identity window
                     if mw_func in ['ID_BACK']:
                         self.hide_window('identify')
+                    elif mw_func in ['ID_SELECT']:
+                        #self.register_new_player(self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()])
+                        self.hide_window('identify')
                     # Scroll up 1 name
                     elif mw_func in ['ID_UP_1_NAME']:
                         self.identify.sclIDs.scroll((int(self.keypress_count / 20) * -1) - 1)
                     # Scroll down 1 name
                     elif mw_func in ['ID_DOWN_1_NAME']:
                         self.identify.sclIDs.scroll(int(self.keypress_count / 20) + 1)
+                    elif mw_func == 'ID_UP_1_LETTER':
+                        self.play_clip('UP_1_LETTER')
+                        self.identify.sclIDs.jumpToLetter(mw_func)
+                    elif mw_func == 'ID_DOWN_1_LETTER':
+                        self.play_clip('DOWN_1_LETTER')
+                        self.identify.sclIDs.jumpToLetter(mw_func)
             # Force games list update if using mouse scroll wheel
             if 'MOUSE_SCROLLUP' in mw_keys or 'MOUSE_SCROLLDOWN' in mw_keys:
                 if widget == self.winMain:
@@ -1154,8 +1161,7 @@ class WinMain(WahCade):
     
     def get_score_string(self):
         """Parse Scores from DB into display string"""
-        url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
-        r = requests.get(url + self.current_rom + "/highscore")
+        r = requests.get(self.game_url + self.current_rom + "/highscore")
         score_string = r.text #string returned from server containing high scores
         index = 1
         if score_string != '[]' and "Could not find" not in score_string:
@@ -1205,8 +1211,8 @@ class WinMain(WahCade):
             pygame.mixer.music.play()
             self.scrsave_time = time.time()
         # Use timer for screen saver to log a person out after period of inactivity
-        auto_log_out_delay = 60
-        if int(time.time() - self.scrsave_time) >= auto_log_out_delay and self.logged_in:
+        auto_log_out_delay = 90
+        if int(time.time() - self.scrsave_time) >= auto_log_out_delay and self.current_players != '':
             self.log_out()
         # Need to start screen saver?
         if int(time.time() - self.scrsave_time) >= self.scrsave_delay:
