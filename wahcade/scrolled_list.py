@@ -83,25 +83,26 @@ class ScrollList(object):
     
     def jumpToLetter(self, direction):
         """Scroll to the start of list entries beginning with a certain letter"""
-#        print self.ls[self.get_selected()]
-#        print self.ls[:self.get_selected()]
-#        print self.ls[self.get_selected():]
         # Don't do anything if nothing is in the list
         if len(self.ls) == 0:
             return
+        # Get current letter
+        thisLetter = self.ls[self.get_selected()][0]
         # Scroll up or down?
         if direction == 'UP_1_LETTER':
-            thisLetter = self.ls[self.get_selected()][0]
             # Get all of the games in the list before the current one and reverse the order
             # Reversing the order simulates the order of the games in the GUI
-            games = self.ls[:self.get_selected()]
+            games = self.ls[:self.get_selected()]                
             games.reverse()
+            if self.wrap_list:
+                wrap = self.ls[self.get_selected():]
+                wrap.reverse()
+                games = games + wrap
             amount = 0
             skip = False
             for row in games:
                 # Still in this letter's section
                 if row[0] == thisLetter:
-#                    print row, "starts with", row[0], ", same as", thisLetter
                     amount += 1
                     # Reached the beginning of the list without finding a new letter
                     if amount >= len(games):
@@ -118,15 +119,16 @@ class ScrollList(object):
                         self.scroll(-amount)
                         break
         else:
-            thisLetter = self.ls[self.get_selected()][0]
             # Get all of the games in the list after the current one
             games = self.ls[self.get_selected():]
+            if self.wrap_list:
+                wrap = self.ls[:self.get_selected()]
+                games = games + wrap
             amount = 0
             skip = False
             for row in games:
                 # Still in this letter's section
                 if row[0] == thisLetter:
-#                    print row, "starts with", row[0], ", same as", thisLetter
                     amount += 1
                     # Reached the end of the list without finding a new letter
                     if amount >= len(games):
