@@ -696,33 +696,49 @@ class WinMain(WahCade):
                             r = requests.post(self.score_url, post_data)
                             
     # TODO: Use RFID
-    def log_in(self):
-        self.rfid_value = 7#get_rfid_value() #Fetch RFID value 
-        name_from_rfid = requests.get(self.player_url + self.rfid_value) #Use this for checking people  
-        print "name from rfid =", name_from_rfid
-        if not name_from_rfid:
-            self.identify.sclIDs._update_display()
-            self.show_window('identify')
-            new_player = name_from_rfid               
-        elif name_from_rfid in self.current_players: # If passed a player name and if that player is logged in, log them out
-            self.log_out(name_from_rfid)
+    def log_in(self, player_name):
+        if len(self.current_players) == 4: #Max players
+            return
+        r = requests.get(self.player_url) #get all players                          
+        players = []
+        data = fromstring(r.text)
+        for player in data.getiterator('player'):
+            players.append(player.find('name').text) # parse player name from xml
+        if not player_name in players: # if player doesn't exist and add them to DB
+            self.register_new_player(player_name)
         else:
-            new_player = name_from_rfid
-        self.current_players.append(new_player) # Add current player to list 
-        self.user.set_text(self.current_players) # Show who is currently logged in
+            self.current_players.append(player_name)
+            self.user.set_text(self.get_logged_in_user_string(self.current_players))     
+        #keep for RFID use
+#        self.rfid_value = 7#get_rfid_value() #Fetch RFID value 
+#        name_from_rfid = requests.get(self.player_url + self.rfid_value) #Use this for checking people  
+#        print "name from rfid =", name_from_rfid
+#        if not name_from_rfid:
+#            self.identify.sclIDs._update_display()
+#            self.show_window('identify')
+#            new_player = name_from_rfid               
+#        elif name_from_rfid in self.current_players: # If passed a player name and if that player is logged in, log them out
+#            self.log_out(name_from_rfid)
+#        else:
+#            new_player = name_from_rfid
+#        self.current_players.append(new_player) # Add current player to list 
+#        self.user.set_text(self.current_players) # Show who is currently logged in
             
-    def log_out(self, player_name = ""):
-        if not player_name:
+    def log_out(self, player_name):
+        if player_name is None:
             self.current_players = []
             self.user.set_text("Not logged in")
         else:
             self.current_players.remove(player_name)
-            self.user.set_text(self.current_players)
+            self.user.set_text(self.get_logged_in_user_string(self.current_players))
 
     def register_new_player(self, player_name):
-        self.rfid_value = 1234 # TODO: remove this once integrated
+        # TODO: Do this check before displaying the identify window in on_winMain_key_press
+        if not self.connected:
+            return
+        self.rfid_value = 123456789012 # TODO: remove this once integrated
         post_data = {"name":player_name, "playerID":self.rfid_value}
-        r = requests.post(self.player_url, post_data)
+        requests.post(self.player_url, post_data)
 #        self.ldap.remove(player_name) # Take them out of the unregistered people list
         self.current_players.append(player_name) # TODO: remove this once integrated
         self.user.set_text(self.get_logged_in_user_string(self.current_players))
@@ -860,7 +876,7 @@ class WinMain(WahCade):
                     break
             for mw_func in mw_functions:
                 # Which function?
-                if mw_func == 'ID_SHOW' and current_window != 'identify':   # Show identify window any time
+                if mw_func == 'ID_SHOW' and current_window != 'identify': #and self.connected:   # Show identify window any time
                     self.identify.sclIDs._update_display()
                     self.show_window('identify')
                 if current_window == 'main':
@@ -1076,14 +1092,16 @@ class WinMain(WahCade):
                         self.message.hide()
                 # Identify window
                 elif current_window == 'identify':
-                    if mw_func == 'EXIT_TO_WINDOWS':
-                        self.play_clip('EXIT_TO_WINDOWS')
-                        self.exit_wahcade()
-                    elif mw_func in ['SS_FIND_N_SELECT_GAME']:
-                        self.register_new_player(self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()])
-                        self.hide_window('identify')
                     # Exit from identity window
                     if mw_func in ['ID_BACK']:
+                        self.hide_window('identify')
+                    elif mw_func in ['ID_SELECT']:
+                        selected_player = self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()]
+                        if selected_player in self.current_players:
+                            self.log_out(selected_player)
+                        else:
+                            self.log_in(selected_player)
+#                            self.register_new_player(self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()])
                         self.hide_window('identify')
                     # Scroll up 1 name
                     elif mw_func in ['ID_UP_1_NAME']:
@@ -1091,6 +1109,12 @@ class WinMain(WahCade):
                     # Scroll down 1 name
                     elif mw_func in ['ID_DOWN_1_NAME']:
                         self.identify.sclIDs.scroll(int(self.keypress_count / 20) + 1)
+                    elif mw_func == 'ID_UP_1_LETTER':
+                        self.play_clip('UP_1_LETTER')
+                        self.identify.sclIDs.jumpToLetter(mw_func)
+                    elif mw_func == 'ID_DOWN_1_LETTER':
+                        self.play_clip('DOWN_1_LETTER')
+                        self.identify.sclIDs.jumpToLetter(mw_func)
             # Force games list update if using mouse scroll wheel
             if 'MOUSE_SCROLLUP' in mw_keys or 'MOUSE_SCROLLDOWN' in mw_keys:
                 if widget == self.winMain:
@@ -1210,8 +1234,7 @@ class WinMain(WahCade):
             
     def on_scrsave_timer(self):
         """timer event - check to see if we need to start video or screen saver"""
-        #sound_time = random.randint((5*60), (15*60))
-        sound_time = random.randint((5), (15))
+        sound_time = random.randint((5*60), (15*60))
         if int(time.time() - self.scrsave_time) >= sound_time:
             pygame.mixer.music.load(self.sounds[random.randrange(0, len(self.sounds))])
             pygame.mixer.music.play()
@@ -1219,7 +1242,7 @@ class WinMain(WahCade):
         # Use timer for screen saver to log a person out after period of inactivity
         auto_log_out_delay = 90
         if int(time.time() - self.scrsave_time) >= auto_log_out_delay and self.current_players != '':
-            self.log_out()
+            self.log_out(None)
         # Need to start screen saver?
         if int(time.time() - self.scrsave_time) >= self.scrsave_delay:
             # Yes, stop any vids playing

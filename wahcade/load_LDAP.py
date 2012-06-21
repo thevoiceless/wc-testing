@@ -49,11 +49,11 @@ class LoadLDAP:
         except:
             print "Could not load LDAP configuration"
             
-        self.LDAP_SERVER = str(self.creds['LDAP_SERVER'])
-        self.BIND_DN = str(self.creds['BIND_DN'])
-        self.BIND_PASS = str(self.creds['BIND_PASS'])
-        self.USER_BASE = str(self.creds['USER_BASE'])
-        self.USER_FILTER = str(self.creds['USER_FILTER'])
+        self.LDAP_SERVER = self.creds['LDAP_SERVER']
+        self.BIND_DN = self.creds['BIND_DN']
+        self.BIND_PASS = self.creds['BIND_PASS']
+        self.USER_BASE = self.creds['USER_BASE']
+        self.USER_FILTER = self.creds['USER_FILTER']
         self.PAGE_SIZE = int(self.creds['PAGE_SIZE'])
     
     def fetchNames(self):
@@ -61,7 +61,7 @@ class LoadLDAP:
             ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, 0)
             self.ldap_connection = ldap.initialize(self.LDAP_SERVER)
             self.ldap_connection.simple_bind_s(self.BIND_DN, self.BIND_PASS)
-            print "Connected"
+            print "Successfully connected to", str(self.creds['LDAP_SERVER'])
         except ldap.LDAPError, e:
             print "Error connecting to server: " + str(e)
 
