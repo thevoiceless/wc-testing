@@ -416,6 +416,8 @@ class WinMain(WahCade):
         # Get a list of games already on the server
         if self.connected:
             self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
+            self.player_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/"
+            self.score_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/score/"
             data = requests.get(self.game_url)
         
             # Map rom name to associated game name
@@ -505,7 +507,7 @@ class WinMain(WahCade):
         self.winMain.connect('destroy', self.on_winMain_destroy)
         self.winMain.connect('focus-in-event', self.on_winMain_focus_in)
         self.winMain.connect('focus-out-event', self.on_winMain_focus_out)
-        self.winMain.connect('rfid-read', self.log_in) # RFID swiped
+#        self.winMain.connect('rfid-read', self.log_in) # RFID swiped
         self.winMain.add_events(
             gtk.gdk.POINTER_MOTION_MASK |
             gtk.gdk.SCROLL_MASK |
@@ -677,30 +679,21 @@ class WinMain(WahCade):
                         high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
                     if 'SCORE' in high_score_table: # If high score table has score
                         if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB
-                            self.player_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/"
                             r = requests.get(self.player_url + self.user.get_text())
                             if r.text == 'null': # if player doesn't exist and add them to DB
                                 randNum = random.randint(1, 5000) #TODO: replacing RFID for now
                                 post_data = {"name":self.user.get_text(), "playerID":randNum}
                                 r = requests.post(self.player_url, post_data)
-                                
-                            self.score_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/score/"
                             if 'NAME' in high_score_table:
                                 post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": '0', "game":self.current_rom, "player":self.user.get_text()}                         
                             else:
                                 post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": '0', "game":self.current_rom, "player":self.user.get_text()}
-                            
                             r = requests.post(self.score_url, post_data)
                             
     # TODO: Use RFID
     def log_in(self):
         self.rfid_value = get_rfid_value() #Fetch RFID value 
-        
-        
-        self.player_url = "http://localhost:" + self.props['port'] + "/RcadeServer/rest/player/"
-        name_from_rfid = requests.get(self.player_url + self.rfid_value) #Use this for checking people
-                    
-                    
+        name_from_rfid = requests.get(self.player_url + self.rfid_value) #Use this for checking people                 
         if name_from_rfid in self.current_players: # If passed a player name and if that player is logged in, log them out
             self.log_out(name_from_rfid)
         else:
@@ -710,20 +703,21 @@ class WinMain(WahCade):
                 self.register_new_player(self.rfid_value) # Have new user register
             self.current_players.append(new_player) # Add current player to list 
             self.user.set_text(self.current_players) # Show who is currently logged in
-
             
     def log_out(self, player_name):
         self.current_players.remove(player_name)
         self.user.set_text(self.current_players)
 
     def register_new_player(self, rfid_stored):
-        press backspash
+        self.identify.sclIDs._update_display()
+        self.show_window('identify')
+        new_player = something_or_other
         if rfid_stored in self.unregistered_users: # If RFID has associated name
-            post_data = {"name":name_from_rileys_scroll_list, "playerID":rfid_stored}
+            post_data = {"name":new_player, "playerID":rfid_stored}
             r = requests.post(self.player_url, post_data)
-        unregistered_users.remove(new_player) # Take them out of the unregistered people list
+        self.unregistered_users.remove(new_player) # Take them out of the unregistered people list
         # register new users to the server
-        post_data = {"playerName":player, "playerRFID":rfid_stored}
+        post_data = {"playerName":new_player, "playerRFID":rfid_stored}
         requests.post(self.player_url, post_data) # Update server with changes
 
 
@@ -1169,7 +1163,6 @@ class WinMain(WahCade):
     
     def get_score_string(self):
         """Parse Scores from DB into display string"""
-        self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
         r = requests.get(self.game_url + self.current_rom + "/highscore")
         score_string = r.text #string returned from server containing high scores
         index = 1
