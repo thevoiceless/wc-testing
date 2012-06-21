@@ -385,6 +385,7 @@ class WinMain(WahCade):
         self._identify_items = [
             (-1, self.identify.lblPrompt, "Prompt"),
             (-1, self.identify.lblPromptText, "PromptText"),
+            (-1, self.identify.lblRFID, "RFID"),
             (-1, self.identify.sclIDs, "IDsList"),
             (-1, self.IDsScrollOverlay, "ScrollOverlay"),]
         self._layout_items = {'main': self._main_items,
@@ -1126,9 +1127,7 @@ class WinMain(WahCade):
             self.game_ini_file = MameWahIni(game_ini_file)
         # Set layout text items
         self.lblGameDescription.set_text(game_info['game_name'])
-        self.lblGameSelected.set_text(_('Game %s/%s') % (
-            self.sclGames.get_selected() + 1,
-            self.lsGames_len))
+        self.lblGameSelected.set_text(_('Game %s/%s') % (self.sclGames.get_selected() + 1, self.lsGames_len))
         if game_info['clone_of'] != '':
             rom_name_desc = _('%s (Clone of %s)') % (game_info['rom_name'], game_info['clone_of'])
         else:
