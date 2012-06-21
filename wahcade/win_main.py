@@ -414,18 +414,18 @@ class WinMain(WahCade):
             self.supported_games.add(line.strip())
                 
         # Get a list of games already on the server
-        if self.connected:
-            self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
-            self.player_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/"
-            self.score_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/score/"
-            data = requests.get(self.game_url)
+        self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
+        self.player_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/"
+        self.score_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/score/"
         
+        if self.connected:
             # Map rom name to associated game name
             romToName = {}
             for sublist in self.lsGames: 
                 romToName[sublist[1]] = sublist[0]
             
             # Get a list of games already on the server
+            data = requests.get(self.game_url)
             data = fromstring(data.text)
             games_on_server = []
             for game in data.getiterator('game'):
@@ -679,20 +679,20 @@ class WinMain(WahCade):
                         high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
                     if 'SCORE' in high_score_table: # If high score table has score
                         if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB
-                            r = requests.get(self.player_url) #get all players                          
-                            players = []
-                            data = fromstring(r.text)
-                            for player in data.getiterator('player'):
-                                players.append(player.find('name').text) # parse player name from xml
-                            if not self.user.get_text() in players: # if player doesn't exist and add them to DB
-                                randNum = random.randint(1, 5000) #TODO: replacing RFID for now
-                                post_data = {"name":self.user.get_text(), "playerID":randNum}
-                                r = requests.post(self.player_url, post_data)
-                            del players[:]
+#                            r = requests.get(self.player_url) #get all players                          
+#                            players = []
+#                            data = fromstring(r.text)
+#                            for player in data.getiterator('player'):
+#                                players.append(player.find('name').text) # parse player name from xml
+#                            if not self.user.get_text() in players: # if player doesn't exist and add them to DB
+#                                randNum = random.randint(1, 5000) #TODO: replacing RFID for now
+#                                post_data = {"name":self.user.get_text(), "playerID":randNum}
+#                                r = requests.post(self.player_url, post_data)
+#                            del players[:]
                             if 'NAME' in high_score_table:
                                 post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": '0', "game":self.current_rom, "player":self.user.get_text()}                         
                             else:
-                                post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": '0', "game":self.current_rom, "player":self.user.get_text()}
+                                post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.current_players[0]}
                             r = requests.post(self.score_url, post_data)
                             
     # TODO: Use RFID
@@ -1095,7 +1095,7 @@ class WinMain(WahCade):
                     # Exit from identity window
                     if mw_func in ['ID_BACK']:
                         self.hide_window('identify')
-                    elif mw_func in ['ID_SELECT']:
+                    elif mw_func in ['ID_SELECT'] and self.connected:
                         selected_player = self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()]
                         if selected_player in self.current_players:
                             self.log_out(selected_player)
