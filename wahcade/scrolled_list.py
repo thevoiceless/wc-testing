@@ -69,6 +69,15 @@ class ScrollList(object):
         # Create the list
         self._create_container()
         self.set_size_request(self.width, self.height)
+        # Create the position indicator
+        self.indicator = gtk.Label()
+        self.indicator.set_size_request(50,50)
+        self.indicator.modify_font(self._pango_font_desc)
+        self.indicator.modify_fg(gtk.STATE_NORMAL, gtk.gdk.color_parse("white"))
+        self.indicator.show()
+        self.fixd.add(self.indicator)
+        self.fixd.move(self.indicator, 0, 0)
+        self.indiCount = 1
 
     def __setattr__(self, var_name, var_value):
         """capture setting of attributes in order to reset _oldIndex"""
@@ -365,6 +374,8 @@ class ScrollList(object):
                 self._rows[i][1].set_text('')
             else:
                 self._rows[i][1].set_text(self.ls[top_ls_idx + i])
+        if self.ls:
+            self.indicator.set_text(self.ls[self._selectedIndex][0:self.indiCount])
 
     def get_name(self):
         return "ScrolledList"
