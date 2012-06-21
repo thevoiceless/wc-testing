@@ -106,7 +106,9 @@ class WinMain(WahCade):
                 for line in f.readlines():
                     val = line.split('=')
                     self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
+                #requests.get("http://localhost:" + self.props['port'] + "/RcadeServer")
                 r = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']) # Attempt to make connection to server
+               # print r.status_code
                 self.connected = True
         except: # Any exception would mean some sort of failed server connection
             self.connected = False
@@ -413,8 +415,8 @@ class WinMain(WahCade):
                 
         # Get a list of games already on the server
         if self.connected:
-            url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
-            data = requests.get(url)
+            self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
+            data = requests.get(self.game_url)
         
             # Map rom name to associated game name
             romToName = {}
@@ -431,12 +433,18 @@ class WinMain(WahCade):
             for rom in self.supported_games:
                 if rom not in games_on_server and rom in romToName:
                     post_data = {"romName":rom, "gameName":romToName[rom]}
-                    requests.post(url, post_data)
+                    requests.post(self.game_url, post_data)                    
 
-        self.logged_in = False
+        # Setup login
+        self.current_players = []
+        self.unregistered_users = []
         if self.connected:
             self.user.set_text("Not Logged In")
             self.user.show()
+            
+            
+            
+            
             
         pygame.init()
         
@@ -489,7 +497,7 @@ class WinMain(WahCade):
         # Input defaults
         self.pointer_grabbed = False
        
-        # Get keyboard & mouse events
+        # Get keyboard, mouse & arduino events
         self.sclGames.connect('update', self.on_sclGames_changed)           # scrolled_list.py
         self.sclGames.connect('mouse-left-click', self.on_sclGames_changed)
         self.sclGames.connect('mouse-right-click', self.on_winMain_key_press)
@@ -497,6 +505,7 @@ class WinMain(WahCade):
         self.winMain.connect('destroy', self.on_winMain_destroy)
         self.winMain.connect('focus-in-event', self.on_winMain_focus_in)
         self.winMain.connect('focus-out-event', self.on_winMain_focus_out)
+        self.winMain.connect('rfid-read', self.log_in) # RFID swiped
         self.winMain.add_events(
             gtk.gdk.POINTER_MOTION_MASK |
             gtk.gdk.SCROLL_MASK |
@@ -589,7 +598,7 @@ class WinMain(WahCade):
         if self.launched_game:
             self.launched_game = False
             # If the game supports high scores run the HiToText executions
-            if self.current_rom in self.supported_games and self.logged_in:
+            if self.current_rom in self.supported_games and self.current_players != '':
                 htt_command = self.htt_read
                 if not onWindows:
                     htt_command = "mono " + self.htt_read
@@ -666,42 +675,56 @@ class WinMain(WahCade):
                 else:
                     for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
                         high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
-                    
                     if 'SCORE' in high_score_table: # If high score table has score
                         if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB
-                            url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/"
-                            r = requests.get(url + self.user.get_text())
+                            self.player_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/"
+                            r = requests.get(self.player_url + self.user.get_text())
                             if r.text == 'null': # if player doesn't exist and add them to DB
                                 randNum = random.randint(1, 5000) #TODO: replacing RFID for now
                                 post_data = {"name":self.user.get_text(), "playerID":randNum}
-                                r = requests.post(url, post_data)
+                                r = requests.post(self.player_url, post_data)
                                 
-                            url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/score/"
+                            self.score_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/score/"
                             if 'NAME' in high_score_table:
                                 post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": '0', "game":self.current_rom, "player":self.user.get_text()}                         
                             else:
                                 post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": '0', "game":self.current_rom, "player":self.user.get_text()}
                             
-                            r = requests.post(url, post_data)
-
+                            r = requests.post(self.score_url, post_data)
+                            
     # TODO: Use RFID
     def log_in(self):
-        randNum = random.randint(1, 20)
-        if randNum % 4 == 0:
-            self.user.set_text("Riley")
-        elif randNum % 4 == 1:
-            self.user.set_text("John")
-        elif randNum % 4 == 2:
-            self.user.set_text("Terek")
-        elif randNum % 4 == 3:
-            self.user.set_text("Zach")
+        self.rfid_value = get_rfid_value() #Fetch RFID value 
         
-        self.user.show()
-        self.logged_in = True
         
-    def log_out(self):
-        self.user.set_text("Not Logged In")
-        self.logged_in = False
+        self.player_url = "http://localhost:" + self.props['port'] + "/RcadeServer/rest/player/"
+        name_from_rfid = requests.get(self.player_url + self.rfid_value) #Use this for checking people
+                    
+                    
+        if name_from_rfid in self.current_players: # If passed a player name and if that player is logged in, log them out
+            self.log_out(name_from_rfid)
+        else:
+            if requests.get(self.player_url + self.rfid_value): # If RFID has associated name
+                new_player = name_from_rfid
+            else:
+                self.register_new_player(self.rfid_value) # Have new user register
+            self.current_players.append(new_player) # Add current player to list 
+            self.user.set_text(self.current_players) # Show who is currently logged in
+
+            
+    def log_out(self, player_name):
+        self.current_players.remove(player_name)
+        self.user.set_text(self.current_players)
+
+    def register_new_player(self, rfid_stored):
+        press backspash
+        if rfid_stored in self.unregistered_users: # If RFID has associated name
+            post_data = {"name":name_from_rileys_scroll_list, "playerID":rfid_stored}
+            r = requests.post(self.player_url, post_data)
+        unregistered_users.remove(new_player) # Take them out of the unregistered people list
+        # register new users to the server
+        post_data = {"playerName":player, "playerRFID":rfid_stored}
+        requests.post(self.player_url, post_data) # Update server with changes
 
 
     def on_winMain_key_press(self, widget, event, *args):
@@ -775,14 +798,6 @@ class WinMain(WahCade):
                     # Keyboard pressed, get GTK keyname
                     keyname = gtk.gdk.keyval_name(event.keyval).lower()
                     
-                    # TODO: Integrate this with wahcade-setup, wahcade.ini, etc
-                    # Special character to log in
-                    if keyname == 'bracketright':
-                        if not self.logged_in:
-                            self.log_in()
-                        else:
-                            self.log_out()
-                            
                     # Got something?
                     if keyname not in mamewah_keys:
                         return
@@ -1154,8 +1169,8 @@ class WinMain(WahCade):
     
     def get_score_string(self):
         """Parse Scores from DB into display string"""
-        url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
-        r = requests.get(url + self.current_rom + "/highscore")
+        self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
+        r = requests.get(self.game_url + self.current_rom + "/highscore")
         score_string = r.text #string returned from server containing high scores
         index = 1
         if score_string != '[]' and "Could not find" not in score_string:
@@ -1206,7 +1221,7 @@ class WinMain(WahCade):
             self.scrsave_time = time.time()
         # Use timer for screen saver to log a person out after period of inactivity
         auto_log_out_delay = 60
-        if int(time.time() - self.scrsave_time) >= auto_log_out_delay and self.logged_in:
+        if int(time.time() - self.scrsave_time) >= auto_log_out_delay and self.current_players != '':
             self.log_out()
         # Need to start screen saver?
         if int(time.time() - self.scrsave_time) >= self.scrsave_delay:

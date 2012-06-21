@@ -1,5 +1,5 @@
-host=localhost
+host=http://localhost
 user=root
 passwd=password
-db=mame
+db=RcadeServer
 port=8080
