@@ -807,7 +807,6 @@ class WinMain(WahCade):
                             self.display_scaled_image(img, img_filename, self.keep_aspect, img.get_data('text-rotation'))
                 #self.lblOverlayScrollLetters.set_visible(False)
                 self.scrollOverlay.hide()
-                self.scrollOverlay.hide()
                 # Keyboard released, update labels, images, etc
                 if widget == self.winMain:
                     # Only update if no further events pending
@@ -832,7 +831,8 @@ class WinMain(WahCade):
                     break
             for mw_func in mw_functions:
                 # Which function?
-                if mw_func == 'IDENTIFY_SHOW':
+                if mw_func == 'ID_SHOW' and current_window != 'identify':   # Show identify window any time
+                    self.identify.sclIDs._update_display()
                     self.show_window('identify')
                 if current_window == 'main':
                     # Display first n letters of selected game when scrolling quickly
@@ -1070,9 +1070,15 @@ class WinMain(WahCade):
                         self.message.hide()
                 # Identify window
                 elif current_window == 'identify':
-                    if mw_func in ['IDENTIFY_BACK']:
-                        print "Return from identify window"
+                    # Exit from identity window
+                    if mw_func in ['ID_BACK']:
                         self.hide_window('identify')
+                    # Scroll up 1 name
+                    elif mw_func in ['ID_UP_1_NAME']:
+                        self.identify.sclIDs.scroll((int(self.keypress_count / 20) * -1) - 1)
+                    # Scroll down 1 name
+                    elif mw_func in ['ID_DOWN_1_NAME']:
+                        self.identify.sclIDs.scroll(int(self.keypress_count / 20) + 1)
             # Force games list update if using mouse scroll wheel
             if 'MOUSE_SCROLLUP' in mw_keys or 'MOUSE_SCROLLDOWN' in mw_keys:
                 if widget == self.winMain:
@@ -1196,7 +1202,7 @@ class WinMain(WahCade):
         #sound_time = random.randint((5*60), (15*60))
         sound_time = random.randint((5), (15))
         if int(time.time() - self.scrsave_time) >= sound_time:
-            pygame.mixer.music.load(self.sounds[random.randint(0, len(self.sounds))])
+            pygame.mixer.music.load(self.sounds[random.randrange(0, len(self.sounds))])
             pygame.mixer.music.play()
             self.scrsave_time = time.time()
         # Use timer for screen saver to log a person out after period of inactivity

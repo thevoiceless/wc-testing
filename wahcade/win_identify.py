@@ -30,6 +30,7 @@ if sys.platform != 'win32':
 import gtk
 
 # Project modules
+from load_LDAP import LoadLDAP
 from scrolled_list import ScrollList
 from constants import *
 from wc_common import WahCade
@@ -58,7 +59,10 @@ class WinIdentify(WahCade):
         self.lblPromptText.show()
         self.winID.show()
         # Build list
-        self.lsIDs = []
+        self.ldap = LoadLDAP()
+        self.lsIDs = self.ldap.getNames()
+#        print self.lsIDs
+#        print len(self.lsIDs)
         self.sclIDs.auto_update = True
         self.sclIDs.display_limiters = self.WinMain.wahcade_ini.getint('show_list_arrows', 0)
         # Get keyboard & mouse events
@@ -66,9 +70,11 @@ class WinIdentify(WahCade):
         self.sclIDs.connect('mouse-left-click', self.on_sclIDs_changed)
         self.sclIDs.connect('mouse-double-click', self.ID_selected)
         # Set up IDs
+        self.sclIDs.ls = [l for l in self.lsIDs]
+        self.sclIDs.ls.sort()
+        print self.sclIDs.ls
         
-        ## TODO: Connect to Active Directory and load employee names
-        ## Exclude IDs already matched to RFID values
+        ## TODO: Exclude IDs already matched to RFID values
         
         # Init window
         self.sclIDs.use_mouse = self.WinMain.ctrlr_ini.getint('mouse')
@@ -79,8 +85,8 @@ class WinIdentify(WahCade):
     def on_sclIDs_changed(self, *args):
         """Selected user identity changed"""
         # Update list widget
-        self.sclIDs.ls = [l[0] for l in self.lsIDs]
-        self.sclIDs.set_selected(self.sclIDs.get_selected())
+        self.sclIDs._update_display()
+        print self.sclIDs.ls[self.sclIDs.get_selected()]
         return
     
     def ID_selected(self, *args):
