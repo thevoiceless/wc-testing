@@ -29,6 +29,15 @@ class LoadLDAP:
     """Connects to a given LDAP server"""
     
     def __init__(self):
+        self.OUTPUT_TO_FILE = False
+        self.updateLDAP()
+        
+    def updateLDAP(self):
+        self.loadCreds()
+        self.fetchNames()
+        self.generateLists()
+    
+    def loadCreds(self):
         # Load LDAP credentials from local file
         self.LDAP_file = str(os.environ['HOME']) + "/Documents/LDAP.txt"
         try:
@@ -46,8 +55,8 @@ class LoadLDAP:
         self.USER_BASE = str(self.creds['USER_BASE'])
         self.USER_FILTER = str(self.creds['USER_FILTER'])
         self.PAGE_SIZE = int(self.creds['PAGE_SIZE'])
-        self.OUTPUT_TO_FILE = False
-
+    
+    def fetchNames(self):
         try:
             ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, 0)
             self.ldap_connection = ldap.initialize(self.LDAP_SERVER)
@@ -99,7 +108,8 @@ class LoadLDAP:
         
         # Unbind
         self.ldap_connection.unbind_s()
-        
+    
+    def generateLists(self):
         # Dictionary with user data
         self.user_map = {}
         # List of real names
@@ -111,6 +121,7 @@ class LoadLDAP:
                 self.user_map[entry[1]['cn'][0]] = entry[1]['sAMAccountName'][0]
                 self.user_names.append(entry[1]['cn'][0])
                 
+    def writeToFile(self):
         if self.OUTPUT_TO_FILE:
             with open("readytalk-users.txt", "w") as f:
                 for name in self.user_names:

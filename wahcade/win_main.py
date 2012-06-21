@@ -106,8 +106,6 @@ class WinMain(WahCade):
                 for line in f.readlines():
                     val = line.split('=')
                     self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
-                #requests.get("http://localhost:" + self.props['port'] + "/RcadeServer")
-                #print self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
                 r = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']) # Attempt to make connection to server
                 self.connected = True
         except: # Any exception would mean some sort of failed server connection
@@ -669,16 +667,21 @@ class WinMain(WahCade):
                     for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
                         high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
                     
-                    if 'SCORE' in high_score_table: # Add to DB if score not zero
-                        if high_score_table['SCORE'] is not '0':
+                    if 'SCORE' in high_score_table: # If high score table has score
+                        if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB
                             url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/"
                             r = requests.get(url + self.user.get_text())
-                            if r.text == 'null': #check if player exists and add them if they don't
+                            if r.text == 'null': # if player doesn't exist and add them to DB
                                 randNum = random.randint(1, 5000) #TODO: replacing RFID for now
                                 post_data = {"name":self.user.get_text(), "playerID":randNum}
                                 r = requests.post(url, post_data)
+                                
                             url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/score/"
-                            post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": '0', "game":self.current_rom, "player":self.user.get_text()}                         
+                            if 'NAME' in high_score_table:
+                                post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": '0', "game":self.current_rom, "player":self.user.get_text()}                         
+                            else:
+                                post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": '0', "game":self.current_rom, "player":self.user.get_text()}
+                            
                             r = requests.post(url, post_data)
 
     # TODO: Use RFID
@@ -1168,7 +1171,7 @@ class WinMain(WahCade):
             
             score_list = sorted(score_list, key=lambda score: int(score[1]), reverse=True) 
             
-            for name, score in score_list: #42 chars in a line
+            for name, score in score_list:
                 if index < 10: #format for leading spaces by numbers. Makes 1. match up with 10.
                     score_string += "  "
                 if len(name) > 7:
