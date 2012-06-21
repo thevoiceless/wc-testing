@@ -151,7 +151,7 @@ class WinLayout(GladeSupport, WahCade):
             self.fixdHist.put(evb, 100, 10 + (i * 30))
         for i, widget_name in enumerate(self._identify_widgets):
             evb = self._make_label(widget_name)
-            main_widgets[widget_name] = evb
+            id_widgets[widget_name] = evb
             self.fixdID.put(evb, 100, 10 + (i * 30))
         #fixed pos widgets
         self._fixed_widgets = [self.fixdMain, self.fixdOpt, self.fixdMsg,
@@ -499,7 +499,6 @@ class WinLayout(GladeSupport, WahCade):
     def on_rbWindow_toggled(self, widget, *args):
         """Changes active window and updates display to match"""
         #print "on_rbWindow_toggled: ",widget.get_name(), widget.get_active()
-        print "Toggle"
         if self.view_updating:
             return
         if widget not in self.view_menu:

@@ -164,60 +164,58 @@ class ScrollList(object):
     def set_size_request(self, width, height):
         """change size"""
         self.width, self.height = width, height
+        # Get font size
+        font_size = int(self._pango_font_desc.get_size() / pango.SCALE)
         # Set list container size
         self.fixd.set_size_request(width, height)
         # Angle
         if self.angle in (0, 180):
             w, h = width, height
             # Scroll arrows
-            self.arwScrollTop.set_size_request(width, 15)
-            self.arwScrollBottom.set_size_request(width, 15)
-            self.arwScrollTop.set_alignment(0.5, 1)
+            self.arwScrollTop.set_size_request(width, font_size)
+            self.arwScrollBottom.set_size_request(width, font_size)
+            self.arwScrollTop.set_alignment(0.5, 0)
             self.arwScrollBottom.set_alignment(0.5, 1)
             if self.angle == 0:
                 self.arwScrollTop.set(gtk.ARROW_UP, gtk.SHADOW_NONE)
                 self.arwScrollBottom.set(gtk.ARROW_DOWN, gtk.SHADOW_NONE)
                 self.fixd.move(self.arwScrollTop, 0, 0)
-                self.fixd.move(self.arwScrollBottom, 0, height - 15)
+                self.fixd.move(self.arwScrollBottom, 0, height - font_size)
             else:
                 self.arwScrollTop.set(gtk.ARROW_DOWN, gtk.SHADOW_NONE)
                 self.arwScrollBottom.set(gtk.ARROW_UP, gtk.SHADOW_NONE)
                 self.fixd.move(self.arwScrollBottom, 0, 0)
-                self.fixd.move(self.arwScrollTop, 0, height - 15)
+                self.fixd.move(self.arwScrollTop, 0, height - font_size)
         else:
             w, h = height, width
             # Scroll arrows
-            self.arwScrollTop.set_size_request(15, height)
-            self.arwScrollBottom.set_size_request(15, height)
+            self.arwScrollTop.set_size_request(font_size, height)
+            self.arwScrollBottom.set_size_request(font_size, height)
             self.arwScrollTop.set_alignment(1.0, 0.5)
             self.arwScrollBottom.set_alignment(0.0, 0.5)
             if self.angle == 90:
                 self.arwScrollTop.set(gtk.ARROW_LEFT, gtk.SHADOW_NONE)
                 self.arwScrollBottom.set(gtk.ARROW_RIGHT, gtk.SHADOW_NONE)
                 self.fixd.move(self.arwScrollTop, 0, 0)
-                self.fixd.move(self.arwScrollBottom, width - 15, 0)
+                self.fixd.move(self.arwScrollBottom, width - font_size, 0)
             else:
                 self.arwScrollTop.set(gtk.ARROW_RIGHT, gtk.SHADOW_NONE)
                 self.arwScrollBottom.set(gtk.ARROW_LEFT, gtk.SHADOW_NONE)
-                self.fixd.move(self.arwScrollTop, width - 15, 0)
+                self.fixd.move(self.arwScrollTop, width - font_size, 0)
                 self.fixd.move(self.arwScrollBottom, 0, 0)
-        # Get font size
-        font_size = int(self._pango_font_desc.get_size() / pango.SCALE)
         # Calc number of rows that will fit (depends on labels font size) and set list_row size
-        if self.display_limiters:
-            height_modifier = -30
-            h = h + height_modifier
-            self._row_height = ((h + height_modifier) / self.num_rows)
-        else:
-            height_modifier = 0
-        row_modifier = round(((float(h) / pango.SCALE) * 10))
-        if ((h + height_modifier) - (font_size * 2)) < font_size:
+        # Height modifier shrinks the list to make room for the arrows at the top and bottom
+        height_modifier = 2 * font_size if self.display_limiters else 0 # height modifier = 20
+        h_final = h - height_modifier   # h_final = -10
+        # Number of rows is calculated by dividing the final height by twice the font size
+        self._row_height = 2 * font_size    # row height = 20
+        self.num_rows = h_final / self._row_height  # num rows = -0.5 -> -1
+        if h_final < self._row_height:
+            # Not enough room for 1 row with padding; therefore round to showing 1 row
+            # Technically something is wrong if this happens, and isn't fixable in code
             self.num_rows = 1
-            self._row_height = (h / self.num_rows) - ((h + height_modifier) - (font_size * 2))
-        else:
-            self.num_rows = (((h + height_modifier) / (font_size * 2)) + int(row_modifier)) - 1
-            h = int(h)
-            self._row_height = (h / self.num_rows) +1 # Reposition rows
+            self._row_height = max(font_size, h_final)
+            self._hl_row = 0
         # Create labels
         self._create_list_labels()
         if self.angle in (0, 180):
@@ -227,27 +225,21 @@ class ScrollList(object):
             rw = self._row_height
             rh = w
         # Move rows into position
-        if self.display_limiters:
-            c = 15
-        else:
-            c = 0
+        offset = font_size if self.display_limiters else 0
         for i in range(self.num_rows):
             self._rows[i][0].set_size_request(rw, rh)
             if self.angle == 0:
-                self.fixd.move(self._rows[i][0], 0, c + (i * self._row_height))
+                self.fixd.move(self._rows[i][0], 0, offset + (i * self._row_height))
             elif self.angle == 90:
-                self.fixd.move(self._rows[i][0], c + (i * self._row_height), 0)
+                self.fixd.move(self._rows[i][0], offset + (i * self._row_height), 0)
             elif self.angle == 180:
-                self.fixd.move(self._rows[i][0],
-                    0, c + ((self.num_rows - i - 1) * self._row_height))
-            else: #270
-                self.fixd.move(self._rows[i][0],
-                    c + ((self.num_rows - i - 1) * self._row_height), 0)
-        # Pick highlight row
+                self.fixd.move(self._rows[i][0], 0, offset + ((self.num_rows - i - 1) * self._row_height))
+            else:
+                self.fixd.move(self._rows[i][0], offset + ((self.num_rows - i - 1) * self._row_height), 0)
+        # Highlight middle row, intentionally using integer division
         self._hl_row = int(self.num_rows / 2)
         self._rows[self._hl_row][0].set_visible_window(True)
-        self._rows[self._hl_row][1].modify_fg(
-            gtk.STATE_NORMAL, self._hl_fg_col)
+        self._rows[self._hl_row][1].modify_fg(gtk.STATE_NORMAL, self._hl_fg_col)
         #print "num_rows=",self.num_rows, "   _hl_row=", self._hl_row
 
     def show(self):
@@ -302,7 +294,7 @@ class ScrollList(object):
         """create labels as rows"""
         # Remove any existing rows
         [self.fixd.remove(row[0]) for row in self._rows]
-        #create labels
+        # Create labels
         self._rows = []
         for i in range(self.num_rows):
             eb = gtk.EventBox()
@@ -332,8 +324,8 @@ class ScrollList(object):
             if self.auto_update:
                 self.update()
             return
-        # Wrap list?
         if idx_to_select < 0:
+            # Wrap list?
             if self.wrap_list:
                 idx_to_select = len_ls - 1
             else:

@@ -107,6 +107,7 @@ class WinMain(WahCade):
                     val = line.split('=')
                     self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
                 #requests.get("http://localhost:" + self.props['port'] + "/RcadeServer")
+                #print self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
                 r = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']) # Attempt to make connection to server
                 self.connected = True
         except: # Any exception would mean some sort of failed server connection
@@ -224,7 +225,6 @@ class WinMain(WahCade):
         self.lblControllerType = gtk.Label()
         self.lblDriverStatus = gtk.Label()
         self.lblCatVer = gtk.Label()
-        self.lblHighScoreHeading = gtk.Label()
         self.lblHighScoreData = gtk.Label()
         self.overlayBG = gtk.Image()
         self.lblOverlayScrollLetters = gtk.Label()
@@ -353,7 +353,6 @@ class WinMain(WahCade):
             #(552, self.overlayBG, "OverlayBG"),                         # Overlay scroll letter background image
             #(552, self.lblOverlayScrollLetters, "OverlayScrollLetters"),# Overlay scroll letters
             (-1, self.scrollOverlay, "ScrollOverlay"),
-            (-1, self.lblHighScoreHeading, "HighScoreHeading"),         # High score heading
             (-1, self.lblHighScoreData, "HighScoreData"),               # High score data
             (-1, self.user, "UserName")]                                # Currently logged in user
         self._options_items = [
@@ -453,7 +452,6 @@ class WinMain(WahCade):
         self.winMain.show()
 
         self.drwVideo.set_property('visible', False)
-
 
         if not self.showcursor:
             self.hide_mouse_cursor(self.winMain)
@@ -673,17 +671,17 @@ class WinMain(WahCade):
                     
                     if 'SCORE' in high_score_table: # Add to DB if score not zero
                         if high_score_table['SCORE'] is not '0':
-                            url = "http://localhost:" + self.props['port'] + "/RcadeServer/rest/player/"
+                            url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/"
                             r = requests.get(url + self.user.get_text())
                             if r.text == 'null': #check if player exists and add them if they don't
                                 randNum = random.randint(1, 5000) #TODO: replacing RFID for now
                                 post_data = {"name":self.user.get_text(), "playerID":randNum}
                                 r = requests.post(url, post_data)
-                            url = "http://localhost:" + self.props['port'] + "/RcadeServer/rest/score/"
+                            url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/score/"
                             post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": '0', "game":self.current_rom, "player":self.user.get_text()}                         
                             r = requests.post(url, post_data)
 
-    #TODO: Use RFID
+    # TODO: Use RFID
     def log_in(self):
         randNum = random.randint(1, 20)
         if randNum % 4 == 0:
@@ -805,7 +803,6 @@ class WinMain(WahCade):
                             self.display_scaled_image(img, img_filename, self.keep_aspect, img.get_data('text-rotation'))
                 #self.lblOverlayScrollLetters.set_visible(False)
                 self.scrollOverlay.hide()
-                self.scrollOverlay.hide()
                 # Keyboard released, update labels, images, etc
                 if widget == self.winMain:
                     # Only update if no further events pending
@@ -830,8 +827,8 @@ class WinMain(WahCade):
                     break
             for mw_func in mw_functions:
                 # Which function?
-                if mw_func == 'IDENTIFY_SHOW':
-                    print "yay"
+                if mw_func == 'ID_SHOW' and current_window != 'identify':   # Show identify window any time
+                    self.identify.sclIDs._update_display()
                     self.show_window('identify')
                 if current_window == 'main':
                     # Display first n letters of selected game when scrolling quickly
@@ -1069,9 +1066,15 @@ class WinMain(WahCade):
                         self.message.hide()
                 # Identify window
                 elif current_window == 'identify':
-                    if mw_func in ['IDENTIFY_BACK']:
-                        print "Return from identify window"
+                    # Exit from identity window
+                    if mw_func in ['ID_BACK']:
                         self.hide_window('identify')
+                    # Scroll up 1 name
+                    elif mw_func in ['ID_UP_1_NAME']:
+                        self.identify.sclIDs.scroll((int(self.keypress_count / 20) * -1) - 1)
+                    # Scroll down 1 name
+                    elif mw_func in ['ID_DOWN_1_NAME']:
+                        self.identify.sclIDs.scroll(int(self.keypress_count / 20) + 1)
             # Force games list update if using mouse scroll wheel
             if 'MOUSE_SCROLLUP' in mw_keys or 'MOUSE_SCROLLDOWN' in mw_keys:
                 if widget == self.winMain:
@@ -1155,7 +1158,7 @@ class WinMain(WahCade):
         if score_string != '[]' and "Could not find" not in score_string:
             score_string = score_string[1:-1] #trim leading and trailing [] from string
             score_list = score_string.split(",")
-            name, score = zip(*(s.split(":") for s in score_list)) #split the list into name's and scores
+            score, name = zip(*(s.split(":") for s in score_list)) #split the list into name's and scores
             score_list[:]=[]
             score_string = ''
             
@@ -1163,7 +1166,7 @@ class WinMain(WahCade):
                 paring = (name[pair].encode('utf8').strip(), score[pair].encode('utf8'))
                 score_list.append(paring)
             
-            score_list = sorted(score_list, key=lambda score: score[1], reverse=True)            
+            score_list = sorted(score_list, key=lambda score: int(score[1]), reverse=True) 
             
             for name, score in score_list: #42 chars in a line
                 if index < 10: #format for leading spaces by numbers. Makes 1. match up with 10.
@@ -1197,7 +1200,7 @@ class WinMain(WahCade):
         if int(time.time() - self.scrsave_time) >= sound_time:
             pygame.mixer.music.load(self.sounds[random.randrange(0, len(self.sounds))])
             pygame.mixer.music.play()
-            #self.scrsave_time = 0    # Uncomment to play Portal sounds without screensaver
+            self.scrsave_time = time.time()
         # Use timer for screen saver to log a person out after period of inactivity
         auto_log_out_delay = 60
         if int(time.time() - self.scrsave_time) >= auto_log_out_delay and self.logged_in:
@@ -1695,18 +1698,14 @@ class WinMain(WahCade):
         # Okay to setup
         self.layout_file = layout_file
         layout_info = yaml.load(open(self.layout_file, 'r'))
-
+        
         # Temp for displaying high score data
         # TODO: Finalize this
-        hs_heading_lay = layout_info['main']['HighScoreHeading']
-        self.lblHighScoreHeading.set_markup('<span color="%s" size="%s">High Scores</span>' % (hs_heading_lay['text-col'], hs_heading_lay['font-size']))
-        #self.fixd.put(self.lblHighScoreHeading, 200, 510)
-        self.lblHighScoreHeading.show()
-        
         # Formatting for the high score labels
         hs_data_lay = layout_info['main']['HighScoreData']
         self.highScoreDataMarkupHead = ('<span color="%s" size="%s">' % (hs_data_lay['text-col'], hs_data_lay['font-size']))
         self.highScoreDataMarkupTail = '</span>'
+        
         # Formatting for the overlay letters
         overlay_lay = layout_info['main']['ScrollOverlay']
         self.overlayMarkupHead = ('<span color="%s" size="%s">' % (overlay_lay['text-col'], overlay_lay['font-size']))
@@ -2558,7 +2557,6 @@ class WinMain(WahCade):
    #     self.start_timer('record') # Doesn't work at the moment
 
     def stop_recording_video(self):
-        print 'hi'
         return os.system('kill `ps -e | awk \'/recordmydesktop/{a=$1}END{print a}\'`')
 
 

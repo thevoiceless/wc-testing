@@ -26,6 +26,8 @@ import ldap
 from ldap.controls import SimplePagedResultsControl
 
 class LoadLDAP:
+    """Connects to a given LDAP server"""
+    
     def __init__(self):
         # Load LDAP credentials from local file
         self.LDAP_file = str(os.environ['HOME']) + "/Documents/LDAP.txt"
@@ -38,12 +40,12 @@ class LoadLDAP:
         except:
             print "Could not load LDAP configuration"
             
-        self.LDAP_SERVER = self.creds['LDAP_SERVER']
-        self.BIND_DN = self.creds['BIND_DN']
-        self.BIND_PASS = self.creds['BIND_PASS']
-        self.USER_BASE = self.creds['USER_BASE']
-        self.USER_FILTER = self.creds['USER_FILTER']
-        self.PAGE_SIZE = self.creds['PAGE_SIZE']
+        self.LDAP_SERVER = str(self.creds['LDAP_SERVER'])
+        self.BIND_DN = str(self.creds['BIND_DN'])
+        self.BIND_PASS = str(self.creds['BIND_PASS'])
+        self.USER_BASE = str(self.creds['USER_BASE'])
+        self.USER_FILTER = str(self.creds['USER_FILTER'])
+        self.PAGE_SIZE = int(self.creds['PAGE_SIZE'])
         self.OUTPUT_TO_FILE = False
 
         try:
@@ -62,7 +64,7 @@ class LoadLDAP:
             self.serverctrls = [self.paged_results_control]
             try:
                 self.msgid = self.ldap_connection.search_ext(self.USER_BASE,
-                                                   ldap.SCOPE_ONELEVEL,
+                                                   ldap.SCOPE_SUBTREE,
                                                    self.USER_FILTER,
                                                    attrlist = ['cn', 'sAMAccountName'],
                                                    serverctrls = self.serverctrls)
@@ -113,4 +115,10 @@ class LoadLDAP:
             with open("readytalk-users.txt", "w") as f:
                 for name in self.user_names:
                     f.write(name + '\n')
+                    
+    def getMap(self):
+        return self.user_map
+    
+    def getNames(self):
+        return self.user_names
     
