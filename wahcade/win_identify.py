@@ -48,7 +48,7 @@ class WinIdentify(WahCade):
         self.imgBackground = gtk.Image()
         self.lblPrompt = gtk.Label()
         self.lblPromptText = gtk.Label()
-        self.sclIDs = ScrollList()
+        self.sclIDs = ScrollList(self.WinMain)
         self.winID.add(self.imgBackground)
         self.winID.add(self.lblPrompt)
         self.winID.add(self.lblPromptText)
@@ -61,10 +61,7 @@ class WinIdentify(WahCade):
         # Build list
         self.ldap = LoadLDAP()
         self.lsIDs = self.ldap.getNames()
-#        print self.lsIDs
-#        print len(self.lsIDs)
         self.sclIDs.auto_update = True
-        self.sclIDs.display_limiters = self.WinMain.wahcade_ini.getint('show_list_arrows', 0)
         # Get keyboard & mouse events
         self.sclIDs.connect('update', self.on_sclIDs_changed)
         self.sclIDs.connect('mouse-left-click', self.on_sclIDs_changed)
@@ -77,8 +74,6 @@ class WinIdentify(WahCade):
         ## TODO: Exclude IDs already matched to RFID values
         
         # Init window
-        self.sclIDs.use_mouse = self.WinMain.ctrlr_ini.getint('mouse')
-        self.sclIDs.wrap_list = self.WinMain.wahcade_ini.getint('wrap_list')
         self.record = False
         self.on_keypress = False        
         

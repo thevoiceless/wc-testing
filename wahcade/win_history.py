@@ -64,7 +64,7 @@ class WinHistory(WahCade):
         self.winHistory.set_has_window(True)
         self.imgBackground = gtk.Image()
         self.lblHeading = gtk.Label()
-        self.sclHistory = ScrollList()
+        self.sclHistory = ScrollList(self.WinMain)
         self.winHistory.add(self.imgBackground)
         self.winHistory.add(self.make_evb_widget(self.lblHeading))
         self.winHistory.add(self.sclHistory.fixd)
@@ -75,7 +75,6 @@ class WinHistory(WahCade):
         #build list
         self.lsHistory = []
         self.sclHistory.auto_update = True
-        self.sclHistory.display_limiters = self.WinMain.wahcade_ini.getint('show_list_arrows', 0)
         #widgets
         self._histview_items = [
             (8, self.lblHeading),
