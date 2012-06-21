@@ -699,6 +699,7 @@ class WinMain(WahCade):
     def log_in(self):
         self.rfid_value = 7#get_rfid_value() #Fetch RFID value 
         name_from_rfid = requests.get(self.player_url + self.rfid_value) #Use this for checking people  
+        print "name from rfid =", name_from_rfid
         if not name_from_rfid:
             self.identify.sclIDs._update_display()
             self.show_window('identify')
@@ -719,12 +720,23 @@ class WinMain(WahCade):
             self.user.set_text(self.current_players)
 
     def register_new_player(self, player_name):
-        self.rfid_value = 8 # TODO: remove this once integrated
+        self.rfid_value = 1234 # TODO: remove this once integrated
         post_data = {"name":player_name, "playerID":self.rfid_value}
         r = requests.post(self.player_url, post_data)
 #        self.ldap.remove(player_name) # Take them out of the unregistered people list
         self.current_players.append(player_name) # TODO: remove this once integrated
-        self.user.set_text(player_name) # TODO: remove this once integrated
+        self.user.set_text(self.get_logged_in_user_string(self.current_players))
+        
+    def get_logged_in_user_string(self, current_users):
+        index = 1
+        string = ''
+        for user in current_users:
+            if index == 1:
+                string += user
+                index += 1
+            else:
+                string += ", " + user
+        return string
 
     def on_winMain_key_press(self, widget, event, *args):
         """key pressed - translate to mamewah setup"""
