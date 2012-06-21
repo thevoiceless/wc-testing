@@ -719,6 +719,9 @@ class WinMain(WahCade):
             self.user.set_text(self.current_players)
 
     def register_new_player(self, player_name):
+        # TODO: Do this check before displaying the identify window in on_winMain_key_press
+        if not self.connected:
+            return
         self.rfid_value = 8 # TODO: remove this once integrated
         post_data = {"name":player_name, "playerID":self.rfid_value}
         r = requests.post(self.player_url, post_data)
@@ -848,7 +851,7 @@ class WinMain(WahCade):
                     break
             for mw_func in mw_functions:
                 # Which function?
-                if mw_func == 'ID_SHOW' and current_window != 'identify':   # Show identify window any time
+                if mw_func == 'ID_SHOW' and current_window != 'identify': #and self.connected:   # Show identify window any time
                     self.identify.sclIDs._update_display()
                     self.show_window('identify')
                 if current_window == 'main':
@@ -1064,14 +1067,11 @@ class WinMain(WahCade):
                         self.message.hide()
                 # Identify window
                 elif current_window == 'identify':
-                    if mw_func == 'EXIT_TO_WINDOWS':
-                        self.play_clip('EXIT_TO_WINDOWS')
-                        self.exit_wahcade()
-                    elif mw_func in ['SS_FIND_N_SELECT_GAME']:
-                        self.register_new_player(self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()])
-                        self.hide_window('identify')
                     # Exit from identity window
                     if mw_func in ['ID_BACK']:
+                        self.hide_window('identify')
+                    elif mw_func in ['ID_SELECT']:
+                        #self.register_new_player(self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()])
                         self.hide_window('identify')
                     # Scroll up 1 name
                     elif mw_func in ['ID_UP_1_NAME']:
@@ -1079,6 +1079,12 @@ class WinMain(WahCade):
                     # Scroll down 1 name
                     elif mw_func in ['ID_DOWN_1_NAME']:
                         self.identify.sclIDs.scroll(int(self.keypress_count / 20) + 1)
+                    elif mw_func == 'ID_UP_1_LETTER':
+                        self.play_clip('UP_1_LETTER')
+                        self.identify.sclIDs.jumpToLetter(mw_func)
+                    elif mw_func == 'ID_DOWN_1_LETTER':
+                        self.play_clip('DOWN_1_LETTER')
+                        self.identify.sclIDs.jumpToLetter(mw_func)
             # Force games list update if using mouse scroll wheel
             if 'MOUSE_SCROLLUP' in mw_keys or 'MOUSE_SCROLLDOWN' in mw_keys:
                 if widget == self.winMain:

@@ -89,7 +89,7 @@ class ScrollList(object):
         # Get current letter
         thisLetter = self.ls[self.get_selected()][0]
         # Scroll up or down?
-        if direction == 'UP_1_LETTER':
+        if direction.find('UP_1_LETTER') != (-1):
             # Get all of the games in the list before the current one and reverse the order
             # Reversing the order simulates the order of the games in the GUI
             games = self.ls[:self.get_selected()]                
