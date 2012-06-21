@@ -48,10 +48,12 @@ class WinIdentify(WahCade):
         self.imgBackground = gtk.Image()
         self.lblPrompt = gtk.Label()
         self.lblPromptText = gtk.Label()
+        self.lblRFID = gtk.Label()
         self.sclIDs = ScrollList(self.WinMain)
         self.winID.add(self.imgBackground)
         self.winID.add(self.lblPrompt)
         self.winID.add(self.lblPromptText)
+        self.winID.add(self.lblRFID)
         self.winID.add(self.sclIDs.fixd)
         WinMain.fixd.add(self.winID)
         self.imgBackground.show()
@@ -74,8 +76,14 @@ class WinIdentify(WahCade):
         ## TODO: Exclude IDs already matched to RFID values
         
         # Init window
+        self.lblPrompt.set_text("Unknown RFID:")
+        self.lblRFID.set_text("____________")
+        self.lblPromptText.set_text("Select your name from the list.")
         self.record = False
-        self.on_keypress = False        
+        self.on_keypress = False
+        
+    def setRFIDlbl(self, value):
+        self.lblRFID.set_text(value)
         
     def on_sclIDs_changed(self, *args):
         """Selected user identity changed"""

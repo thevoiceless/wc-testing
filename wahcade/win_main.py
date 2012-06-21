@@ -226,12 +226,17 @@ class WinMain(WahCade):
         self.lblDriverStatus = gtk.Label()
         self.lblCatVer = gtk.Label()
         self.lblHighScoreData = gtk.Label()
-        self.overlayBG = gtk.Image()
-        self.lblOverlayScrollLetters = gtk.Label()
-        self.scrollOverlay = ScrollOverlay(self.lblOverlayScrollLetters, self.overlayBG)
         self.user = gtk.Label()
+        # Overlay for games list
+        self.gamesOverlayBG = gtk.Image()
+        self.lblGamesOverlayScrollLetters = gtk.Label()
+        self.gamesScrollOverlay = ScrollOverlay(self.lblGamesOverlayScrollLetters, self.gamesOverlayBG)
+        # Overlay for IDs list
+        self.IDsOverlayBG = gtk.Image()
+        self.lblIDsOverlayScrollLetters = gtk.Label()
+        self.IDsScrollOverlay = ScrollOverlay(self.lblIDsOverlayScrollLetters, self.IDsOverlayBG)
 
-        # create scroll list widget
+        # Create scroll list widget
         self.sclGames = ScrollList(self) 
         self._main_images = [
             self.imgArtwork1,
@@ -350,9 +355,9 @@ class WinMain(WahCade):
             (255, self.lblControllerType, "ControllerType"),            # Controller
             (268, self.lblDriverStatus, "DriverStatus"),                # Driver
             (281, self.lblCatVer, "CatVer"),
-            #(552, self.overlayBG, "OverlayBG"),                         # Overlay scroll letter background image
-            #(552, self.lblOverlayScrollLetters, "OverlayScrollLetters"),# Overlay scroll letters
-            (-1, self.scrollOverlay, "ScrollOverlay"),
+            #(552, self.gamesOverlayBG, "OverlayBG"),                         # Overlay scroll letter background image
+            #(552, self.lblGamesOverlayScrollLetters, "OverlayScrollLetters"),# Overlay scroll letters
+            (-1, self.gamesScrollOverlay, "ScrollOverlay"),
             (-1, self.lblHighScoreData, "HighScoreData"),               # High score data
             (-1, self.user, "UserName")]                                # Currently logged in user
         self._options_items = [
@@ -380,7 +385,9 @@ class WinMain(WahCade):
         self._identify_items = [
             (-1, self.identify.lblPrompt, "Prompt"),
             (-1, self.identify.lblPromptText, "PromptText"),
-            (-1, self.identify.sclIDs, "IDsList")]
+            (-1, self.identify.lblRFID, "RFID"),
+            (-1, self.identify.sclIDs, "IDsList"),
+            (-1, self.IDsScrollOverlay, "ScrollOverlay"),]
         self._layout_items = {'main': self._main_items,
                               'options': self._options_items,
                               'message': self._message_items,
@@ -399,7 +406,7 @@ class WinMain(WahCade):
                     self.fixd.add(widget)
                 else:
                     self.fixd.add(widget.fixd)
-        #self.scrollOverlay.add_to_fixd(self.fixd)
+        #self.gamesScrollOverlay.add_to_fixd(self.fixd)
             
         ### Load list
         self.current_list_ini = None
@@ -414,18 +421,18 @@ class WinMain(WahCade):
             self.supported_games.add(line.strip())
                 
         # Get a list of games already on the server
-        if self.connected:
-            self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
-            self.player_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/"
-            self.score_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/score/"
-            data = requests.get(self.game_url)
+        self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
+        self.player_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/"
+        self.score_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/score/"
         
+        if self.connected:
             # Map rom name to associated game name
             romToName = {}
             for sublist in self.lsGames: 
                 romToName[sublist[1]] = sublist[0]
             
             # Get a list of games already on the server
+            data = requests.get(self.game_url)
             data = fromstring(data.text)
             games_on_server = []
             for game in data.getiterator('game'):
@@ -679,55 +686,80 @@ class WinMain(WahCade):
                         high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
                     if 'SCORE' in high_score_table: # If high score table has score
                         if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB
-                            r = requests.get(self.player_url) #get all players                          
-                            players = []
-                            data = fromstring(r.text)
-                            for player in data.getiterator('player'):
-                                players.append(player.find('name').text) # parse player name from xml
-                            if not self.user.get_text() in players: # if player doesn't exist and add them to DB
-                                randNum = random.randint(1, 5000) #TODO: replacing RFID for now
-                                post_data = {"name":self.user.get_text(), "playerID":randNum}
-                                r = requests.post(self.player_url, post_data)
-                            del players[:]
+#                            r = requests.get(self.player_url) #get all players                          
+#                            players = []
+#                            data = fromstring(r.text)
+#                            for player in data.getiterator('player'):
+#                                players.append(player.find('name').text) # parse player name from xml
+#                            if not self.user.get_text() in players: # if player doesn't exist and add them to DB
+#                                randNum = random.randint(1, 5000) #TODO: replacing RFID for now
+#                                post_data = {"name":self.user.get_text(), "playerID":randNum}
+#                                r = requests.post(self.player_url, post_data)
+#                            del players[:]
                             if 'NAME' in high_score_table:
                                 post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": '0', "game":self.current_rom, "player":self.user.get_text()}                         
                             else:
-                                post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": '0', "game":self.current_rom, "player":self.user.get_text()}
+                                post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.current_players[0]}
                             r = requests.post(self.score_url, post_data)
                             
     # TODO: Use RFID
-    def log_in(self):
-        self.rfid_value = 7#get_rfid_value() #Fetch RFID value 
-        name_from_rfid = requests.get(self.player_url + self.rfid_value) #Use this for checking people  
-        if not name_from_rfid:
-            self.identify.sclIDs._update_display()
-            self.show_window('identify')
-            new_player = name_from_rfid               
-        elif name_from_rfid in self.current_players: # If passed a player name and if that player is logged in, log them out
-            self.log_out(name_from_rfid)
+    def log_in(self, player_name):
+        if len(self.current_players) == 4: #Max players
+            return
+        r = requests.get(self.player_url) #get all players                          
+        players = []
+        data = fromstring(r.text)
+        for player in data.getiterator('player'):
+            players.append(player.find('name').text) # parse player name from xml
+        if not player_name in players: # if player doesn't exist and add them to DB
+            self.register_new_player(player_name)
         else:
-            new_player = name_from_rfid
-        self.current_players.append(new_player) # Add current player to list 
-        self.user.set_text(self.current_players) # Show who is currently logged in
+            self.current_players.append(player_name)
+            self.user.set_text(self.get_logged_in_user_string(self.current_players))     
+        #keep for RFID use
+#        self.rfid_value = 7#get_rfid_value() #Fetch RFID value 
+#        name_from_rfid = requests.get(self.player_url + self.rfid_value) #Use this for checking people  
+#        print "name from rfid =", name_from_rfid
+#        if not name_from_rfid:
+#            self.identify.sclIDs._update_display()
+#            self.show_window('identify')
+#            new_player = name_from_rfid               
+#        elif name_from_rfid in self.current_players: # If passed a player name and if that player is logged in, log them out
+#            self.log_out(name_from_rfid)
+#        else:
+#            new_player = name_from_rfid
+#        self.current_players.append(new_player) # Add current player to list 
+#        self.user.set_text(self.current_players) # Show who is currently logged in
             
-    def log_out(self, player_name = ""):
-        if not player_name:
+    def log_out(self, player_name):
+        if player_name is None:
             self.current_players = []
             self.user.set_text("Not logged in")
         else:
             self.current_players.remove(player_name)
-            self.user.set_text(self.current_players)
+            self.user.set_text(self.get_logged_in_user_string(self.current_players))
 
     def register_new_player(self, player_name):
         # TODO: Do this check before displaying the identify window in on_winMain_key_press
         if not self.connected:
             return
-        self.rfid_value = 8 # TODO: remove this once integrated
+        self.rfid_value = 123456789012 # TODO: remove this once integrated
         post_data = {"name":player_name, "playerID":self.rfid_value}
-        r = requests.post(self.player_url, post_data)
+        requests.post(self.player_url, post_data)
 #        self.ldap.remove(player_name) # Take them out of the unregistered people list
         self.current_players.append(player_name) # TODO: remove this once integrated
-        self.user.set_text(player_name) # TODO: remove this once integrated
+        self.user.set_text(self.get_logged_in_user_string(self.current_players))
+        
+    def get_logged_in_user_string(self, current_users):
+        index = 1
+        string = ''
+        for user in current_users:
+            if index == 1:
+                string += user
+                index += 1
+            else:
+                string += ", " + user
+        return string
 
     def on_winMain_key_press(self, widget, event, *args):
         """key pressed - translate to mamewah setup"""
@@ -825,8 +857,8 @@ class WinMain(WahCade):
                                 self.current_emu,
                                 (i + 1))
                             self.display_scaled_image(img, img_filename, self.keep_aspect, img.get_data('text-rotation'))
-                #self.lblOverlayScrollLetters.set_visible(False)
-                self.scrollOverlay.hide()
+                self.gamesScrollOverlay.hide()
+                self.IDsScrollOverlay.hide()
                 # Keyboard released, update labels, images, etc
                 if widget == self.winMain:
                     # Only update if no further events pending
@@ -857,11 +889,9 @@ class WinMain(WahCade):
                 if current_window == 'main':
                     # Display first n letters of selected game when scrolling quickly
                     if self.keypress_count > self.showOverlayThresh:
-                        self.scrollOverlay.show()
-                        overlayLetters = self.lsGames[ self.sclGames.get_selected() ][ 0 ][ 0 : self.scrollOverlay.charShowCount ]
-                        self.scrollOverlay.set_markup( _('%s%s%s') % (self.overlayMarkupHead, overlayLetters, self.overlayMarkupTail) )
-                        #self.lblOverlayScrollLetters.set_visible(True)
-                        self.scrollOverlay.show()
+                        overlayLetters = self.lsGames[ self.sclGames.get_selected() ][ 0 ][ 0 : self.gamesScrollOverlay.charShowCount ]
+                        self.gamesScrollOverlay.set_markup( _('%s%s%s') % (self.gamesOverlayMarkupHead, overlayLetters, self.gamesOverlayMarkupTail) )
+                        self.gamesScrollOverlay.show()
                     # Main form
                     if mw_func == 'UP_1_GAME':
                         self.play_clip('UP_1_GAME')
@@ -1067,11 +1097,21 @@ class WinMain(WahCade):
                         self.message.hide()
                 # Identify window
                 elif current_window == 'identify':
+                    # Display first n letters of selected name when scrolling quickly
+                    if self.keypress_count > self.showOverlayThresh:
+                        overlayLetters = self.identify.sclIDs.ls[ self.identify.sclIDs.get_selected() ][ 0 : self.IDsScrollOverlay.charShowCount ]
+                        self.IDsScrollOverlay.set_markup( _('%s%s%s') % (self.IDsOverlayMarkupHead, overlayLetters, self.IDsOverlayMarkupTail) )
+                        self.IDsScrollOverlay.show()
                     # Exit from identity window
                     if mw_func in ['ID_BACK']:
                         self.hide_window('identify')
-                    elif mw_func in ['ID_SELECT']:
-                        #self.register_new_player(self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()])
+                    elif mw_func in ['ID_SELECT'] and self.connected:
+                        selected_player = self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()]
+                        if selected_player in self.current_players:
+                            self.log_out(selected_player)
+                        else:
+                            self.log_in(selected_player)
+#                            self.register_new_player(self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()])
                         self.hide_window('identify')
                     # Scroll up 1 name
                     elif mw_func in ['ID_UP_1_NAME']:
@@ -1117,9 +1157,7 @@ class WinMain(WahCade):
             self.game_ini_file = MameWahIni(game_ini_file)
         # Set layout text items
         self.lblGameDescription.set_text(game_info['game_name'])
-        self.lblGameSelected.set_text(_('Game %s/%s') % (
-            self.sclGames.get_selected() + 1,
-            self.lsGames_len))
+        self.lblGameSelected.set_text(_('Game %s/%s') % (self.sclGames.get_selected() + 1, self.lsGames_len))
         if game_info['clone_of'] != '':
             rom_name_desc = _('%s (Clone of %s)') % (game_info['rom_name'], game_info['clone_of'])
         else:
@@ -1204,8 +1242,7 @@ class WinMain(WahCade):
             
     def on_scrsave_timer(self):
         """timer event - check to see if we need to start video or screen saver"""
-        #sound_time = random.randint((5*60), (15*60))
-        sound_time = random.randint((5), (15))
+        sound_time = random.randint((5*60), (15*60))
         if int(time.time() - self.scrsave_time) >= sound_time:
             pygame.mixer.music.load(self.sounds[random.randrange(0, len(self.sounds))])
             pygame.mixer.music.play()
@@ -1213,7 +1250,7 @@ class WinMain(WahCade):
         # Use timer for screen saver to log a person out after period of inactivity
         auto_log_out_delay = 90
         if int(time.time() - self.scrsave_time) >= auto_log_out_delay and self.current_players != '':
-            self.log_out()
+            self.log_out(None)
         # Need to start screen saver?
         if int(time.time() - self.scrsave_time) >= self.scrsave_delay:
             # Yes, stop any vids playing
@@ -1715,10 +1752,15 @@ class WinMain(WahCade):
         self.highScoreDataMarkupHead = ('<span color="%s" size="%s">' % (hs_data_lay['text-col'], hs_data_lay['font-size']))
         self.highScoreDataMarkupTail = '</span>'
         
-        # Formatting for the overlay letters
+        # Formatting for the games overlay letters
         overlay_lay = layout_info['main']['ScrollOverlay']
-        self.overlayMarkupHead = ('<span color="%s" size="%s">' % (overlay_lay['text-col'], overlay_lay['font-size']))
-        self.overlayMarkupTail = '</span>'
+        self.gamesOverlayMarkupHead = ('<span color="%s" size="%s">' % (overlay_lay['text-col'], overlay_lay['font-size']))
+        self.gamesOverlayMarkupTail = '</span>'
+        
+        # Formatting for the IDs letters
+        overlay_lay = layout_info['identify']['ScrollOverlay']
+        self.IDsOverlayMarkupHead = ('<span color="%s" size="%s">' % (overlay_lay['text-col'], overlay_lay['font-size']))
+        self.IDsOverlayMarkupTail = '</span>'
         
         # Set up main Fixd window
         main = self.winMain
@@ -1792,7 +1834,6 @@ class WinMain(WahCade):
         idtfy_img = idtfy_lay['use-image']
         if not os.path.dirname(idtfy_img):
             idtfy_img = os.path.join(self.layout_path, idtfy_img)
-        #idtfy.imgBackground.set_data('layout-image', idtfy_img)
         idtfy.imgBackground.set_from_file(idtfy_img)
             
         # Set up all Widgets
@@ -1869,6 +1910,7 @@ class WinMain(WahCade):
                     widget = widget.get_parent()
                 # Add to fixed layout on correct window
                 if w_set_name == "main":
+                    # Move widgets to the correct places; move_in_fixd is for the scroll overlay
                     if isinstance(widget, gtk.Widget):
                         self.fixd.move(widget, w_lay['x'], w_lay['y'])
                     else:
@@ -1880,7 +1922,11 @@ class WinMain(WahCade):
                 elif w_set_name == "screensaver":
                     self.scrsaver.winScrSaver.move(widget, w_lay['x'], w_lay['y'])
                 elif w_set_name == "identify":
-                    self.identify.winID.move(widget, w_lay['x'], w_lay['y'])
+                    # Move widgets to the correct places; move_in_fixd is for the scroll overlay
+                    if isinstance(widget, gtk.Widget):
+                        self.identify.winID.move(widget, w_lay['x'], w_lay['y'])
+                    else:
+                        widget.move_in_fixd(self.identify.winID, w_lay['x'], w_lay['y'])
                 else:
                     print "Orphaned widget detected. Did not belong to one of [main/options/message/screensaver]"
        
@@ -1949,14 +1995,14 @@ class WinMain(WahCade):
         bg_file = self.get_path(lines[at['scroll_img']])
         if not os.path.dirname(bg_file):
             bg_file = os.path.join(self.layout_path, bg_file)
-        self.overlayBG.set_from_file(bg_file)
-        #self.fixd.put(self.overlayBG, 100, 100)
-        self.fixd.put(self.overlayBG, int(lines[at['scroll_img_x']]), int(lines[at['scroll_img_y']]))
+        self.gamesOverlayBG.set_from_file(bg_file)
+        #self.fixd.put(self.gamesOverlayBG, 100, 100)
+        self.fixd.put(self.gamesOverlayBG, int(lines[at['scroll_img_x']]), int(lines[at['scroll_img_y']]))
         
         # Display overlay letters on ROM list when scrolling quickly
-        self.lblOverlayScrollLetters.hide()
-        #self.fixd.put(self.lblOverlayScrollLetters, 120, 118)
-        self.fixd.put(self.lblOverlayScrollLetters, int(lines[at['scroll_let_x']]), int(lines[at['scroll_let_y']]))
+        self.lblGamesOverlayScrollLetters.hide()
+        #self.fixd.put(self.lblGamesOverlayScrollLetters, 120, 118)
+        self.fixd.put(self.lblGamesOverlayScrollLetters, int(lines[at['scroll_let_x']]), int(lines[at['scroll_let_y']]))
         
         # Background image file
         img_file = self.get_path(lines[at['main_img']])
