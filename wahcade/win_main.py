@@ -670,12 +670,17 @@ class WinMain(WahCade):
                     if 'SCORE' in high_score_table: # If high score table has score
                         if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB
                             url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/"
-                            r = requests.get(url + self.user.get_text())
-                            if r.text == 'null': # if player doesn't exist and add them to DB
+                            r = requests.get(url) #get all players                          
+                            players = []
+                            data = fromstring(r.text)
+                            for player in data.getiterator('player'):
+                                players.append(player.find('name').text) # parse player name from xml
+                            
+                            if not self.user.get_text() in players: # if player doesn't exist and add them to DB
                                 randNum = random.randint(1, 5000) #TODO: replacing RFID for now
                                 post_data = {"name":self.user.get_text(), "playerID":randNum}
                                 r = requests.post(url, post_data)
-                                
+                            del players[:]
                             url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/score/"
                             if 'NAME' in high_score_table:
                                 post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": '0', "game":self.current_rom, "player":self.user.get_text()}                         
@@ -1058,7 +1063,10 @@ class WinMain(WahCade):
                         self.message.hide()
                 # Identify window
                 elif current_window == 'identify':
-                    if mw_func in ['SS_FIND_N_SELECT_GAME']:
+                    if mw_func == 'EXIT_TO_WINDOWS':
+                        self.play_clip('EXIT_TO_WINDOWS')
+                        self.exit_wahcade()
+                    elif mw_func in ['SS_FIND_N_SELECT_GAME']:
                         self.log_in(self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()])
                         self.hide_window('identify')
                     # Exit from identity window
@@ -1197,7 +1205,7 @@ class WinMain(WahCade):
             pygame.mixer.music.play()
             self.scrsave_time = time.time()
         # Use timer for screen saver to log a person out after period of inactivity
-        auto_log_out_delay = 60
+        auto_log_out_delay = 90
         if int(time.time() - self.scrsave_time) >= auto_log_out_delay and self.logged_in:
             self.log_out()
         # Need to start screen saver?
