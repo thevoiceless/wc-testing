@@ -1154,8 +1154,8 @@ class WinMain(WahCade):
     
     def get_score_string(self):
         """Parse Scores from DB into display string"""
-        url = "http://localhost:" + self.props['port'] + "/RcadeServer/rest/game/"
-        r = requests.get(url+self.current_rom+"/highscore")
+        url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
+        r = requests.get(url + self.current_rom + "/highscore")
         score_string = r.text #string returned from server containing high scores
         index = 1
         if score_string != '[]' and "Could not find" not in score_string:
@@ -1169,7 +1169,7 @@ class WinMain(WahCade):
                 paring = (name[pair].encode('utf8').strip(), score[pair].encode('utf8'))
                 score_list.append(paring)
             
-            score_list = sorted(score_list, key=lambda score: int(score[1]), reverse=True) 
+            score_list = sorted(score_list, key = lambda score: int(score[1]), reverse = True) 
             
             for name, score in score_list:
                 if index < 10: #format for leading spaces by numbers. Makes 1. match up with 10.
