@@ -686,17 +686,8 @@ class WinMain(WahCade):
                             print r.status_code
 
     # TODO: Use RFID
-    def log_in(self):
-        randNum = random.randint(1, 20)
-        if randNum % 4 == 0:
-            self.user.set_text("Riley")
-        elif randNum % 4 == 1:
-            self.user.set_text("John")
-        elif randNum % 4 == 2:
-            self.user.set_text("Terek")
-        elif randNum % 4 == 3:
-            self.user.set_text("Zach")
-        
+    def log_in(self, user):
+        self.user.set_text(user)
         self.user.show()
         self.logged_in = True
         
@@ -779,11 +770,8 @@ class WinMain(WahCade):
                     # TODO: Integrate this with wahcade-setup, wahcade.ini, etc
                     # Special character to log in
                     if keyname == 'bracketright':
-                        if not self.logged_in:
-                            self.log_in()
-                        else:
-                            self.log_out()
-                            
+                        if self.logged_in:
+                            self.log_out()                            
                     # Got something?
                     if keyname not in mamewah_keys:
                         return
@@ -1070,6 +1058,9 @@ class WinMain(WahCade):
                         self.message.hide()
                 # Identify window
                 elif current_window == 'identify':
+                    if mw_func in ['SS_FIND_N_SELECT_GAME']:
+                        self.log_in(self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()])
+                        self.hide_window('identify')
                     # Exit from identity window
                     if mw_func in ['ID_BACK']:
                         self.hide_window('identify')
