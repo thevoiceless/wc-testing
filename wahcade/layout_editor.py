@@ -84,6 +84,7 @@ class WinLayout(GladeSupport, WahCade):
         self.fixdScr = gtk.Fixed()
         self.fixdCpv = gtk.Fixed()
         self.fixdHist = gtk.Fixed()
+        self.fixdID = gtk.Fixed()
         self.fixd = self.fixdMain
         #background
         self.fixdBg = gtk.Fixed()
@@ -115,6 +116,7 @@ class WinLayout(GladeSupport, WahCade):
             'Spinner1', 'Spinner2']
         self._hist_widgets = [
             'Heading', 'Game History']
+        self._identify_widgets = ['Prompt', 'Prompt Text', 'IDs List']
         #labels
         main_widgets = {}
         opt_widgets = {}
@@ -122,6 +124,7 @@ class WinLayout(GladeSupport, WahCade):
         scr_widgets = {}
         cpv_widgets = {}
         hist_widgets = {}
+        id_widgets = {}
         for i, widget_name in enumerate(self._main_widgets):
             evb = self._make_label(widget_name)
             main_widgets[widget_name] = evb
@@ -146,9 +149,13 @@ class WinLayout(GladeSupport, WahCade):
             evb = self._make_label(widget_name)
             hist_widgets[widget_name] = evb
             self.fixdHist.put(evb, 100, 10 + (i * 30))
+        for i, widget_name in enumerate(self._identify_widgets):
+            evb = self._make_label(widget_name)
+            id_widgets[widget_name] = evb
+            self.fixdID.put(evb, 100, 10 + (i * 30))
         #fixed pos widgets
         self._fixed_widgets = [self.fixdMain, self.fixdOpt, self.fixdMsg,
-                self.fixdScr, self.fixdCpv, self.fixdHist]
+                self.fixdScr, self.fixdCpv, self.fixdHist, self.fixdID]
         for fixd in self._fixed_widgets:
             fixd.connect('expose-event', self.on_fixd_expose_event)
             fixd.connect('drag-data-received', self.on_fixd_drag_data_received)
@@ -187,7 +194,8 @@ class WinLayout(GladeSupport, WahCade):
             (1, self.fixdMain, "fixdMain"),
             (294, self.fixdOpt, "fixdOpt"),
             (353, self.fixdMsg, "fixdMsg"),
-            (-1, self.fixdScr, "fixdScr")]
+            (-1, self.fixdScr, "fixdScr"),
+            (-1, self.fixdID, "fixdID")]
         self._layout_items = [
             (8, main_widgets['Main Logo'], "MainLogo"),
             (21, main_widgets['Game List Indicator'], "GameListIndicator"),
@@ -233,7 +241,10 @@ class WinLayout(GladeSupport, WahCade):
             (500, scr_widgets['Artwork9'], "ScrArtwork9"),
             (513, scr_widgets['Artwork10'], "ScrArtwork10"),
             (526, scr_widgets['Game Description'], "GameDescription"),
-            (539, scr_widgets['MP3 Name'], "MP3Name")]
+            (539, scr_widgets['MP3 Name'], "MP3Name"),
+            (-1, id_widgets['Prompt'], 'Prompt'),
+            (-1, id_widgets['Prompt Text'], 'PromptText'),
+            (-1, id_widgets['IDs List'], 'IDsList')]
         self._histview_items = [
             (8, hist_widgets['Heading'], "Heading"),
             (21, hist_widgets['Game History'], "GameHistory")]
@@ -243,11 +254,12 @@ class WinLayout(GladeSupport, WahCade):
         self.scr_widgets = scr_widgets
         self.cpv_widgets = cpv_widgets
         self.hist_widgets = hist_widgets
+        self.id_widgets = id_widgets
         #setup view menu / toolbar
         self.view_updating = True
-        self.view_menu = [self.mnuVMain, self.mnuVOpt, self.mnuVMsg, self.mnuVScr,
+        self.view_menu = [self.mnuVMain, self.mnuVOpt, self.mnuVMsg, self.mnuVID, self.mnuVScr,
             self.mnuVCpv, self.mnuVHist]
-        self.view_trb = [self.trbMain, self.trbOpt, self.trbMsg, self.trbScr,
+        self.view_trb = [self.trbMain, self.trbOpt, self.trbMsg, self.trbMsg, self.trbScr,
             self.trbCpv, self.trbHist]
         for mnu in self.view_menu[1:]:
             mnu.set_active(False)
@@ -517,6 +529,12 @@ class WinLayout(GladeSupport, WahCade):
                 self.trbMsg.set_active(True)
                 self.fixd = self.fixdMsg
                 self.dlg_props.populate_names(self._msg_widgets)
+            elif widget in [self.trbID, self.mnuVID]:
+                #message
+                self.mnuVID.set_active(True)
+                self.trbID.set_active(True)
+                self.fixd = self.fixdID
+                self.dlg_props.populate_names(self._identify_widgets)
             elif widget in [self.trbScr, self.mnuVScr]:
                 #screen saver
                 self.mnuVScr.set_active(True)
@@ -820,6 +838,9 @@ class WinLayout(GladeSupport, WahCade):
         layout_path = os.path.dirname(layout_filename)
         lay_info = yaml.load(open(layout_filename, 'r'))
         
+        # Stash the original file data for writing out later
+        self.ylines = lay_info
+        
         # Initialize main window stuff
         main_lay = lay_info['main']
         fixdm_lay = main_lay['fixdMain']
@@ -870,6 +891,19 @@ class WinLayout(GladeSupport, WahCade):
             img_file = os.path.join(layout_path, img_file)
         self.dLayout[self.fixdMsg]['image-available'] = os.path.isfile(img_file)
         
+        # Initialize identify window stuff
+        id_lay = lay_info['identify']
+        fixdi_lay = id_lay['fixdID']
+        self.dLayout[self.fixdID] = fixdi_lay
+        self.dLayout[self.fixdID]['name'] = 'Message'
+        self.dLayout[self.fixdID]['background-col'] = fixdi_lay['background-col']
+        msg_bg_col = gtk.gdk.color_parse(fixdi_lay['background-col'])
+        self.dLayout[self.fixdID]['use-image'] = fixdi_lay['use-image']
+        img_file = self.get_path(fixdi_lay['use-image'])
+        if not os.path.dirname(img_file):
+            img_file = os.path.join(layout_path, img_file)
+        self.dLayout[self.fixdID]['image-available'] = os.path.isfile(img_file)
+        
         # Initialize screensaver window stuff (matches dimensions of main window)
         self.dLayout[self.fixdScr] = {}
         self.dLayout[self.fixdScr]['width'] = self.dLayout[self.fixdMain]['width']
@@ -892,6 +926,8 @@ class WinLayout(GladeSupport, WahCade):
                 hName = "options"
             elif widget in self.msg_widgets.values():
                 hName = "message"
+            elif widget in self.id_widgets.values():
+                hName = "identify"
             elif widget in self.scr_widgets.values():
                 hName = "screensaver"
             else:
@@ -950,6 +986,11 @@ class WinLayout(GladeSupport, WahCade):
                 if w_lay['transparent']:
                     widget.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse("#303030"))
                 self.fixdMsg.move(widget, w_lay['x'], w_lay['y'])
+            elif hName is "identify":
+                #message window
+                if w_lay['transparent']:
+                    widget.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse("#303030"))
+                self.fixdID.move(widget, w_lay['x'], w_lay['y'])
             elif hName is "screensaver":
                 #screen saver window
                 if w_lay['transparent']:
@@ -1097,20 +1138,21 @@ class WinLayout(GladeSupport, WahCade):
     def save_layout_file(self, layout_filename=None):
         if layout_filename:
             self.layout_filename = layout_filename
-        # YAML setup
-        ylines = {}
+        # Retrieve the input data we read in earlier and restore it to our output object
+        # This prevents accidental loss of data
+        ylines = self.ylines
         main = {}
         options = {}
         message = {}
+        identify = {}
         screensaver = {}
         ylines['main'] = main
         ylines['options'] = options
         ylines['message'] = message
+        ylines['identify'] = identify
         ylines['screensaver'] = screensaver
         for offset, widget, name in self._layout_windows:
             # Fixd object saving
-            if offset < 0:
-                break
             d = self.dLayout[widget]
             # Start by assuming nothing has changed
             dic = d
@@ -1125,6 +1167,8 @@ class WinLayout(GladeSupport, WahCade):
                 options[name] = dic
             elif name is "fixdMsg":
                 message[name] = dic
+            elif name is "fixdID":
+                identify[name] = dic
             elif name is "fixdScr":
                 screensaver[name] = dic
             else:
@@ -1141,6 +1185,8 @@ class WinLayout(GladeSupport, WahCade):
                 hName = "options"
             elif widget in self.msg_widgets.values():
                 hName = "message"
+            elif widget in self.id_widgets.values():
+                hName = "identify"
             elif widget in self.scr_widgets.values():
                 hName = "screensaver"
             else:
@@ -1175,6 +1221,8 @@ class WinLayout(GladeSupport, WahCade):
                 options[name] = dic
             elif hName is "message":
                 message[name] = dic
+            elif hName is "identify":
+                identify[name] = dic
             elif hName is "screensaver":
                 screensaver[name] = dic
             else:

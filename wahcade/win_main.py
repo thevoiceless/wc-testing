@@ -683,7 +683,6 @@ class WinMain(WahCade):
                                 post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": '0', "game":self.current_rom, "player":self.user.get_text()}
                             
                             r = requests.post(url, post_data)
-                            print r.status_code
 
     # TODO: Use RFID
     def log_in(self):

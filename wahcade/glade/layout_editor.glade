@@ -1048,11 +1048,22 @@
 		  <child>
 		    <widget class="GtkRadioMenuItem" id="mnuVMsg">
 		      <property name="visible">True</property>
-		      <property name="label" translatable="yes">M_essage Window</property>
+		      <property name="label" translatable="yes">_Message Window</property>
 		      <property name="use_underline">True</property>
 		      <property name="active">True</property>
 		      <property name="group">mnuVMain</property>
 		      <signal name="activate" handler="on_rbWindow_toggled" last_modification_time="Tue, 04 Jul 2006 10:05:04 GMT"/>
+		    </widget>
+		  </child>
+
+		  <child>
+		    <widget class="GtkRadioMenuItem" id="mnuVID">
+		      <property name="visible">True</property>
+		      <property name="label" translatable="yes">_Identify Window</property>
+		      <property name="use_underline">True</property>
+		      <property name="active">True</property>
+		      <property name="group">mnuVMain</property>
+		      <signal name="activate" handler="on_rbWindow_toggled" last_modification_time="Thu, 21 Jun 2012 8:54:00 MDT"/>
 		    </widget>
 		  </child>
 
@@ -1379,6 +1390,26 @@
 	      <property name="active">False</property>
 	      <property name="group">trbMain</property>
 	      <signal name="toggled" handler="on_rbWindow_toggled" last_modification_time="Tue, 04 Jul 2006 10:03:56 GMT"/>
+	    </widget>
+	    <packing>
+	      <property name="expand">False</property>
+	      <property name="homogeneous">True</property>
+	    </packing>
+	  </child>
+
+	  <child>
+	    <widget class="GtkRadioToolButton" id="trbID">
+	      <property name="visible">True</property>
+	      <property name="tooltip" translatable="yes">Identify Window</property>
+	      <property name="label" translatable="yes">Identify Window</property>
+	      <property name="use_underline">True</property>
+	      <property name="icon">win_identify.png</property>
+	      <property name="visible_horizontal">True</property>
+	      <property name="visible_vertical">True</property>
+	      <property name="is_important">False</property>
+	      <property name="active">False</property>
+	      <property name="group">trbMain</property>
+	      <signal name="toggled" handler="on_rbWindow_toggled" last_modification_time="Thu, 21 Jun 2012 8:58:00 MDT"/>
 	    </widget>
 	    <packing>
 	      <property name="expand">False</property>
