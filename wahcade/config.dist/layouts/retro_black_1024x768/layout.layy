@@ -30,7 +30,7 @@ main:
     visible: true
     width: 383
     x: 571
-    y: 627
+    y: 628
   UserName:
     background-col: '#000000'
     font: SF Atarian System Extended
@@ -61,7 +61,7 @@ main:
     visible: true
     width: 383
     x: 571
-    y: 653
+    y: 654
   EmulatorName:
     background-col: '#000000'
     font: SF Atarian System Extended
@@ -143,7 +143,7 @@ main:
     visible: true
     width: 384
     x: 571
-    y: 679
+    y: 680
   HighScoreData:
     background-col: '#000000'
     font: SF Atarian System Extended
@@ -176,22 +176,6 @@ main:
     width: 377
     x: 574
     y: 94
-  MainArtwork10:
-    background-col: '#808080'
-    font: Sans
-    font-bold: true
-    font-italic: false
-    font-name: Sans Bold 10.0
-    font-size: 9.75
-    height: 277
-    text-align: 0.5
-    text-col: '#FFFFFF'
-    text-rotation: 0
-    transparent: true
-    visible: false
-    width: 320
-    x: 392
-    y: 40
   MainArtwork2:
     background-col: '#808080'
     font: Sans
@@ -320,6 +304,22 @@ main:
     width: 320
     x: 384
     y: 40
+  MainArtwork10:
+    background-col: '#808080'
+    font: Sans
+    font-bold: true
+    font-italic: false
+    font-name: Sans Bold 10.0
+    font-size: 9.75
+    height: 277
+    text-align: 0.5
+    text-col: '#FFFFFF'
+    text-rotation: 0
+    transparent: true
+    visible: false
+    width: 320
+    x: 392
+    y: 40
   MainLogo:
     background-col: '#808080'
     font: Sans
@@ -351,7 +351,7 @@ main:
     visible: true
     width: 383
     x: 571
-    y: 549
+    y: 550
   ScreenType:
     background-col: '#000000'
     font: SF Atarian System Extended
@@ -367,7 +367,7 @@ main:
     visible: true
     width: 383
     x: 571
-    y: 601
+    y: 602
   ScrollOverlay:
     background-col: '#000000'
     bg-image: games-scroll-overlay.png
@@ -401,7 +401,7 @@ main:
     visible: true
     width: 383
     x: 571
-    y: 575
+    y: 576
   fixdMain:
     background-col: '#000000'
     height: 768
@@ -746,7 +746,7 @@ identify:
     text-align: 0.5
     text-col: '#C90000'
     text-rotation: 0
-    transparent: false
+    transparent: true
     visible: true
     width: 375
     x: 65
@@ -761,7 +761,7 @@ identify:
     text-align: 0.5
     text-col: '#F31111'
     text-rotation: 0
-    transparent: false
+    transparent: true
     visible: true
     width: 375
     x: 65
@@ -776,7 +776,7 @@ identify:
     text-align: 0.5
     text-col: '#C90000'
     text-rotation: 0
-    transparent: false
+    transparent: true
     visible: true
     width: 375
     x: 65
