@@ -81,7 +81,7 @@ class WinIdentify(WahCade):
         """Selected user identity changed"""
         # Update list widget
         self.sclIDs._update_display()
-        print self.sclIDs.ls[self.sclIDs.get_selected()]
+        #print self.sclIDs.ls[self.sclIDs.get_selected()]
         return
     
     def ID_selected(self, *args):
