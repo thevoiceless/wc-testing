@@ -63,7 +63,7 @@ class WinOptions(WahCade):
         self.lblHeading = gtk.Label()
         self.lblSettingHeading = gtk.Label()
         self.lblSettingValue = gtk.Label()
-        self.sclOptions = ScrollList()
+        self.sclOptions = ScrollList(self.WinMain)
         self.winOptions.add(self.imgBackground)
         self.winOptions.add(self.lblHeading)
         self.winOptions.add(self.lblSettingHeading)
@@ -78,7 +78,6 @@ class WinOptions(WahCade):
         # Build list
         self.lsOptions = []
         self.sclOptions.auto_update = True
-        self.sclOptions.display_limiters = self.WinMain.wahcade_ini.getint('show_list_arrows', 0)
         # Get keyboard & mouse events
         self.sclOptions.connect('update', self.on_sclOptions_changed)
         self.sclOptions.connect('mouse-left-click', self.on_sclOptions_changed)
@@ -135,8 +134,6 @@ class WinOptions(WahCade):
             [_('Only if better than Parent'), 'better']]
         self._display_clone_idx = 0
         # Init window
-        self.sclOptions.use_mouse = self.WinMain.ctrlr_ini.getint('mouse')
-        self.sclOptions.wrap_list = self.WinMain.wahcade_ini.getint('wrap_list')
         #self.lblHeading.set_ellipsize(pango.ELLIPSIZE_START)
         self.record = False
         self.on_keypress = False

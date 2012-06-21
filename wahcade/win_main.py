@@ -230,7 +230,7 @@ class WinMain(WahCade):
         self.user = gtk.Label()
 
         # create scroll list widget
-        self.sclGames = ScrollList() 
+        self.sclGames = ScrollList(self) 
         self._main_images = [
             self.imgArtwork1,
             self.imgArtwork2,
@@ -857,33 +857,10 @@ class WinMain(WahCade):
                         self.sclGames.scroll(+self.sclGames.num_rows)
                     elif mw_func == 'UP_1_LETTER':
                         self.play_clip('UP_1_LETTER')
-                        if self.lsGames_len == 0:
-                            break
-                        toLetter = self.lsGames[self.sclGames.get_selected()][0][0]
-                        games = [r[0] for r in self.lsGames]
-                        games = games[:self.sclGames.get_selected()]
-                        games.reverse()
-                        i = 0
-                        for row in games:
-                            i += 1
-                            if row[0] != toLetter:
-                                self.sclGames.scroll(-i)
-                                break
-                            if i >= len(games):
-                                self.sclGames.scroll(-i)
+                        self.sclGames.jumpToLetter(mw_func)
                     elif mw_func == 'DOWN_1_LETTER':
                         self.play_clip('DOWN_1_LETTER')
-                        if self.lsGames_len == 0:
-                            break
-                        toLetter = self.lsGames[self.sclGames.get_selected()][0][0]
-                        games = [r[0] for r in self.lsGames]
-                        games = games[self.sclGames.get_selected():]
-                        i = -1
-                        for row in games:
-                            i += 1
-                            if row[0] != toLetter:
-                                self.sclGames.scroll(+i)
-                                break
+                        self.sclGames.jumpToLetter(mw_func)
                     elif mw_func == 'RANDOM_GAME':
                         self.play_clip('RANDOM_GAME')
                         self.sclGames.set_selected(self.get_random_game_idx())
