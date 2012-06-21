@@ -80,7 +80,10 @@ class WinIdentify(WahCade):
         self.lblRFID.set_text("____________")
         self.lblPromptText.set_text("Select your name from the list.")
         self.record = False
-        self.on_keypress = False        
+        self.on_keypress = False
+        
+    def setRFIDlbl(self, value):
+        self.lblRFID.set_text(value)
         
     def on_sclIDs_changed(self, *args):
         """Selected user identity changed"""
