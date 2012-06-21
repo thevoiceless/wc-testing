@@ -232,7 +232,7 @@ class WinMain(WahCade):
         self.user = gtk.Label()
 
         # create scroll list widget
-        self.sclGames = ScrollList() 
+        self.sclGames = ScrollList(self) 
         self._main_images = [
             self.imgArtwork1,
             self.imgArtwork2,
@@ -679,11 +679,16 @@ class WinMain(WahCade):
                         high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
                     if 'SCORE' in high_score_table: # If high score table has score
                         if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB
-                            r = requests.get(self.player_url + self.user.get_text())
-                            if r.text == 'null': # if player doesn't exist and add them to DB
+                            r = requests.get(self.player_url) #get all players                          
+                            players = []
+                            data = fromstring(r.text)
+                            for player in data.getiterator('player'):
+                                players.append(player.find('name').text) # parse player name from xml
+                            if not self.user.get_text() in players: # if player doesn't exist and add them to DB
                                 randNum = random.randint(1, 5000) #TODO: replacing RFID for now
                                 post_data = {"name":self.user.get_text(), "playerID":randNum}
                                 r = requests.post(self.player_url, post_data)
+                            del players[:]
                             if 'NAME' in high_score_table:
                                 post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": '0', "game":self.current_rom, "player":self.user.get_text()}                         
                             else:
@@ -719,7 +724,6 @@ class WinMain(WahCade):
         # register new users to the server
         post_data = {"playerName":new_player, "playerRFID":rfid_stored}
         requests.post(self.player_url, post_data) # Update server with changes
-
 
     def on_winMain_key_press(self, widget, event, *args):
         """key pressed - translate to mamewah setup"""
@@ -791,7 +795,11 @@ class WinMain(WahCade):
                 else:
                     # Keyboard pressed, get GTK keyname
                     keyname = gtk.gdk.keyval_name(event.keyval).lower()
-                    
+                    # TODO: Integrate this with wahcade-setup, wahcade.ini, etc
+                    # Special character to log in
+                    if keyname == 'bracketright':
+                        if self.logged_in:
+                            self.log_out()
                     # Got something?
                     if keyname not in mamewah_keys:
                         return
@@ -865,33 +873,10 @@ class WinMain(WahCade):
                         self.sclGames.scroll(+self.sclGames.num_rows)
                     elif mw_func == 'UP_1_LETTER':
                         self.play_clip('UP_1_LETTER')
-                        if self.lsGames_len == 0:
-                            break
-                        toLetter = self.lsGames[self.sclGames.get_selected()][0][0]
-                        games = [r[0] for r in self.lsGames]
-                        games = games[:self.sclGames.get_selected()]
-                        games.reverse()
-                        i = 0
-                        for row in games:
-                            i += 1
-                            if row[0] != toLetter:
-                                self.sclGames.scroll(-i)
-                                break
-                            if i >= len(games):
-                                self.sclGames.scroll(-i)
+                        self.sclGames.jumpToLetter(mw_func)
                     elif mw_func == 'DOWN_1_LETTER':
                         self.play_clip('DOWN_1_LETTER')
-                        if self.lsGames_len == 0:
-                            break
-                        toLetter = self.lsGames[self.sclGames.get_selected()][0][0]
-                        games = [r[0] for r in self.lsGames]
-                        games = games[self.sclGames.get_selected():]
-                        i = -1
-                        for row in games:
-                            i += 1
-                            if row[0] != toLetter:
-                                self.sclGames.scroll(+i)
-                                break
+                        self.sclGames.jumpToLetter(mw_func)
                     elif mw_func == 'RANDOM_GAME':
                         self.play_clip('RANDOM_GAME')
                         self.sclGames.set_selected(self.get_random_game_idx())
@@ -1078,6 +1063,12 @@ class WinMain(WahCade):
                         self.message.hide()
                 # Identify window
                 elif current_window == 'identify':
+                    if mw_func == 'EXIT_TO_WINDOWS':
+                        self.play_clip('EXIT_TO_WINDOWS')
+                        self.exit_wahcade()
+                    elif mw_func in ['SS_FIND_N_SELECT_GAME']:
+                        self.log_in(self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()])
+                        self.hide_window('identify')
                     # Exit from identity window
                     if mw_func in ['ID_BACK']:
                         self.hide_window('identify')
@@ -1213,7 +1204,7 @@ class WinMain(WahCade):
             pygame.mixer.music.play()
             self.scrsave_time = time.time()
         # Use timer for screen saver to log a person out after period of inactivity
-        auto_log_out_delay = 60
+        auto_log_out_delay = 90
         if int(time.time() - self.scrsave_time) >= auto_log_out_delay and self.current_players != '':
             self.log_out()
         # Need to start screen saver?

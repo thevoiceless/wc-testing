@@ -35,17 +35,22 @@ import pango
 class ScrollList(object):
     """custom scroll list control"""
 
-    def __init__(self):
+    def __init__(self, WinMain):
         """create custom scroll list control"""
         # Properties
+        # Initialize list before assignming WinMain, otherwise the list won't exist yet
         self.ls = []
+        self.WinMain = WinMain
         self.width, self.height = 10, 10  # Changing these doesn't seem to do anything
         self.angle = 0
         self.auto_update = False
-        self.display_limiters = True
+        self.display_limiters = False
         self.use_mouse = False
         self.wrap_list = False
         self.num_rows = 10
+        self.use_mouse = self.WinMain.use_mouse
+        self.wrap_list = self.WinMain.wrap_list
+        self.display_limiters = self.WinMain.display_limiters
         # Internal properties
         self._hl_on_row = 0
         self._selectedIndex = 0
@@ -75,6 +80,70 @@ class ScrollList(object):
         self.__dict__[var_name] = var_value
         if self.__dict__[var_name] == self.ls:
             self._oldIndex = -1
+    
+    def jumpToLetter(self, direction):
+        """Scroll to the start of list entries beginning with a certain letter"""
+#        print self.ls[self.get_selected()]
+#        print self.ls[:self.get_selected()]
+#        print self.ls[self.get_selected():]
+        # Don't do anything if nothing is in the list
+        if len(self.ls) == 0:
+            return
+        # Scroll up or down?
+        if direction == 'UP_1_LETTER':
+            thisLetter = self.ls[self.get_selected()][0]
+            # Get all of the games in the list before the current one and reverse the order
+            # Reversing the order simulates the order of the games in the GUI
+            games = self.ls[:self.get_selected()]
+            games.reverse()
+            amount = 0
+            skip = False
+            for row in games:
+                # Still in this letter's section
+                if row[0] == thisLetter:
+#                    print row, "starts with", row[0], ", same as", thisLetter
+                    amount += 1
+                    # Reached the beginning of the list without finding a new letter
+                    if amount >= len(games):
+                        self.scroll(-amount)
+                        break
+                # New letter
+                else:
+                    if amount == 0 and not skip:
+                        thisLetter = row[0]
+                        amount = 1
+                        skip = True
+                        continue
+                    else:
+                        self.scroll(-amount)
+                        break
+        else:
+            thisLetter = self.ls[self.get_selected()][0]
+            # Get all of the games in the list after the current one
+            games = self.ls[self.get_selected():]
+            amount = 0
+            skip = False
+            for row in games:
+                # Still in this letter's section
+                if row[0] == thisLetter:
+#                    print row, "starts with", row[0], ", same as", thisLetter
+                    amount += 1
+                    # Reached the end of the list without finding a new letter
+                    if amount >= len(games):
+                        self.scroll(amount - 1)
+                        break
+                # New letter
+                else:
+                    # If starting at the beginning of a letter's section, scroll to the start of the next letter's section
+                    if amount == 0 and not skip:
+                        thisLetter = row[0]
+                        amount = 1
+                        skip = True
+                        continue
+                    else:
+                        self.scroll(amount)
+                        break
+            
 
     def connect(self, signal_name, callback, *args):
         """connect callback functions to signals"""
