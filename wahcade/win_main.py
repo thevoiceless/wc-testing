@@ -697,33 +697,34 @@ class WinMain(WahCade):
                             
     # TODO: Use RFID
     def log_in(self):
-        self.rfid_value = get_rfid_value() #Fetch RFID value 
-        name_from_rfid = requests.get(self.player_url + self.rfid_value) #Use this for checking people                 
-        if name_from_rfid in self.current_players: # If passed a player name and if that player is logged in, log them out
+        self.rfid_value = 7#get_rfid_value() #Fetch RFID value 
+        name_from_rfid = requests.get(self.player_url + self.rfid_value) #Use this for checking people  
+        if not name_from_rfid:
+            self.identify.sclIDs._update_display()
+            self.show_window('identify')
+            new_player = name_from_rfid               
+        elif name_from_rfid in self.current_players: # If passed a player name and if that player is logged in, log them out
             self.log_out(name_from_rfid)
         else:
-            if requests.get(self.player_url + self.rfid_value): # If RFID has associated name
-                new_player = name_from_rfid
-            else:
-                self.register_new_player(self.rfid_value) # Have new user register
-            self.current_players.append(new_player) # Add current player to list 
-            self.user.set_text(self.current_players) # Show who is currently logged in
+            new_player = name_from_rfid
+        self.current_players.append(new_player) # Add current player to list 
+        self.user.set_text(self.current_players) # Show who is currently logged in
             
-    def log_out(self, player_name):
-        self.current_players.remove(player_name)
-        self.user.set_text(self.current_players)
+    def log_out(self, player_name = ""):
+        if not player_name:
+            self.current_players = []
+            self.user.set_text("Not logged in")
+        else:
+            self.current_players.remove(player_name)
+            self.user.set_text(self.current_players)
 
-    def register_new_player(self, rfid_stored):
-        self.identify.sclIDs._update_display()
-        self.show_window('identify')
-        new_player = something_or_other
-        if rfid_stored in self.unregistered_users: # If RFID has associated name
-            post_data = {"name":new_player, "playerID":rfid_stored}
-            r = requests.post(self.player_url, post_data)
-        self.unregistered_users.remove(new_player) # Take them out of the unregistered people list
-        # register new users to the server
-        post_data = {"playerName":new_player, "playerRFID":rfid_stored}
-        requests.post(self.player_url, post_data) # Update server with changes
+    def register_new_player(self, player_name):
+        self.rfid_value = 8 # TODO: remove this once integrated
+        post_data = {"name":player_name, "playerID":self.rfid_value}
+        r = requests.post(self.player_url, post_data)
+#        self.ldap.remove(player_name) # Take them out of the unregistered people list
+        self.current_players.append(player_name) # TODO: remove this once integrated
+        self.user.set_text(player_name) # TODO: remove this once integrated
 
     def on_winMain_key_press(self, widget, event, *args):
         """key pressed - translate to mamewah setup"""
@@ -798,7 +799,7 @@ class WinMain(WahCade):
                     # TODO: Integrate this with wahcade-setup, wahcade.ini, etc
                     # Special character to log in
                     if keyname == 'bracketright':
-                        if self.logged_in:
+                        if self.current_players:
                             self.log_out()
                     # Got something?
                     if keyname not in mamewah_keys:
@@ -1067,7 +1068,7 @@ class WinMain(WahCade):
                         self.play_clip('EXIT_TO_WINDOWS')
                         self.exit_wahcade()
                     elif mw_func in ['SS_FIND_N_SELECT_GAME']:
-                        self.log_in(self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()])
+                        self.register_new_player(self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()])
                         self.hide_window('identify')
                     # Exit from identity window
                     if mw_func in ['ID_BACK']:
