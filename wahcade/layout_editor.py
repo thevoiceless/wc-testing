@@ -116,7 +116,7 @@ class WinLayout(GladeSupport, WahCade):
             'Spinner1', 'Spinner2']
         self._hist_widgets = [
             'Heading', 'Game History']
-        self._identify_widgets = ['Prompt', 'Prompt Text', 'IDs List']
+        self._identify_widgets = ['Prompt', 'RFID Value', 'Prompt Text', 'IDs List']
         #labels
         main_widgets = {}
         opt_widgets = {}
@@ -220,7 +220,7 @@ class WinLayout(GladeSupport, WahCade):
             (268, main_widgets['Driver Status'], "DriverStatus"),
             (281, main_widgets['Cat Ver'], "CatVer"),
             (552, main_widgets['Overlay Indicator'], "ScrollOverlay"),
-            (-1, main_widgets['High Score Heading'], "HighScoreHeading"),                         
+#            (-1, main_widgets['High Score Heading'], "HighScoreHeading"),                         
             (-1, main_widgets['High Score Data'], "HighScoreData"),
             (-1, main_widgets['User Name'], "UserName"),
             (301, opt_widgets['Heading'], "OptHeading"),
@@ -243,6 +243,7 @@ class WinLayout(GladeSupport, WahCade):
             (526, scr_widgets['Game Description'], "GameDescription"),
             (539, scr_widgets['MP3 Name'], "MP3Name"),
             (-1, id_widgets['Prompt'], 'Prompt'),
+            (-1, id_widgets['RFID Value'], 'RFID'),
             (-1, id_widgets['Prompt Text'], 'PromptText'),
             (-1, id_widgets['IDs List'], 'IDsList')]
         self._histview_items = [
