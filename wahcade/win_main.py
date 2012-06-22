@@ -36,6 +36,7 @@ from operator import itemgetter
 import subprocess
 from subprocess import Popen
 import yaml #@UnresolvedImport
+import serial
 
 
 ## GTK Modules
@@ -449,6 +450,7 @@ class WinMain(WahCade):
         if self.connected:
             self.user.set_text("Not Logged In")
             self.user.show()
+        self.rfid_reader = serial.Serial('/dev/ttyUSB0', 9600)
             
             
             
@@ -513,7 +515,10 @@ class WinMain(WahCade):
         self.winMain.connect('destroy', self.on_winMain_destroy)
         self.winMain.connect('focus-in-event', self.on_winMain_focus_in)
         self.winMain.connect('focus-out-event', self.on_winMain_focus_out)
-#        self.winMain.connect('rfid-read', self.log_in) # RFID swiped
+#        self.rfid_reader.writeTimeout = 0
+#        print self.rfid_reader.read(12)
+#        if self.rfid_reader.read(12):
+#            self.log_in()
         self.winMain.add_events(
             gtk.gdk.POINTER_MOTION_MASK |
             gtk.gdk.SCROLL_MASK |
@@ -703,7 +708,7 @@ class WinMain(WahCade):
                             
     # TODO: Use RFID
     def log_in(self):
-        self.rfid_value = 7#get_rfid_value() #Fetch RFID value 
+        self.rfid_value = "7"#get_rfid_value() #Fetch RFID value 
         name_from_rfid = requests.get(self.player_url + self.rfid_value) #Use this for checking people  
         if not name_from_rfid:
             self.identify.sclIDs._update_display()
