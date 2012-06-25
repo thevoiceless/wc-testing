@@ -2433,7 +2433,7 @@ class WinMain(WahCade, threading.Thread):
             self.log_msg('Custom splash found, loading ' + str(self.splash_gfx))
             img.set_from_file(self.splash_gfx)
         else:
-            self.splash_gfx = os.path.join(APP_PATH, 'pixmaps', 'wahcade-logo.png')
+            self.splash_gfx = os.path.join(APP_PATH, 'pixmaps', 'Rcade-logo.png')
             self.log_msg('No custom splash found, loading ' + str(self.splash_gfx))
             img.set_from_file(self.splash_gfx)
         if self.splash_show_text == 1:
@@ -2441,7 +2441,7 @@ class WinMain(WahCade, threading.Thread):
             lbl.set_alignment(0.5, 0.5)
             lbl.set_justify(gtk.JUSTIFY_CENTER)
             lbl.set_use_markup(True)
-            lbl.set_markup('<big><b>Wah!Cade</b></big>\n%s "%s"' % (VERSION, VERSION_NAME))
+            lbl.set_markup('<big><b>Rcade</b></big>\n%s "%s"' % (VERSION, VERSION_NAME))
             vbox.pack_end(lbl)
         vbox.pack_start(img)
         self.splash.add(vbox)

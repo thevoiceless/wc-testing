@@ -335,7 +335,7 @@ class WinOptions(WahCade):
                 self.WinMain.sclGames.update()
             elif menu_item == 'about':
                 # About
-                self.show_about_dialog('Wah!Cade', CONFIG_DIR)
+                self.show_about_dialog('Rcade', CONFIG_DIR)
                 self.WinMain.hide_window('options')
             else:
                 # Show appropriate menu
