@@ -308,7 +308,7 @@ class WahCade:
         dlg.set_name(app_name)
         dlg.set_version('\n%s "%s"' % (VERSION, VERSION_NAME))
         dlg.set_logo(gtk.gdk.pixbuf_new_from_file(
-            os.path.join(APP_PATH, 'pixmaps', 'wahcade-logo.png')))
+            os.path.join(APP_PATH, 'pixmaps', 'Rcade-logo.png')))
         gtk.about_dialog_set_url_hook(self.show_website, None)
         dlg.set_website('http:///www.anti-particle.com/wahcade.shtml')
         dlg.set_website_label('www.anti-particle.com/wahcade')
