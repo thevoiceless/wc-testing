@@ -111,7 +111,6 @@ class WinMain(WahCade, threading.Thread):
                     self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
                 #requests.get("http://localhost:" + self.props['port'] + "/RcadeServer")
                 r = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']) # Attempt to make connection to server
-                print 'initial connect:', r.status_code
                 self.connected_to_server = True
         except: # Any exception would mean some sort of failed server connection
             self.connected_to_server = False
@@ -438,7 +437,6 @@ class WinMain(WahCade, threading.Thread):
             
             # Get a list of games already on the server
             data = requests.get(self.game_url)
-            print 'data:', data.status_code
             data = fromstring(data.text)
             games_on_server = []
             for game in data.getiterator('game'):
@@ -467,6 +465,7 @@ class WinMain(WahCade, threading.Thread):
             self.running = True
         self.recent_log = False
         self.timer_existing = False
+        self.not_in_database = True
         self.last_log = ''
         r = requests.get(self.player_url) #get all players                          
         self.player_names = ['Terek Campbell', 'Zach McGaughey', 'Riley Moses', 'John Kelly', 'Devin Wilson']
@@ -534,7 +533,7 @@ class WinMain(WahCade, threading.Thread):
         # Input defaults
         self.pointer_grabbed = False
        
-        # Get keyboard, mouse & arduino events
+        # Get keyboard and mouse events
         self.sclGames.connect('update', self.on_sclGames_changed)           # scrolled_list.py
         self.sclGames.connect('mouse-left-click', self.on_sclGames_changed)
         self.sclGames.connect('mouse-right-click', self.on_winMain_key_press)
@@ -739,7 +738,6 @@ class WinMain(WahCade, threading.Thread):
             if self.recent_log and self.last_log == player_rfid: # Prevents the reader from logging someone in and then out immediately
                 return
             else:
-                self.recent_log = True
                 self.last_log = player_rfid
                 if not self.timer_existing:
                     self.timer_existing = True
@@ -748,18 +746,22 @@ class WinMain(WahCade, threading.Thread):
                     if line == player_rfid:
                         player_name = self.player_names[self.player_rfids.index(line)]
                         break
-    #            print "name from rfid =", player_name
                 if player_name in self.current_players:          # If player is logged in, log them out
+                    self.recent_log = True
                     self.log_out(player_name)
                 elif len(self.current_players) == 4:                #Max players
                     print "The maximum number of players are logged in. Please have someone logout and try again"
                     return
                 elif not player_name == '':                      # Log the player in
+                    self.recent_log = True
                     self.current_players.append(player_name)
                     self.user.set_text(self.get_logged_in_user_string(self.current_players))   
                 else:                                               # if player doesn't exist then add them to DB
                     self.register_new_player(player_rfid)
-                    self.log_in(player_rfid)
+                    if self.not_in_database:
+                        return
+                    else:
+                        self.log_in(player_rfid)
         else:                                                   # if not connected to arduino
             if len(self.current_players) == 4: #Max players
                 return
@@ -796,7 +798,7 @@ class WinMain(WahCade, threading.Thread):
         self.recent_log = False
         self.timer_existing = False
 
-    def register_new_player(self, player_rfid, player_name = ''): # TODO: Ultimately we will remove player_name from this function
+    def register_new_player(self, player_rfid, player_name = ''): # TODO: Ultimately we will remove player_name from this function call
         if self.connected_to_arduino:
             # bring up new player list
             self.identify.setRFIDlbl(player_rfid)
@@ -812,7 +814,12 @@ class WinMain(WahCade, threading.Thread):
                 for line in self.player_names:
                     if line == player_name:
                         self.player_rfids[self.player_names.index(line)] = player_rfid
+                        self.not_in_database = False
                         break
+                    else:
+                        self.not_in_database = True
+                if self.not_in_database: # TODO: Get rid of this in production? It should never happen 
+                    print "Sorry you're not in the employee database!"
                 post_data = {"name":player_name, "playerID":player_rfid}
 #                requests.post(self.player_url, post_data)
 #                self.ldap.remove(player_name) # Take them out of the unregistered people list
@@ -1187,6 +1194,8 @@ class WinMain(WahCade, threading.Thread):
                         self.IDsScrollOverlay.show()
                     # Exit from identity window
                     if mw_func in ['ID_BACK']:
+                        if self.connected_to_arduino:
+                            self.selected_player = []
                         self.hide_window('identify')
                     elif mw_func in ['ID_SELECT'] and self.connected_to_server:
                         if self.connected_to_arduino:
@@ -2474,6 +2483,7 @@ class WinMain(WahCade, threading.Thread):
         elif timer_type == 'login':
             self.timeout = 5; # Number of seconds till recent_log times out
             self.login_timer = gobject.timeout_add(self.timeout * 1000, self.reset_recent_log)
+            print self.login_timer
 
     def display_splash(self):
         """show splash screen"""
