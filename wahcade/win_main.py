@@ -468,7 +468,7 @@ class WinMain(WahCade, threading.Thread):
         self.last_log = ''
         r = requests.get(self.player_url) #get all players                          
         self.player_names = ['Terek Campbell', 'Zach McGaughey', 'Riley Moses', 'John Kelly', 'Devin Wilson']
-        self.player_rfids = ['52000032DCBC', '5100FFE36C21', '5200001A9BD3', '52000003C697', '52000007EFBA']
+        self.player_rfids = ['52000032DCBC', '5100FFE36C21', '5200001A9BD3', '52000003C697', '']
         data = fromstring(r.text)
 #        for player in data.getiterator('player'): #TODO: read these in
 #            self.player_names.append(player.find('name').text) # parse player name from xml
@@ -533,9 +533,7 @@ class WinMain(WahCade, threading.Thread):
         self.winMain.connect('destroy', self.on_winMain_destroy)
         self.winMain.connect('focus-in-event', self.on_winMain_focus_in)
         self.winMain.connect('focus-out-event', self.on_winMain_focus_out)
-#        self.rfid = RfidReader(self)
-#        self.rfid.begin()
-        self.start()
+        self.start() # Starts the arduino event catching thread
         self.winMain.add_events(
             gtk.gdk.POINTER_MOTION_MASK |
             gtk.gdk.SCROLL_MASK |
@@ -728,36 +726,31 @@ class WinMain(WahCade, threading.Thread):
                             
     def log_in(self, player_rfid):
         if self.connected_to_arduino:
-            name_from_rfid = ''
-            print "recent log: " + str(self.recent_log)
+            player_name = ''
             if self.recent_log and self.last_log == player_rfid: # Prevents the reader from logging someone in and then out immediately
                 return
             else:
                 self.recent_log = True
                 self.last_log = player_rfid
-                print "timer existing: " + str(self.timer_existing)
                 if not self.timer_existing:
                     self.timer_existing = True
                     self.start_timer('login')
                 for line in self.player_rfids:
                     if line == player_rfid:
-                        name_from_rfid = self.player_names[self.player_rfids.index(line)]
+                        player_name = self.player_names[self.player_rfids.index(line)]
                         break
-    #            print "name from rfid =", name_from_rfid
-                if name_from_rfid in self.current_players:          # If player is logged in, log them out
-                    self.log_out(name_from_rfid)
+    #            print "name from rfid =", player_name
+                if player_name in self.current_players:          # If player is logged in, log them out
+                    self.log_out(player_name)
                 elif len(self.current_players) == 4:                #Max players
                     print "The maximum number of players are logged in. Please have someone logout and try again"
                     return
-                elif not name_from_rfid == '':                      # Log the player in
-                    self.current_players.append(name_from_rfid)
+                elif not player_name == '':                      # Log the player in
+                    self.current_players.append(player_name)
                     self.user.set_text(self.get_logged_in_user_string(self.current_players))   
                 else:                                               # if player doesn't exist then add them to DB
-    #                self.register_new_player(player_name) # TODO: Call this function directly
-                    self.identify.sclIDs._update_display() # bring up new player list
-                    self.show_window('identify')
-    #                self.current_players.append(name_from_rfid)
-    #                self.user.set_text(self.get_logged_in_user_string(self.current_players))   
+                    self.register_new_player(player_rfid)
+                    self.log_in(player_rfid)
         else:                                                   # if not connected to arduino
             if len(self.current_players) == 4: #Max players
                 return
@@ -766,7 +759,7 @@ class WinMain(WahCade, threading.Thread):
             data = fromstring(r.text)
             for player in data.getiterator('player'):
                 players.append(player.find('name').text) # parse player name from xml
-                # NOTE: player_rfid is actually player_name in the lines below
+                # NOTE: player_rfid is actually the players name in the lines below
             if not player_rfid in players: # if player doesn't exist and add them to DB
                 self.register_new_player(player_rfid)
             else:
@@ -787,16 +780,38 @@ class WinMain(WahCade, threading.Thread):
         self.recent_log = False
         self.timer_existing = False
 
-    def register_new_player(self, player_name, player_rfid = 123456789012):
-        # TODO: Do this check before displaying the identify window in on_winMain_key_press
-        if not self.connected_to_server:
-            print "Not connected to database"
-            return
-        post_data = {"name":player_name, "playerID":player_rfid}
-#        requests.post(self.player_url, post_data)
-#        self.ldap.remove(player_name) # Take them out of the unregistered people list
-        self.current_players.append(player_name) # TODO: remove this once integrated
-        self.user.set_text(self.get_logged_in_user_string(self.current_players))
+    def register_new_player(self, player_rfid, player_name = ''): # TODO: Ultimately we will remove player_name from this function
+        if self.connected_to_arduino:
+            # bring up new player list
+            self.identify.setRFIDlbl(player_rfid)
+            self.identify.sclIDs._update_display()
+            self.show_window('identify')
+            while self.current_window == 'identify':
+                time.sleep(0.1) # TODO: Find a better way of doing this
+            player_name = self.selected_player
+            if not self.connected_to_server:
+                print "Not connected to database"
+                return
+            if player_name is not None:
+                for line in self.player_names:
+                    if line == player_name:
+                        self.player_rfids[self.player_names.index(line)] = player_rfid
+                        break
+                post_data = {"name":player_name, "playerID":player_rfid}
+#                requests.post(self.player_url, post_data)
+#                self.ldap.remove(player_name) # Take them out of the unregistered people list
+            else:
+                print "No player name given, not updating lists"
+        else: # Not connected to arduino
+            # TODO: Do this check before displaying the identify window in on_winMain_key_press
+            if not self.connected_to_server:
+                print "Not connected to database"
+                return
+            post_data = {"name":player_name, "playerID":player_rfid}
+    #        requests.post(self.player_url, post_data)
+    #        self.ldap.remove(player_name) # Take them out of the unregistered people list
+            self.current_players.append(player_name) # TODO: remove this once integrated
+            self.user.set_text(self.get_logged_in_user_string(self.current_players))
         
     def get_logged_in_user_string(self, current_users):
         index = 1
@@ -1158,11 +1173,15 @@ class WinMain(WahCade, threading.Thread):
                     if mw_func in ['ID_BACK']:
                         self.hide_window('identify')
                     elif mw_func in ['ID_SELECT'] and self.connected_to_server:
-                        selected_player = self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()]
-                        self.current_players.append(selected_player)
-                        self.user.set_text(self.get_logged_in_user_string(self.current_players))   
-#                            self.register_new_player(selected_player)
-                        self.hide_window('identify')
+                        if self.connected_to_arduino:
+                            self.selected_player = self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()]
+                            self.hide_window('identify')
+                            return
+                        else:
+                            selected_player = self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()]
+                            self.current_players.append(selected_player)
+                            self.user.set_text(self.get_logged_in_user_string(self.current_players))   
+                            self.hide_window('identify')                            
                     # Scroll up 1 name
                     elif mw_func in ['ID_UP_1_NAME']:
                         self.identify.sclIDs.scroll((int(self.keypress_count / 20) * -1) - 1)
@@ -2675,15 +2694,15 @@ class WinMain(WahCade, threading.Thread):
             self.rfid_reader.flushInput() # Flushes anything that might be sitting in the input buffer
             while(self.running):
                 if self.rfid_reader.inWaiting() >= 12:
-                    print "Before reading " + str(self.rfid_reader.inWaiting())
+#                    print "Before reading " + str(self.rfid_reader.inWaiting())
                     scannedRfid = self.rfid_reader.read(12)
-                    print "Scanned RFID before cut: " + scannedRfid
+#                    print "Scanned RFID before cut: " + scannedRfid
                     if len(scannedRfid) == 12 and scannedRfid.isalnum():
                         self.log_in(scannedRfid)
                     else:
                         print "Error during read, please rescan your card"
-                    print "After register, before flush " + str(self.rfid_reader.inWaiting())
+#                    print "After register, before flush " + str(self.rfid_reader.inWaiting())
                     self.rfid_reader.flushInput()
-                    print "After flush " + str(self.rfid_reader.inWaiting()) + "\n"
+#                    print "After flush " + str(self.rfid_reader.inWaiting()) + "\n"
                     time.sleep(0.5)
 
