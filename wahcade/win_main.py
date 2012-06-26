@@ -451,23 +451,30 @@ class WinMain(WahCade, threading.Thread):
                     r = requests.post(self.game_url, post_data)
                     print r.status_code                    
 
-            # Setup login
-            self.current_players = []
-            self.unregistered_users = []
-            try:
-                self.rfid_reader = serial.Serial('/dev/ttyUSB0', 9600)
-                self.connected_to_arduino = True
-                print "Successfully connected to arduino at /dev/ttyUSB0" # TODO: Change this to system directory
-            except:
-                print "Failed to connect to arduino on /dev/ttyUSB0"
-                self.connected_to_arduino = False
-            if self.connected_to_server:# and self.connected_to_arduino:
-                self.user.set_text("Not Logged In")
-                self.user.show()
-            r = requests.get(self.player_url) #get all players                          
-            self.player_names = ['Terek Campbell', 'Zach McGaughey', 'Riley Moses', 'John Kelly', 'Devin Wilson']
-            self.player_rfids = ['52000032DCBC', '5100FFE36C21', '5200001A9BD3', '52000003C697', '52000007EFBA']
-            data = fromstring(r.text)
+        # Setup login
+        self.current_players = []
+        self.unregistered_users = []
+        try:
+            self.rfid_reader = serial.Serial('/dev/ttyUSB0', 9600)
+            self.connected_to_arduino = True
+            print "Successfully connected to arduino at /dev/ttyUSB0" # TODO: Change this to system directory
+        except:
+            self.connected_to_arduino = False
+            print "Failed to connect to arduino at /dev/ttyUSB0"
+        if self.connected_to_server:# and self.connected_to_arduino:
+            self.user.set_text("Not Logged In")
+            self.user.show()
+            self.running = True
+        self.recent_log = False
+        self.timer_existing = False
+        self.last_log = ''
+        r = requests.get(self.player_url) #get all players                          
+        self.player_names = ['Terek Campbell', 'Zach McGaughey', 'Riley Moses', 'John Kelly', 'Devin Wilson']
+        self.player_rfids = ['52000032DCBC', '5100FFE36C21', '5200001A9BD3', '52000003C697', '52000007EFBA']
+        data = fromstring(r.text)
+#        for player in data.getiterator('player'): #TODO: read these in
+#            self.player_names.append(player.find('name').text) # parse player name from xml
+#            self.player_rfids.append(player.find('playerID').text) # parse player RFID's from xml
             
         if self.connected_to_arduino:
             self.start()
@@ -730,25 +737,35 @@ class WinMain(WahCade, threading.Thread):
     def log_in(self, player_rfid):
         if self.connected_to_arduino:
             name_from_rfid = ''
-            for line in self.player_rfids:
-                if line == player_rfid:
-                    name_from_rfid = self.player_names[self.player_rfids.index(line)]
-                    break
-#            print "name from rfid =", name_from_rfid
-            if name_from_rfid in self.current_players:          # If player is logged in, log them out
-                self.log_out(name_from_rfid)
-            elif len(self.current_players) == 4:                #Max players
-                print "The maximum number of players are logged in. Please have someone logout and try again"
+            print "recent log: " + str(self.recent_log)
+            if self.recent_log and self.last_log == player_rfid: # Prevents the reader from logging someone in and then out immediately
                 return
-            elif not name_from_rfid == '':                      # Log the player in
-                self.current_players.append(name_from_rfid)
-                self.user.set_text(self.get_logged_in_user_string(self.current_players))   
-            else:                                               # if player doesn't exist then add them to DB
-#                self.register_new_player(player_name) # TODO: Call this function directly
-                self.identify.sclIDs._update_display() # bring up new player list
-                self.show_window('identify')
-#                self.current_players.append(name_from_rfid)
-#                self.user.set_text(self.get_logged_in_user_string(self.current_players))   
+            else:
+                self.recent_log = True
+                self.last_log = player_rfid
+                print "timer existing: " + str(self.timer_existing)
+                if not self.timer_existing:
+                    self.timer_existing = True
+                    self.start_timer('login')
+                for line in self.player_rfids:
+                    if line == player_rfid:
+                        name_from_rfid = self.player_names[self.player_rfids.index(line)]
+                        break
+    #            print "name from rfid =", name_from_rfid
+                if name_from_rfid in self.current_players:          # If player is logged in, log them out
+                    self.log_out(name_from_rfid)
+                elif len(self.current_players) == 4:                #Max players
+                    print "The maximum number of players are logged in. Please have someone logout and try again"
+                    return
+                elif not name_from_rfid == '':                      # Log the player in
+                    self.current_players.append(name_from_rfid)
+                    self.user.set_text(self.get_logged_in_user_string(self.current_players))   
+                else:                                               # if player doesn't exist then add them to DB
+    #                self.register_new_player(player_name) # TODO: Call this function directly
+                    self.identify.sclIDs._update_display() # bring up new player list
+                    self.show_window('identify')
+    #                self.current_players.append(name_from_rfid)
+    #                self.user.set_text(self.get_logged_in_user_string(self.current_players))   
         else:                                                   # if not connected to arduino
             if len(self.current_players) == 4: #Max players
                 return
@@ -780,6 +797,10 @@ class WinMain(WahCade, threading.Thread):
             self.user.set_text("Not logged in")
         else:
             self.user.set_text(self.get_logged_in_user_string(self.current_players))
+            
+    def reset_recent_log(self):
+        self.recent_log = False
+        self.timer_existing = False
 
     def register_new_player(self, player_name, player_rfid = 123456789012):
         # TODO: Do this check before displaying the identify window in on_winMain_key_press
@@ -2430,7 +2451,10 @@ class WinMain(WahCade, threading.Thread):
         elif timer_type == 'record':
             self.timeout = 2; # Number of seconds till the video recorder times out
             self.recorder_timer = gobject.timeout_add(self.timeout * 1000, self.stop_recording_video)
-
+        # Login timer
+        elif timer_type == 'login':
+            self.timeout = 5; # Number of seconds till recent_log times out
+            self.login_timer = gobject.timeout_add(self.timeout * 1000, self.reset_recent_log)
 
     def display_splash(self):
         """show splash screen"""
@@ -2661,17 +2685,15 @@ class WinMain(WahCade, threading.Thread):
         return os.system('kill `ps -e | awk \'/recordmydesktop/{a=$1}END{print a}\'`')
 
     # Begins the thread for reading RFID's
-    def run(self):
+    def run(self): # TODO: Fix problem whenscanning multiple cards at once
         if self.connected_to_arduino:
+            time.sleep(2)
             self.rfid_reader.flushInput() # Flushes anything that might be sitting in the input buffer
-            time.sleep(5)
             while(self.running):
                 if self.rfid_reader.inWaiting() >= 12:
                     print "Before reading " + str(self.rfid_reader.inWaiting())
                     scannedRfid = self.rfid_reader.read(12)
                     print "Scanned RFID before cut: " + scannedRfid
-#                    scannedRfid = scannedRfid[0:12]
-#                    print "Scanned RFID after cut: " + scannedRfid
                     if len(scannedRfid) == 12 and scannedRfid.isalnum():
                         self.log_in(scannedRfid)
                     else:
