@@ -82,7 +82,6 @@ from win_scrsaver import WinScrSaver    # Screen saver window
 from win_history import WinHistory      # History viewer
 from win_cpviewer import WinCPViewer    # Control panel viewer window
 from win_identify import WinIdentify    # Identify window
-#from rfid_reader import *               # Gets input from RFID reader
 import threading
 import filters                          # filters.py, routines to read/write mamewah filters and lists
 from mamewah_ini import MameWahIni      # Reads mamewah-formatted ini file
@@ -97,8 +96,10 @@ class WinMain(WahCade, threading.Thread):
     """Wah!Cade Main Window"""          # This is the docstring belonging to the class, __doc__
 
     def __init__(self, config_opts):
-        threading.Thread.__init__(self)
         """initialise main Wah!Cade window"""   # Docstring for this method
+        
+        # begin the thread for reading from arduino
+        threading.Thread.__init__(self)        
         
         # Try connecting to a database, otherwise
         self.db_file = "confs" + sep + config_opts.db_config_file + ".txt"
@@ -456,6 +457,7 @@ class WinMain(WahCade, threading.Thread):
             try:
                 self.rfid_reader = serial.Serial('/dev/ttyUSB0', 9600)
                 self.connected_to_arduino = True
+                print "Successfully connected to arduino at /dev/ttyUSB0" # TODO: Change this to system directory
             except:
                 print "Failed to connect to arduino on /dev/ttyUSB0"
                 self.connected_to_arduino = False
@@ -570,6 +572,8 @@ class WinMain(WahCade, threading.Thread):
         """done, quit the application"""
         # Stop video playing if necessary
         self.stop_video()
+        # Tells the thread to terminate properly
+        self.running = False
         # Save ini files
         self.wahcade_ini.write()
         self.emu_ini.write()
@@ -725,18 +729,16 @@ class WinMain(WahCade, threading.Thread):
              
     def log_in(self, player_rfid):
         if self.connected_to_arduino:
-            print "Connected to arduino"
             name_from_rfid = ''
             for line in self.player_rfids:
                 if line == player_rfid:
                     name_from_rfid = self.player_names[self.player_rfids.index(line)]
                     break
 #            print "name from rfid =", name_from_rfid
-            print name_from_rfid
             if name_from_rfid in self.current_players:          # If player is logged in, log them out
                 self.log_out(name_from_rfid)
             elif len(self.current_players) == 4:                #Max players
-                print "Max players logged in, please have someone logout and try again"
+                print "The maximum number of players are logged in. Please have someone logout and try again"
                 return
             elif not name_from_rfid == '':                      # Log the player in
                 self.current_players.append(name_from_rfid)
@@ -753,12 +755,18 @@ class WinMain(WahCade, threading.Thread):
             r = requests.get(self.player_url) #get all players                          
             players = []
             data = fromstring(r.text)
+            
             for player in data.getiterator('player'):
                 players.append(player.find('name').text) # parse player name from xml
                 # NOTE: player_rfid is actually player_name in the lines below
-            if not player_rfid in players: # if player doesn't exist and add them to DB
+            
+            if not player_rfid in players: # if player doesn't exist and add them to DB and log them in
                 self.register_new_player(player_rfid)
-            else:
+                self.current_players.append(player_rfid)
+                self.user.set_text(self.get_logged_in_user_string(self.current_players))
+            elif player_rfid in self.current_players:   #if player already logged in, log them out
+                self.log_out(player_rfid)
+            else:   #player not logged in, log them in
                 self.current_players.append(player_rfid)
                 self.user.set_text(self.get_logged_in_user_string(self.current_players))      
 
@@ -779,10 +787,10 @@ class WinMain(WahCade, threading.Thread):
             print "Not connected to database"
             return
         post_data = {"name":player_name, "playerID":player_rfid}
-#        requests.post(self.player_url, post_data)
+        requests.post(self.player_url, post_data)
 #        self.ldap.remove(player_name) # Take them out of the unregistered people list
-        self.current_players.append(player_name) # TODO: remove this once integrated
-        self.user.set_text(self.get_logged_in_user_string(self.current_players))
+#        self.current_players.append(player_name) # TODO: remove this once integrated
+#        self.user.set_text(self.get_logged_in_user_string(self.current_players))
         
     def get_logged_in_user_string(self, current_users):
         index = 1
@@ -1145,8 +1153,9 @@ class WinMain(WahCade, threading.Thread):
                         self.hide_window('identify')
                     elif mw_func in ['ID_SELECT']:
                         selected_player = self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()]
-                        self.current_players.append(selected_player)
-                        self.user.set_text(self.get_logged_in_user_string(self.current_players))   
+                        self.log_in(selected_player)
+#                        self.current_players.append(selected_player)
+#                        self.user.set_text(self.get_logged_in_user_string(self.current_players))   
 #                            self.register_new_player(selected_player)
                         self.hide_window('identify')
                     # Scroll up 1 name
@@ -2654,14 +2663,21 @@ class WinMain(WahCade, threading.Thread):
     # Begins the thread for reading RFID's
     def run(self):
         if self.connected_to_arduino:
-            while(True):
-                if self.rfid_reader.inWaiting() > 0:
-    #                print "Before register " + str(self.rfid_reader.inWaiting())
+            self.rfid_reader.flushInput() # Flushes anything that might be sitting in the input buffer
+            time.sleep(5)
+            while(self.running):
+                if self.rfid_reader.inWaiting() >= 12:
+                    print "Before reading " + str(self.rfid_reader.inWaiting())
                     scannedRfid = self.rfid_reader.read(12)
-                    print "Scanned RFID in run method: " + scannedRfid
-                    self.log_in(scannedRfid)
-    #                self.register_new_player(scannedRfid)
-    #                print "After register, before flush " + str(self.rfid_reader.inWaiting())
+                    print "Scanned RFID before cut: " + scannedRfid
+#                    scannedRfid = scannedRfid[0:12]
+#                    print "Scanned RFID after cut: " + scannedRfid
+                    if len(scannedRfid) == 12 and scannedRfid.isalnum():
+                        self.log_in(scannedRfid)
+                    else:
+                        print "Error during read, please rescan your card"
+                    print "After register, before flush " + str(self.rfid_reader.inWaiting())
                     self.rfid_reader.flushInput()
-    #                print "After flush " + str(self.rfid_reader.inWaiting())
+                    print "After flush " + str(self.rfid_reader.inWaiting()) + "\n"
+                    time.sleep(0.5)
 
