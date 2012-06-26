@@ -86,11 +86,9 @@ import threading
 import filters                          # filters.py, routines to read/write mamewah filters and lists
 from mamewah_ini import MameWahIni      # Reads mamewah-formatted ini file
 import joystick                         # joystick.py, joystick class, uses pygame package (SDL bindings for games in Python)
-import MySQLdb
 import requests #@UnresolvedImport
 import pygame
 from xml.etree.ElementTree import fromstring
-from dummy_db import DummyDB
 # Set gettext function
 _ = gettext.gettext
 
@@ -113,7 +111,7 @@ class WinMain(WahCade, threading.Thread):
                     self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
                 #requests.get("http://localhost:" + self.props['port'] + "/RcadeServer")
                 r = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']) # Attempt to make connection to server
-               # print r.status_code
+                print 'initial connect:', r.status_code
                 self.connected_to_server = True
         except: # Any exception would mean some sort of failed server connection
             self.connected_to_server = False
@@ -430,6 +428,8 @@ class WinMain(WahCade, threading.Thread):
         self.player_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/"
         self.score_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/score/"
         
+        self.connected_to_arduino = False
+        
         if self.connected_to_server:
             # Map rom name to associated game name
             romToName = {}
@@ -438,6 +438,7 @@ class WinMain(WahCade, threading.Thread):
             
             # Get a list of games already on the server
             data = requests.get(self.game_url)
+            print 'data:', data.status_code
             data = fromstring(data.text)
             games_on_server = []
             for game in data.getiterator('game'):
@@ -447,7 +448,8 @@ class WinMain(WahCade, threading.Thread):
             for rom in self.supported_games:
                 if rom not in games_on_server and rom in romToName:
                     post_data = {"romName":rom, "gameName":romToName[rom]}
-                    requests.post(self.game_url, post_data)                    
+                    r = requests.post(self.game_url, post_data)
+                    print r.status_code                    
 
         # Setup login
         self.current_players = []
@@ -474,6 +476,13 @@ class WinMain(WahCade, threading.Thread):
 #            self.player_names.append(player.find('name').text) # parse player name from xml
 #            self.player_rfids.append(player.find('playerID').text) # parse player RFID's from xml
             
+        if self.connected_to_arduino:
+            self.start()
+            
+    #        for player in data.getiterator('player'): #TODO: read these in
+    #            self.player_names.append(player.find('name').text) # parse player name from xml
+    #            self.player_rfids.append(player.find('playerID').text) # parse player RFID's from xml
+                
         pygame.init()
         
         sound_files = os.listdir('sounds/')
@@ -533,7 +542,6 @@ class WinMain(WahCade, threading.Thread):
         self.winMain.connect('destroy', self.on_winMain_destroy)
         self.winMain.connect('focus-in-event', self.on_winMain_focus_in)
         self.winMain.connect('focus-out-event', self.on_winMain_focus_out)
-        self.start() # Starts the arduino event catching thread
         self.winMain.add_events(
             gtk.gdk.POINTER_MOTION_MASK |
             gtk.gdk.SCROLL_MASK |
@@ -723,7 +731,8 @@ class WinMain(WahCade, threading.Thread):
                             else:
                                 post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.current_players[0]}
                             r = requests.post(self.score_url, post_data)
-                            
+                            print "parse high score:", r.status_code
+             
     def log_in(self, player_rfid):
         if self.connected_to_arduino:
             player_name = ''
@@ -757,14 +766,21 @@ class WinMain(WahCade, threading.Thread):
             r = requests.get(self.player_url) #get all players                          
             players = []
             data = fromstring(r.text)
+            
             for player in data.getiterator('player'):
                 players.append(player.find('name').text) # parse player name from xml
-                # NOTE: player_rfid is actually the players name in the lines below
-            if not player_rfid in players: # if player doesn't exist and add them to DB
+                
+            # NOTE: player_rfid is actually player_name in the lines below
+            if not player_rfid in players: # if player doesn't exist and add them to DB and log them in
                 self.register_new_player(player_rfid)
-            else:
+                self.current_players.append(player_rfid)
+                self.user.set_text(self.get_logged_in_user_string(self.current_players))
+            elif player_rfid in self.current_players:   #if player already logged in, log them out
+                self.log_out(player_rfid)
+            else:   #player not logged in, log them in
                 self.current_players.append(player_rfid)
                 self.user.set_text(self.get_logged_in_user_string(self.current_players))      
+
             
     def log_out(self, player_name = "All"):
         if player_name == "All":
@@ -947,7 +963,7 @@ class WinMain(WahCade, threading.Thread):
                     break
             for mw_func in mw_functions:
                 # Which function?
-                if mw_func == 'ID_SHOW' and current_window != 'identify': #and self.connected_to_server:   # Show identify window any time
+                if mw_func == 'ID_SHOW' and current_window != 'identify' and self.connected_to_server: #and self.connected_to_server:   # Show identify window any time
                     if self.connected_to_arduino:
                         self.register_new_player("New player")
                     else:
@@ -1318,8 +1334,8 @@ class WinMain(WahCade, threading.Thread):
             self.scrsave_time = time.time()
         # Use timer for screen saver to log a person out after period of inactivity
         auto_log_out_delay = 90
-        if int(time.time() - self.scrsave_time) >= auto_log_out_delay and self.current_players != '':
-            self.log_out(None)
+        if int(time.time() - self.scrsave_time) >= auto_log_out_delay and self.current_players is not None:
+            self.log_out()
         # Need to start screen saver?
         if int(time.time() - self.scrsave_time) >= self.scrsave_delay:
             # Yes, stop any vids playing

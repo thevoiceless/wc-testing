@@ -756,10 +756,10 @@ identify:
     font: SF Atarian System Extended
     font-bold: false
     font-italic: false
-    font-size: 18.0
+    font-size: 16.0
     height: 40
     text-align: 0.5
-    text-col: '#F31111'
+    text-col: '#0099CC'
     text-rotation: 0
     transparent: true
     visible: true
@@ -772,9 +772,9 @@ identify:
     font-bold: false
     font-italic: false
     font-size: 16.0
-    height: 60
+    height: 40
     text-align: 0.5
-    text-col: '#C90000'
+    text-col: '#0099CC'
     text-rotation: 0
     transparent: true
     visible: true
