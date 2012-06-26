@@ -739,48 +739,33 @@ identify:
   Prompt:
     background-col: '#000000'
     font: SF Atarian System Extended
-    font-bold: true
-    font-italic: false
-    font-size: 18.0
-    height: 40
-    text-align: 0.5
-    text-col: '#C90000'
-    text-rotation: 0
-    transparent: false
-    visible: true
-    width: 375
-    x: 65
-    y: 310
-  RFID:
-    background-col: '#000000'
-    font: SF Atarian System Extended
     font-bold: false
     font-italic: false
-    font-size: 18.0
+    font-size: 16.0
     height: 40
     text-align: 0.5
-    text-col: '#F31111'
+    text-col: '#0099CC'
     text-rotation: 0
     transparent: false
-    visible: true
-    width: 375
-    x: 65
-    y: 360
+    visible: false
+    width: 510
+    x: 0
+    y: 0
   PromptText:
     background-col: '#000000'
     font: SF Atarian System Extended
     font-bold: false
     font-italic: false
     font-size: 16.0
-    height: 60
+    height: 40
     text-align: 0.5
-    text-col: '#C90000'
+    text-col: '#0099CC'
     text-rotation: 0
     transparent: false
-    visible: true
-    width: 375
-    x: 65
-    y: 410
+    visible: false
+    width: 510
+    x: 0
+    y: 0
   IDsList:
     background-col: '#000000'
     font: SF Atarian System Extended

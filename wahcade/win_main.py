@@ -84,11 +84,9 @@ from win_identify import WinIdentify    # Identify window
 import filters                          # filters.py, routines to read/write mamewah filters and lists
 from mamewah_ini import MameWahIni      # Reads mamewah-formatted ini file
 import joystick                         # joystick.py, joystick class, uses pygame package (SDL bindings for games in Python)
-import MySQLdb
 import requests #@UnresolvedImport
 import pygame
 from xml.etree.ElementTree import fromstring
-from dummy_db import DummyDB
 # Set gettext function
 _ = gettext.gettext
 
@@ -108,7 +106,7 @@ class WinMain(WahCade):
                     self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
                 #requests.get("http://localhost:" + self.props['port'] + "/RcadeServer")
                 r = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']) # Attempt to make connection to server
-               # print r.status_code
+                print 'initial connect:', r.status_code
                 self.connected = True
         except: # Any exception would mean some sort of failed server connection
             self.connected = False
@@ -433,6 +431,7 @@ class WinMain(WahCade):
             
             # Get a list of games already on the server
             data = requests.get(self.game_url)
+            print 'data:', data.status_code
             data = fromstring(data.text)
             games_on_server = []
             for game in data.getiterator('game'):
@@ -442,7 +441,8 @@ class WinMain(WahCade):
             for rom in self.supported_games:
                 if rom not in games_on_server and rom in romToName:
                     post_data = {"romName":rom, "gameName":romToName[rom]}
-                    requests.post(self.game_url, post_data)                    
+                    r = requests.post(self.game_url, post_data)
+                    print r.status_code                    
 
         # Setup login
         self.current_players = []
@@ -701,12 +701,13 @@ class WinMain(WahCade):
                             else:
                                 post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.current_players[0]}
                             r = requests.post(self.score_url, post_data)
-                            
+                            print "parse high score:", r.status_code
     # TODO: Use RFID
     def log_in(self, player_name):
         if len(self.current_players) == 4: #Max players
             return
-        r = requests.get(self.player_url) #get all players                          
+        r = requests.get(self.player_url) #get all players 
+        print 'logging in:', r.status_code                         
         players = []
         data = fromstring(r.text)
         for player in data.getiterator('player'):
