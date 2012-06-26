@@ -110,13 +110,8 @@ class WinMain(WahCade, threading.Thread):
                     self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
                 #requests.get("http://localhost:" + self.props['port'] + "/RcadeServer")
                 r = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']) # Attempt to make connection to server
-<<<<<<< HEAD
                 print 'initial connect:', r.status_code
-                self.connected = True
-=======
-               # print r.status_code
                 self.connected_to_server = True
->>>>>>> 6252130fe35ff89755acea1faeb5dc3358c539af
         except: # Any exception would mean some sort of failed server connection
             self.connected_to_server = False
         
@@ -432,6 +427,8 @@ class WinMain(WahCade, threading.Thread):
         self.player_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/"
         self.score_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/score/"
         
+        self.connected_to_arduino = False
+        
         if self.connected_to_server:
             # Map rom name to associated game name
             romToName = {}
@@ -453,26 +450,30 @@ class WinMain(WahCade, threading.Thread):
                     r = requests.post(self.game_url, post_data)
                     print r.status_code                    
 
-        # Setup login
-        self.current_players = []
-        self.unregistered_users = []
-        try:
-            self.rfid_reader = serial.Serial('/dev/ttyUSB0', 9600)
-            self.connected_to_arduino = True
-        except:
-            print "Failed to connect to arduino on /dev/ttyUSB0"
-            self.connected_to_arduino = False
-        if self.connected_to_server:# and self.connected_to_arduino:
-            self.user.set_text("Not Logged In")
-            self.user.show()
-        r = requests.get(self.player_url) #get all players                          
-        self.player_names = ['Terek Campbell', 'Zach McGaughey', 'Riley Moses', 'John Kelly', 'Devin Wilson']
-        self.player_rfids = ['52000032DCBC', '5100FFE36C21', '5200001A9BD3', '52000003C697', '52000007EFBA']
-        data = fromstring(r.text)
-#        for player in data.getiterator('player'): #TODO: read these in
-#            self.player_names.append(player.find('name').text) # parse player name from xml
-#            self.player_rfids.append(player.find('playerID').text) # parse player RFID's from xml
+            # Setup login
+            self.current_players = []
+            self.unregistered_users = []
+            try:
+                self.rfid_reader = serial.Serial('/dev/ttyUSB0', 9600)
+                self.connected_to_arduino = True
+            except:
+                print "Failed to connect to arduino on /dev/ttyUSB0"
+                self.connected_to_arduino = False
+            if self.connected_to_server:# and self.connected_to_arduino:
+                self.user.set_text("Not Logged In")
+                self.user.show()
+            r = requests.get(self.player_url) #get all players                          
+            self.player_names = ['Terek Campbell', 'Zach McGaughey', 'Riley Moses', 'John Kelly', 'Devin Wilson']
+            self.player_rfids = ['52000032DCBC', '5100FFE36C21', '5200001A9BD3', '52000003C697', '52000007EFBA']
+            data = fromstring(r.text)
             
+        if self.connected_to_arduino:
+            self.start()
+            
+    #        for player in data.getiterator('player'): #TODO: read these in
+    #            self.player_names.append(player.find('name').text) # parse player name from xml
+    #            self.player_rfids.append(player.find('playerID').text) # parse player RFID's from xml
+                
         pygame.init()
         
         sound_files = os.listdir('sounds/')
@@ -532,9 +533,7 @@ class WinMain(WahCade, threading.Thread):
         self.winMain.connect('destroy', self.on_winMain_destroy)
         self.winMain.connect('focus-in-event', self.on_winMain_focus_in)
         self.winMain.connect('focus-out-event', self.on_winMain_focus_out)
-#        self.rfid = RfidReader(self)
-#        self.rfid.begin()
-        self.start()
+
         self.winMain.add_events(
             gtk.gdk.POINTER_MOTION_MASK |
             gtk.gdk.SCROLL_MASK |
@@ -722,39 +721,8 @@ class WinMain(WahCade, threading.Thread):
                             else:
                                 post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.current_players[0]}
                             r = requests.post(self.score_url, post_data)
-<<<<<<< HEAD
                             print "parse high score:", r.status_code
-    # TODO: Use RFID
-    def log_in(self, player_name):
-        if len(self.current_players) == 4: #Max players
-            return
-        r = requests.get(self.player_url) #get all players 
-        print 'logging in:', r.status_code                         
-        players = []
-        data = fromstring(r.text)
-        for player in data.getiterator('player'):
-            players.append(player.find('name').text) # parse player name from xml
-        if not player_name in players: # if player doesn't exist and add them to DB
-            self.register_new_player(player_name)
-        else:
-            self.current_players.append(player_name)
-            self.user.set_text(self.get_logged_in_user_string(self.current_players))     
-        #keep for RFID use
-#        self.rfid_value = 7#get_rfid_value() #Fetch RFID value 
-#        name_from_rfid = requests.get(self.player_url + self.rfid_value) #Use this for checking people  
-#        print "name from rfid =", name_from_rfid
-#        if not name_from_rfid:
-#            self.identify.sclIDs._update_display()
-#            self.show_window('identify')
-#            new_player = name_from_rfid               
-#        elif name_from_rfid in self.current_players: # If passed a player name and if that player is logged in, log them out
-#            self.log_out(name_from_rfid)
-#        else:
-#            new_player = name_from_rfid
-#        self.current_players.append(new_player) # Add current player to list 
-#        self.user.set_text(self.current_players) # Show who is currently logged in
-=======
-                            
+             
     def log_in(self, player_rfid):
         if self.connected_to_arduino:
             print "Connected to arduino"
@@ -793,7 +761,7 @@ class WinMain(WahCade, threading.Thread):
             else:
                 self.current_players.append(player_rfid)
                 self.user.set_text(self.get_logged_in_user_string(self.current_players))      
->>>>>>> 6252130fe35ff89755acea1faeb5dc3358c539af
+
             
     def log_out(self, player_name = "All"):
         if player_name == "All":
@@ -950,7 +918,7 @@ class WinMain(WahCade, threading.Thread):
                     break
             for mw_func in mw_functions:
                 # Which function?
-                if mw_func == 'ID_SHOW' and current_window != 'identify': #and self.connected_to_server:   # Show identify window any time
+                if mw_func == 'ID_SHOW' and current_window != 'identify' and self.connected_to_server: #and self.connected_to_server:   # Show identify window any time
                     if self.connected_to_arduino:
                         self.register_new_player("New player")
                     else:
@@ -1175,7 +1143,7 @@ class WinMain(WahCade, threading.Thread):
                     # Exit from identity window
                     if mw_func in ['ID_BACK']:
                         self.hide_window('identify')
-                    elif mw_func in ['ID_SELECT'] and self.connected_to_server:
+                    elif mw_func in ['ID_SELECT']:
                         selected_player = self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()]
                         self.current_players.append(selected_player)
                         self.user.set_text(self.get_logged_in_user_string(self.current_players))   
@@ -1317,8 +1285,8 @@ class WinMain(WahCade, threading.Thread):
             self.scrsave_time = time.time()
         # Use timer for screen saver to log a person out after period of inactivity
         auto_log_out_delay = 90
-        if int(time.time() - self.scrsave_time) >= auto_log_out_delay and self.current_players != '':
-            self.log_out(None)
+        if int(time.time() - self.scrsave_time) >= auto_log_out_delay and self.current_players is not None:
+            self.log_out()
         # Need to start screen saver?
         if int(time.time() - self.scrsave_time) >= self.scrsave_delay:
             # Yes, stop any vids playing
