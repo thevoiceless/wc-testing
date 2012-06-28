@@ -789,7 +789,7 @@ class WinMain(WahCade, threading.Thread):
             # NOTE: player_rfid is actually player_name in the lines below
             if not player_rfid in players: # if player doesn't exist and add them to DB and log them in
                 print 'not in players'
-                self.register_new_player(player_rfid)
+                self.register_new_player(123456, player_rfid)
                 self.current_players.append(player_rfid)
                 self.user.set_text(self.get_logged_in_user_string(self.current_players))
             elif player_rfid in self.current_players:   #if player already logged in, log them out
@@ -830,8 +830,6 @@ class WinMain(WahCade, threading.Thread):
                         break
                     else:
                         self.not_in_database = True
-                if self.not_in_database: # TODO: Get rid of this in production? It should never happen 
-                    print "Sorry you're not in the employee database!"
                 post_data = {"name":player_name, "playerID":player_rfid}
                 r = requests.post(self.player_url, post_data)
                 print r.status_code
@@ -842,6 +840,8 @@ class WinMain(WahCade, threading.Thread):
             if not self.connected_to_server:
                 print "Not connected to database"
                 return
+            print 'getting ready to post data to', self.player_url
+            print 'player:', player_name, player_rfid
             post_data = {"name":player_name, "playerID":player_rfid}
             r = requests.post(self.player_url, post_data)
             print 'posting data', r.status_code
