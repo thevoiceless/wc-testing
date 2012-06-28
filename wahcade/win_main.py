@@ -467,18 +467,20 @@ class WinMain(WahCade, threading.Thread):
         self.timer_existing = False
         self.not_in_database = True
         self.last_log = ''
-        r = requests.get(self.player_url) #get all players                          
-        self.player_names = ['Terek Campbell', 'Zach McGaughey', 'Riley Moses', 'John Kelly', 'Devin Wilson']
-        self.player_rfids = ['52000032DCBC', '5100FFE36C21', '5200001A9BD3', '52000003C697', '']
+        r = requests.get(self.player_url) #get all players         
+        self.player_info = [['Terek Campbell', '52000032DCBC'],
+                            ['Zach McGaughey', '5100FFE36C21'],
+                            ['Riley Moses', '5200001A9BD3'], 
+                            ['John Kelly', '52000003C697'],
+                            ['Devin Wilson', '']]    
         data = fromstring(r.text)
             
         if self.connected_to_arduino:
             self.start()
-            
-    #        for player in data.getiterator('player'): #TODO: read these in
-    #            self.player_names.append(player.find('name').text) # parse player name from xml
-    #            self.player_rfids.append(player.find('playerID').text) # parse player RFID's from xml
-                
+
+#        for player in data.getiterator('player'): #TODO: read these in. Does the following line do what I want it to?
+#            self.player_info.append((player.find('name').text, player.find('playerID').text)) # parse player name and rfidfrom xml
+             
         pygame.init()
         
         sound_files = os.listdir('sounds/')
@@ -742,10 +744,9 @@ class WinMain(WahCade, threading.Thread):
             if not self.timer_existing:
                 self.timer_existing = True
                 self.start_timer('login')
-            for line in self.player_rfids:
-                if line == player_rfid:
-                    player_name = self.player_names[self.player_rfids.index(line)]
-                    break
+            for v in self.player_info:
+                if v[1] == player_rfid:
+                    player_name = v[0]
             if player_name in self.current_players:          # If player is logged in, log them out
                 self.recent_log = True
                 self.last_log = player_rfid
@@ -808,10 +809,10 @@ class WinMain(WahCade, threading.Thread):
             if not self.connected_to_server:
                 print "Not connected to database"
                 return
-            if player_name is not None:
-                for line in self.player_names:
-                    if line == player_name:
-                        self.player_rfids[self.player_names.index(line)] = player_rfid
+            if player_name != '':
+                for v in self.player_info:
+                    if v[0] == player_name:
+                        v[1] = player_rfid
                         self.not_in_database = False
                         break
                     else:
@@ -1589,16 +1590,15 @@ class WinMain(WahCade, threading.Thread):
             pass
         
         # Run emulator & wait for it to finish
-        print cmd
         if not wshell:
-            p = Popen(cmd, shell=False)
+            self.p = Popen(cmd, shell=False)
         else:
-            p = Popen(cmd, shell=True)
+            self.p = Popen(cmd, shell=True)
         
         # Begins video recording of game
         if self.options.record:
             self.start_recording_video(rom)
-        sts = p.wait()
+        sts = self.p.wait()
         self.launched_game = True
         # Stops video recording
         if self.options.record:
@@ -1698,9 +1698,9 @@ class WinMain(WahCade, threading.Thread):
                     self.winMain.iconify()
                     self.do_events()
                 cmd = '%s %s' % (app_name, game_opts['options'])
-                p = Popen(cmd, shell=True)
+                self.p = Popen(cmd, shell=True)
                 if wait_for_finish:
-                    sts = p.wait()
+                    sts = self.p.wait()
                     # Un-minimize
                     if game_opts['minimize_wahcade']:
                         self.winMain.present()
@@ -2720,6 +2720,7 @@ class WinMain(WahCade, threading.Thread):
             self.rfid_reader.flushInput() # Flushes anything that might be sitting in the input buffer
             while(self.running):
                 if self.rfid_reader.inWaiting() >= 12:
+#                    self.in_game()
 #                    print "Before reading " + str(self.rfid_reader.inWaiting())
                     scannedRfid = self.rfid_reader.read(12)
 #                    print "Scanned RFID before cut: " + scannedRfid
@@ -2731,4 +2732,14 @@ class WinMain(WahCade, threading.Thread):
                     self.rfid_reader.flushInput()
 #                    print "After flush " + str(self.rfid_reader.inWaiting()) + "\n"
                     time.sleep(0.125)
+
+    def in_game(self):
+        try:
+            if self.p.poll() is None:
+                print "ingame"
+            else:
+                print "in Rcade after exit"
+        except:
+            print "in Rcade"
+
 
