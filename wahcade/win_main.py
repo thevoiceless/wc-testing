@@ -471,9 +471,6 @@ class WinMain(WahCade, threading.Thread):
         self.player_names = ['Terek Campbell', 'Zach McGaughey', 'Riley Moses', 'John Kelly', 'Devin Wilson']
         self.player_rfids = ['52000032DCBC', '5100FFE36C21', '5200001A9BD3', '52000003C697', '']
         data = fromstring(r.text)
-#        for player in data.getiterator('player'): #TODO: read these in
-#            self.player_names.append(player.find('name').text) # parse player name from xml
-#            self.player_rfids.append(player.find('playerID').text) # parse player RFID's from xml
             
         if self.connected_to_arduino:
             self.start()
@@ -737,31 +734,31 @@ class WinMain(WahCade, threading.Thread):
             player_name = ''
             if self.recent_log and self.last_log == player_rfid: # Prevents the reader from logging someone in and then out immediately
                 return
-            else:
+            if not self.timer_existing:
+                self.timer_existing = True
+                self.start_timer('login')
+            for line in self.player_rfids:
+                if line == player_rfid:
+                    player_name = self.player_names[self.player_rfids.index(line)]
+                    break
+            if player_name in self.current_players:          # If player is logged in, log them out
+                self.recent_log = True
                 self.last_log = player_rfid
-                if not self.timer_existing:
-                    self.timer_existing = True
-                    self.start_timer('login')
-                for line in self.player_rfids:
-                    if line == player_rfid:
-                        player_name = self.player_names[self.player_rfids.index(line)]
-                        break
-                if player_name in self.current_players:          # If player is logged in, log them out
-                    self.recent_log = True
-                    self.log_out(player_name)
-                elif len(self.current_players) == 4:                #Max players
-                    print "The maximum number of players are logged in. Please have someone logout and try again"
+                self.log_out(player_name)
+            elif len(self.current_players) == 4:                #Max players
+                print "The maximum number of players are logged in. Please have someone logout and try again"
+                return
+            elif not player_name == '':                      # Log the player in
+                self.recent_log = True
+                self.last_log = player_rfid
+                self.current_players.append(player_name)
+                self.user.set_text(self.get_logged_in_user_string(self.current_players))   
+            else:                                               # if player doesn't exist then add them to DB
+                self.register_new_player(player_rfid)
+                if self.not_in_database:
                     return
-                elif not player_name == '':                      # Log the player in
-                    self.recent_log = True
-                    self.current_players.append(player_name)
-                    self.user.set_text(self.get_logged_in_user_string(self.current_players))   
-                else:                                               # if player doesn't exist then add them to DB
-                    self.register_new_player(player_rfid)
-                    if self.not_in_database:
-                        return
-                    else:
-                        self.log_in(player_rfid)
+                else:
+                    self.log_in(player_rfid)
         else:                                                   # if not connected to arduino
             if len(self.current_players) == 4: #Max players
                 return
@@ -794,10 +791,6 @@ class WinMain(WahCade, threading.Thread):
         else:
             self.user.set_text(self.get_logged_in_user_string(self.current_players))
             
-    def reset_recent_log(self):
-        self.recent_log = False
-        self.timer_existing = False
-
     def register_new_player(self, player_rfid, player_name = ''): # TODO: Ultimately we will remove player_name from this function call
         if self.connected_to_arduino:
             # bring up new player list
@@ -805,7 +798,7 @@ class WinMain(WahCade, threading.Thread):
             self.identify.sclIDs._update_display()
             self.show_window('identify')
             while self.current_window == 'identify':
-                time.sleep(0.1) # TODO: Find a better way of doing this
+                time.sleep(0.1)
             player_name = self.selected_player
             if not self.connected_to_server:
                 print "Not connected to database"
@@ -826,7 +819,6 @@ class WinMain(WahCade, threading.Thread):
             else:
                 print "No player name given, not updating lists"
         else: # Not connected to arduino
-            # TODO: Do this check before displaying the identify window in on_winMain_key_press
             if not self.connected_to_server:
                 print "Not connected to database"
                 return
@@ -846,6 +838,10 @@ class WinMain(WahCade, threading.Thread):
             else:
                 string += ", " + user
         return string
+
+    def reset_recent_log(self):
+        self.recent_log = False
+        self.timer_existing = False
 
     def on_winMain_key_press(self, widget, event, *args):
         """key pressed - translate to mamewah setup"""
@@ -1343,7 +1339,7 @@ class WinMain(WahCade, threading.Thread):
             self.scrsave_time = time.time()
         # Use timer for screen saver to log a person out after period of inactivity
         auto_log_out_delay = 90
-        if int(time.time() - self.scrsave_time) >= auto_log_out_delay and self.current_players is not None:
+        if int(time.time() - self.scrsave_time) >= auto_log_out_delay and self.current_players != []:
             self.log_out()
         # Need to start screen saver?
         if int(time.time() - self.scrsave_time) >= self.scrsave_delay:
@@ -2483,7 +2479,6 @@ class WinMain(WahCade, threading.Thread):
         elif timer_type == 'login':
             self.timeout = 5; # Number of seconds till recent_log times out
             self.login_timer = gobject.timeout_add(self.timeout * 1000, self.reset_recent_log)
-            print self.login_timer
 
     def display_splash(self):
         """show splash screen"""
@@ -2714,7 +2709,7 @@ class WinMain(WahCade, threading.Thread):
         return os.system('kill `ps -e | awk \'/recordmydesktop/{a=$1}END{print a}\'`')
 
     # Begins the thread for reading RFID's
-    def run(self): # TODO: Fix problem whenscanning multiple cards at once
+    def run(self):
         if self.connected_to_arduino:
             time.sleep(2)
             self.rfid_reader.flushInput() # Flushes anything that might be sitting in the input buffer
@@ -2730,5 +2725,5 @@ class WinMain(WahCade, threading.Thread):
 #                    print "After register, before flush " + str(self.rfid_reader.inWaiting())
                     self.rfid_reader.flushInput()
 #                    print "After flush " + str(self.rfid_reader.inWaiting()) + "\n"
-                    time.sleep(0.5)
+                    time.sleep(0.125)
 
