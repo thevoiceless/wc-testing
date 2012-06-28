@@ -109,10 +109,8 @@ class WinMain(WahCade, threading.Thread):
                 for line in f.readlines():
                     val = line.split('=')
                     self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
-                #requests.get("http://localhost:" + self.props['port'] + "/RcadeServer")
                 r = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']) # Attempt to make connection to server
-                print 'initial connect:', r.status_code
-                self.connected_to_server = True
+                self.check_connection(r.status_code)
         except: # Any exception would mean some sort of failed server connection
             self.connected_to_server = False
         
@@ -302,6 +300,7 @@ class WinMain(WahCade, threading.Thread):
         self.lsGames_len = 0
         # Timers
         self.scrsave_time = time.time()
+        self.portal_time_last_played = time.time()
        
         ### Create options window
         self.options = WinOptions(self)
@@ -431,25 +430,28 @@ class WinMain(WahCade, threading.Thread):
         self.connected_to_arduino = False
         
         if self.connected_to_server:
-            # Map rom name to associated game name
-            romToName = {}
-            for sublist in self.lsGames: 
-                romToName[sublist[1]] = sublist[0]
-            
-            # Get a list of games already on the server
-            data = requests.get(self.game_url)
-            print 'data:', data.status_code
-            data = fromstring(data.text)
-            games_on_server = []
-            for game in data.getiterator('game'):
-                games_on_server.append(game.find('romName').text)
-    
-            # Add games to the server if not on the server
-            for rom in self.supported_games:
-                if rom not in games_on_server and rom in romToName:
-                    post_data = {"romName":rom, "gameName":romToName[rom]}
-                    r = requests.post(self.game_url, post_data)
-                    print r.status_code                    
+            try:
+                # Map rom name to associated game name
+                romToName = {}
+                for sublist in self.lsGames: 
+                    romToName[sublist[1]] = sublist[0]
+                
+                # Get a list of games already on the server
+                data = requests.get(self.game_url)
+                self.check_connection(data.status_code)
+                data = fromstring(data.text)
+                games_on_server = []
+                for game in data.getiterator('game'):
+                    games_on_server.append(game.find('romName').text)
+        
+                # Add games to the server if not on the server
+                for rom in self.supported_games:
+                    if rom not in games_on_server and rom in romToName:
+                        post_data = {"romName":rom, "gameName":romToName[rom]}
+                        r = requests.post(self.game_url, post_data)
+                        self.check_connection(r.status_code)
+            except e:
+                self.connected_to_server = False                    
 
         # Setup login
         self.current_players = []
@@ -732,7 +734,14 @@ class WinMain(WahCade, threading.Thread):
                             else:
                                 post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.current_players[0]}
                             r = requests.post(self.score_url, post_data)
-                            print "parse high score:", r.status_code
+                            self.check_connection(r.status_code)
+             
+    def check_connection(self, status_code):
+        if (status_code - 200) < 100 and (status_code - 200) >= 0:
+            self.connected_to_server = True
+        else:
+            self.connected_to_server = False
+        
              
     def log_in(self, player_rfid):
         if self.connected_to_arduino:
@@ -1244,6 +1253,8 @@ class WinMain(WahCade, threading.Thread):
             self.lblHighScoreData.set_markup(_('%s%s%s') % (self.highScoreDataMarkupHead, " NOT CONNECTED TO A DATABASE", self.highScoreDataMarkupTail))
         elif game_info['rom_name'] in self.supported_games:
             highScoreInfo = self.get_score_string()
+            self.lblHighScoreData.modify_font(pango.FontDescription(self.highScoreDataLayout['font-name']))#TODO
+            self.lblHighScoreData.set_text(highScoreInfo)
             self.lblHighScoreData.set_markup(_('%s%s%s') % (self.highScoreDataMarkupHead, highScoreInfo, self.highScoreDataMarkupTail))
         else:
             self.lblHighScoreData.set_markup(_('%s%s%s') % (self.highScoreDataMarkupHead, "  HIGH SCORE NOT SUPPORTED", self.highScoreDataMarkupTail))        
@@ -1281,27 +1292,22 @@ class WinMain(WahCade, threading.Thread):
             
             score_list = sorted(score_list, key = lambda score: int(score[1]), reverse = True) 
             
-            for name, score in score_list:
+            for name, score in score_list: #42 characters in each line
                 if index < 10: #format for leading spaces by numbers. Makes 1. match up with 10.
-                    score_string += "  "
-                if len(name) > 7:
-                    score_string += str(index) + ". " + name[:6] + ".\t" + " "*(24-len(score)) + score + "\n"
-                elif len(name) <= 3:
-                    score_string += str(index) + ". " + name + " "*(9-len(name)) + "\t" + " "*(24-len(score)) + score + "\n"
-                else:
-                    score_string += str(index) + ". " + name + " "*(7-len(name)) + "\t" + " "*(24-len(score)) + score + "\n"
+                    score_string += " " + str(index) + ". "
+                    score_string += '{0:<21}'.format(name) + '{0:>21}\n'.format(score)
                 index += 1
             while index <= 10: #fill in un-used score spots
                 if index < 10:
-                    score_string += "  "
-                score_string += str(index) + ". " + "-"*12 + "\t" + " "*(24-6) + "-"*9 + "\n"
+                    score_string += " "
+                score_string += str(index) + ". " + '{0:<21}'.format("-"*12) + '{0:>21}\n'.format("-"*9)
                 index += 1
         else: #no high scores recorded
             score_string = ''
             while index <= 10:
                 if index < 10:
-                    score_string += "  "
-                score_string += str(index) + ". " + "-"*12 + "\t" + " "*(24-6) + "-"*9 + "\n"
+                    score_string += " "
+                score_string += str(index) + ". " + '{0:<21}'.format("-"*12) + '{0:>21}\n'.format("-"*9)
                 index += 1
             
         return score_string
@@ -1309,10 +1315,12 @@ class WinMain(WahCade, threading.Thread):
     def on_scrsave_timer(self):
         """timer event - check to see if we need to start video or screen saver"""
         sound_time = random.randint((5*60), (15*60))
-        if int(time.time() - self.scrsave_time) >= sound_time:
+        if int(time.time() - self.portal_time_last_played) >= sound_time and int(time.time() - self.scrsave_time) > self.scrsave_delay:
+            pygame.mixer.init()
             pygame.mixer.music.load(self.sounds[random.randrange(0, len(self.sounds))])
             pygame.mixer.music.play()
-            self.scrsave_time = time.time()
+            self.portal_time_last_played = time.time()
+            #pygame.mixer.quit If you want to re-initialize mixer with different args
         # Use timer for screen saver to log a person out after period of inactivity
         auto_log_out_delay = 90
         if int(time.time() - self.scrsave_time) >= auto_log_out_delay and self.current_players is not None:
@@ -1818,6 +1826,7 @@ class WinMain(WahCade, threading.Thread):
         hs_data_lay = layout_info['main']['HighScoreData']
         self.highScoreDataMarkupHead = ('<span color="%s" size="%s">' % (hs_data_lay['text-col'], hs_data_lay['font-size']))
         self.highScoreDataMarkupTail = '</span>'
+        self.highScoreDataLayout = hs_data_lay
         
         # Formatting for the games overlay letters
         overlay_lay = layout_info['main']['ScrollOverlay']
