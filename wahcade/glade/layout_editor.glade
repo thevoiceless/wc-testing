@@ -1035,6 +1035,17 @@
 		  </child>
 
 		  <child>
+		    <widget class="GtkRadioMenuItem" id="mnuVPop">
+		      <property name="visible">True</property>
+		      <property name="label" translatable="yes">_Popular Games Window</property>
+		      <property name="use_underline">True</property>
+		      <property name="active">True</property>
+		      <property name="group">mnuVMain</property>
+		      <signal name="activate" handler="on_rbWindow_toggled" last_modification_time="Thu, 21 Jun 2012 8:54:00 MDT"/>
+		    </widget>
+		  </child>
+
+		  <child>
 		    <widget class="GtkRadioMenuItem" id="mnuVScr">
 		      <property name="visible">True</property>
 		      <property name="label" translatable="yes">_Screen Saver Window</property>
@@ -1350,6 +1361,26 @@
 	      <property name="active">False</property>
 	      <property name="group">trbMain</property>
 	      <signal name="toggled" handler="on_rbWindow_toggled" last_modification_time="Tue, 04 Jul 2006 10:03:45 GMT"/>
+	    </widget>
+	    <packing>
+	      <property name="expand">False</property>
+	      <property name="homogeneous">True</property>
+	    </packing>
+	  </child>
+
+	  <child>
+	    <widget class="GtkRadioToolButton" id="trbPop">
+	      <property name="visible">True</property>
+	      <property name="tooltip" translatable="yes">Popular Games Window</property>
+	      <property name="label" translatable="yes">Popular Games Window</property>
+	      <property name="use_underline">True</property>
+	      <property name="icon">win_popular.png</property>
+	      <property name="visible_horizontal">True</property>
+	      <property name="visible_vertical">True</property>
+	      <property name="is_important">False</property>
+	      <property name="active">False</property>
+	      <property name="group">trbMain</property>
+	      <signal name="toggled" handler="on_rbWindow_toggled" last_modification_time="Thu, 21 Jun 2012 8:58:00 MDT"/>
 	    </widget>
 	    <packing>
 	      <property name="expand">False</property>
