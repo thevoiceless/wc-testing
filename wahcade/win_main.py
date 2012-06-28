@@ -752,7 +752,6 @@ class WinMain(WahCade, threading.Thread):
         
              
     def log_in(self, player_rfid):
-        print 'logging in'
         self.scrsave_time = time.time()
         if self.scrsaver.running:
             self.scrsaver.stop_scrsaver()
@@ -820,7 +819,6 @@ class WinMain(WahCade, threading.Thread):
             self.user.set_text(self.get_logged_in_user_string(self.current_players))
             
     def register_new_player(self, player_rfid, player_name = ''): # TODO: Ultimately we will remove player_name from this function call
-        print 'registering'
         if self.connected_to_arduino:
             # bring up new player list
             self.identify.setRFIDlbl(player_rfid)
@@ -850,11 +848,8 @@ class WinMain(WahCade, threading.Thread):
             if not self.connected_to_server:
                 print "Not connected to database"
                 return
-            print 'getting ready to post data to', self.player_url
-            print 'player:', player_name, player_rfid
             post_data = {"name":player_name, "playerID":player_rfid}
-            r = requests.post(self.player_url, post_data)
-            print 'posting data', r.status_code
+            requests.post(self.player_url, post_data)
     #        self.ldap.remove(player_name) # Take them out of the unregistered people list
 #            self.current_players.append(player_name) # TODO: remove this once integrated
 #            self.user.set_text(self.get_logged_in_user_string(self.current_players))
