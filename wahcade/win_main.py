@@ -82,6 +82,8 @@ from win_scrsaver import WinScrSaver    # Screen saver window
 from win_history import WinHistory      # History viewer
 from win_cpviewer import WinCPViewer    # Control panel viewer window
 from win_identify import WinIdentify    # Identify window
+from win_popular import WinPopular      # Popular games window
+#from rfid_reader import *               # Gets input from RFID reader
 import threading
 import filters                          # filters.py, routines to read/write mamewah filters and lists
 from mamewah_ini import MameWahIni      # Reads mamewah-formatted ini file
@@ -320,6 +322,9 @@ class WinMain(WahCade, threading.Thread):
         ### Create identify window
         self.identify = WinIdentify(self)
         self.identify.winID.hide()
+        ### Create popular games window
+        self.popular = WinPopular(self)
+        self.popular.winPop.hide()
         
         self.hide_window()
         
@@ -389,12 +394,16 @@ class WinMain(WahCade, threading.Thread):
             (-1, self.identify.lblPromptText, "PromptText"),
             (-1, self.identify.lblRFID, "RFID"),
             (-1, self.identify.sclIDs, "IDsList"),
-            (-1, self.IDsScrollOverlay, "ScrollOverlay"),]
+            (-1, self.IDsScrollOverlay, "ScrollOverlay")]
+        self._popular_items = [
+            (-1, self.popular.lblHeading, "Header"),
+            (-1, self.popular.sclPop, "PopList"),]
         self._layout_items = {'main': self._main_items,
                               'options': self._options_items,
                               'message': self._message_items,
                               'screensaver': self._screensaver_items,
-                              'identify' : self._identify_items}
+                              'identify' : self._identify_items,
+                              'popular' : self._popular_items}
           
         # Initialize and show primary Fixd containers, and populate appropriately
         self.fixd.show()
@@ -561,7 +570,7 @@ class WinMain(WahCade, threading.Thread):
             'UP_1_GAME', 'DOWN_1_GAME',
             'UP_1_PAGE', 'DOWN_1_PAGE',
             'UP_1_LETTER', 'DOWN_1_LETTER']
-        self.keypress_count = 0
+        self.scroll_count = 0
        
         #### Joystick setup
         self.joy = None
@@ -904,9 +913,9 @@ class WinMain(WahCade, threading.Thread):
                         mw_keys = ['MOUSE_UP']
                     elif mm > 3.0:
                         mw_keys = ['MOUSE_DOWN']
-                self.keypress_count += int(abs(mm) / 10) + 1
+                self.scroll_count += int(abs(mm) / 10) + 1
                 if not mw_keys:
-                    self.keypress_count = 0
+                    self.scroll_count = 0
                     if widget == self.winMain:
                         self.sclGames.update()
                     return
@@ -918,6 +927,7 @@ class WinMain(WahCade, threading.Thread):
                 # Mouse click
                 mw_keys = ['MOUSE_BUTTON%s' % (event.button - 1)]
             elif event.type == gtk.gdk.SCROLL:
+                self.scroll_count = 0
                 # Mouse scroll wheel
                 if event.direction in [gtk.gdk.SCROLL_UP, gtk.gdk.SCROLL_LEFT]:
                     mw_keys = ['MOUSE_SCROLLUP']
@@ -929,7 +939,6 @@ class WinMain(WahCade, threading.Thread):
 
                 if debug_mode:
                     self.log_msg("  key-press",1)
-                self.keypress_count += 1
                 if joystick_key:
                     # Joystick action
                     mw_keys = [joystick_key]
@@ -949,12 +958,12 @@ class WinMain(WahCade, threading.Thread):
                     if mw_keys == []:
                         return
             elif event.type == gtk.gdk.KEY_RELEASE:
-                self.keypress_count = 0
+                self.scroll_count = 0
                 # Updates ROM image after scrolling stops
                 if len(self.lsGames) != 0:
                     game_info = filters.get_game_dict(self.lsGames[self.sclGames.get_selected()])
                     for i, img in enumerate(self.visible_img_list):
-                        if self.keypress_count == 0:
+                        if self.scroll_count == 0:
                             img_filename = self.get_artwork_image(
                                 self.visible_img_paths[i],
                                 self.layout_path,
@@ -996,27 +1005,33 @@ class WinMain(WahCade, threading.Thread):
                         self.show_window('identify')
                 if current_window == 'main':
                     # Display first n letters of selected game when scrolling quickly
-                    if self.keypress_count > self.showOverlayThresh:
+                    if self.scroll_count > self.showOverlayThresh:
                         overlayLetters = self.lsGames[ self.sclGames.get_selected() ][ 0 ][ 0 : self.gamesScrollOverlay.charShowCount ]
                         self.gamesScrollOverlay.set_markup( _('%s%s%s') % (self.gamesOverlayMarkupHead, overlayLetters, self.gamesOverlayMarkupTail) )
                         self.gamesScrollOverlay.show()
                     # Main form
                     if mw_func == 'UP_1_GAME':
+                        self.scroll_count += 1
                         self.play_clip('UP_1_GAME')
-                        self.sclGames.scroll((int(self.keypress_count / 20) * -1) - 1)
+                        self.sclGames.scroll((int(self.scroll_count / 20) * -1) - 1)
                     elif mw_func == 'DOWN_1_GAME':
+                        self.scroll_count += 1
                         self.play_clip('DOWN_1_GAME')
-                        self.sclGames.scroll(int(self.keypress_count / 20) + 1)
+                        self.sclGames.scroll(int(self.scroll_count / 20) + 1)
                     elif mw_func == 'UP_1_PAGE':
+                        self.scroll_count += 1
                         self.play_clip('UP_1_PAGE')
                         self.sclGames.scroll(-self.sclGames.num_rows)
                     elif mw_func == 'DOWN_1_PAGE':
+                        self.scroll_count += 1
                         self.play_clip('DOWN_1_PAGE')
                         self.sclGames.scroll(+self.sclGames.num_rows)
                     elif mw_func == 'UP_1_LETTER':
+                        self.scroll_count += 1
                         self.play_clip('UP_1_LETTER')
                         self.sclGames.jumpToLetter(mw_func)
                     elif mw_func == 'DOWN_1_LETTER':
+                        self.scroll_count += 1
                         self.play_clip('DOWN_1_LETTER')
                         self.sclGames.jumpToLetter(mw_func)
                     elif mw_func == 'RANDOM_GAME':
@@ -1124,6 +1139,11 @@ class WinMain(WahCade, threading.Thread):
                         self.play_clip('EXIT_WITH_CHOICE')
                         self.options.set_menu('exit')
                         self.show_window('options')
+                    elif mw_func == 'POPULAR_SHOW':
+                        self.popular.set_games_list(self.get_server_popular_games())
+                        self.popular.sclPop._update_display()
+                        self.show_window('popular')
+                        return
                 elif current_window == 'options':
                     # Options form
                     if mw_func == 'OP_UP_1_OPTION':
@@ -1175,10 +1195,10 @@ class WinMain(WahCade, threading.Thread):
                 elif current_window == 'history':
                     if mw_func == 'UP_1_GAME':
                         self.play_clip('UP_1_GAME')
-                        self.histview.sclHistory.scroll((int(self.keypress_count / 20) * -1) - 1)
+                        self.histview.sclHistory.scroll((int(self.scroll_count / 20) * -1) - 1)
                     elif mw_func == 'DOWN_1_GAME':
                         self.play_clip('DOWN_1_GAME')
-                        self.histview.sclHistory.scroll(int(self.keypress_count / 20) + 1)
+                        self.histview.sclHistory.scroll(int(self.scroll_count / 20) + 1)
                     elif mw_func in ['UP_1_PAGE', 'UP_1_LETTER']:
                         self.play_clip('UP_1_PAGE')
                         self.histview.sclHistory.scroll(-self.histview.sclHistory.num_rows)
@@ -1206,7 +1226,7 @@ class WinMain(WahCade, threading.Thread):
                 # Identify window
                 elif current_window == 'identify':
                     # Display first n letters of selected name when scrolling quickly
-                    if self.keypress_count > self.showOverlayThresh:
+                    if self.scroll_count > self.showOverlayThresh:
                         overlayLetters = self.identify.sclIDs.ls[ self.identify.sclIDs.get_selected() ][ 0 : self.IDsScrollOverlay.charShowCount ]
                         self.IDsScrollOverlay.set_markup( _('%s%s%s') % (self.IDsOverlayMarkupHead, overlayLetters, self.IDsOverlayMarkupTail) )
                         self.IDsScrollOverlay.show()
@@ -1225,16 +1245,23 @@ class WinMain(WahCade, threading.Thread):
                             self.hide_window('identify')                            
                     # Scroll up 1 name
                     elif mw_func in ['ID_UP_1_NAME']:
-                        self.identify.sclIDs.scroll((int(self.keypress_count / 20) * -1) - 1)
+                        self.identify.sclIDs.scroll((int(self.scroll_count / 20) * -1) - 1)
                     # Scroll down 1 name
                     elif mw_func in ['ID_DOWN_1_NAME']:
-                        self.identify.sclIDs.scroll(int(self.keypress_count / 20) + 1)
+                        self.identify.sclIDs.scroll(int(self.scroll_count / 20) + 1)
                     elif mw_func == 'ID_UP_1_LETTER':
                         self.play_clip('UP_1_LETTER')
                         self.identify.sclIDs.jumpToLetter(mw_func)
                     elif mw_func == 'ID_DOWN_1_LETTER':
                         self.play_clip('DOWN_1_LETTER')
                         self.identify.sclIDs.jumpToLetter(mw_func)
+                elif current_window == 'popular':
+                    if mw_func in ['POPULAR_SHOW']:
+                        self.hide_window('popular')
+                    elif mw_func in ['POP_UP_1_GAME']:
+                        self.popular.sclPop.scroll(-1)
+                    elif mw_func in ['POP_DOWN_1_GAME']:
+                        self.popular.sclPop.scroll(1)
             # Force games list update if using mouse scroll wheel
             if 'MOUSE_SCROLLUP' in mw_keys or 'MOUSE_SCROLLDOWN' in mw_keys:
                 if widget == self.winMain:
@@ -1298,7 +1325,7 @@ class WinMain(WahCade, threading.Thread):
             self.start_timer('video')
         # Set layout images (at low scroll speeds)
         for i, img in enumerate(self.visible_img_list):
-            if self.keypress_count >= self.showImgThresh:
+            if self.scroll_count >= self.showImgThresh:
                 img.set_from_file(None)     # Don't display an image if starting to scroll quickly
             else:
                 img_filename = self.get_artwork_image(
@@ -1939,12 +1966,31 @@ class WinMain(WahCade, threading.Thread):
         self.fixd.move(idtfy.winID, 0, 0)
         idtfy.winID.set_size_request(main_lay['width'], main_lay['height'])
         idtfy.winID.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(idtfy_lay['background-col']))
-        idtfy.winID.move(self.identify.imgBackground, 0, 0)
+        idtfy.winID.move(idtfy.imgBackground, 0, 0)
         idtfy.imgBackground.set_size_request(main_lay['width'], main_lay['height'])
         idtfy_img = idtfy_lay['use-image']
         if not os.path.dirname(idtfy_img):
             idtfy_img = os.path.join(self.layout_path, idtfy_img)
         idtfy.imgBackground.set_from_file(idtfy_img)
+        
+        # Set up Popular Games window
+        # Match sizes of main window
+        pop = self.popular
+        pop_lay = layout_info['popular']['fixdPop']
+        self.fixd.move(pop.winPop, 0, 0)
+        pop.winPop.set_size_request(pop_lay['width'], pop_lay['height'])
+        pop.winPop.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(pop_lay['background-col']))
+        pop.winPop.move(pop.imgBackground, 0, 0)
+        pop.imgBackground.set_size_request(pop_lay['width'], pop_lay['height'])
+        pop_img = pop_lay['use-image']
+        self.fixd.move(pop.winPop,
+                       (( main_lay['width'] - pop_lay['width'] ) / 2),
+                       (( main_lay['height'] - pop_lay['height'] ) / 2))
+        if not os.path.dirname(pop_img):
+            pop_img = os.path.join(self.layout_path, pop_img)
+        pop.imgBackground.set_from_file(pop_img)
+        # Other stuff
+        pop.lblHeading.set_text(_('Popular Games'))
             
         # Set up all Widgets
         for w_set_name in self._layout_items.keys():
@@ -2010,12 +2056,14 @@ class WinMain(WahCade, threading.Thread):
                         self.fixd.move(self.drwVideo, w_lay['x'], w_lay['y'])
                         self.drwVideo.set_size_request(w_lay['width'], w_lay['height'])
                 # Modify widget reference for lists
-                if widget == self.sclGames:
-                    widget = self.sclGames.fixd
-                elif widget == self.options.sclOptions:
-                    widget = self.options.sclOptions.fixd
-                elif widget == self.identify.sclIDs:
-                    widget = self.identify.sclIDs.fixd
+#                if widget == self.sclGames:
+#                    widget = self.sclGames.fixd
+#                elif widget == self.options.sclOptions:
+#                    widget = self.options.sclOptions.fixd
+#                elif widget == self.identify.sclIDs:
+#                    widget = self.identify.sclIDs.fixd
+                if isinstance(widget, ScrollList):
+                    widget = widget.fixd
                 elif parent.get_ancestor(gtk.EventBox):
                     widget = widget.get_parent()
                 # Add to fixed layout on correct window
@@ -2037,8 +2085,12 @@ class WinMain(WahCade, threading.Thread):
                         self.identify.winID.move(widget, w_lay['x'], w_lay['y'])
                     else:
                         widget.move_in_fixd(self.identify.winID, w_lay['x'], w_lay['y'])
+                elif w_set_name == "popular":
+                    # Move widgets to the correct places; move_in_fixd is for the scroll overlay
+                    if isinstance(widget, gtk.Widget):
+                        self.popular.winPop.move(widget, w_lay['x'], w_lay['y'])
                 else:
-                    print "Orphaned widget detected. Did not belong to one of [main/options/message/screensaver]"
+                    print "Orphaned widget detected. Did not belong to one of [main/options/message/screensaver/identify/popular]"
        
         # Load histview and cpviewer layouts
         # Still in use?
@@ -2643,6 +2695,8 @@ class WinMain(WahCade, threading.Thread):
                 child_win = self.cpviewer.winCPViewer
         elif window_name == 'identify':
             child_win = self.identify.winID
+        elif window_name == 'popular':
+            child_win = self.popular.winPop
         # Show given child window
         if child_win:            
             self.stop_video()
@@ -2663,6 +2717,7 @@ class WinMain(WahCade, threading.Thread):
         self.histview.winHistory.hide()
         self.cpviewer.winCPViewer.hide()
         self.identify.winID.hide()
+        self.popular.winPop.hide()
         # "show" main
         self.current_window = 'main'
         self.winMain.present()
@@ -2670,6 +2725,10 @@ class WinMain(WahCade, threading.Thread):
         self.start_timer('scrsave')
         self.start_timer('video')
 
+    def show_popular_games(self):
+        popScl = ScrollList(self)
+        # Make request to server
+        
 
     def check_ext_on_game_launch(self, romext='*'):
         if romext == '' or '*':
@@ -2756,4 +2815,10 @@ class WinMain(WahCade, threading.Thread):
         except:
             print "in Rcade"
 
-
+    def get_server_popular_games(self):
+        data = requests.get("http://localhost:8080/RcadeServer/game/popular?renderXML=true")
+        data = fromstring(data.text)
+        gList = []
+        for game in data.getiterator('game'):
+            gList.append(game.find('gameName').text)
+        return gList
