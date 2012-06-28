@@ -88,11 +88,9 @@ import threading
 import filters                          # filters.py, routines to read/write mamewah filters and lists
 from mamewah_ini import MameWahIni      # Reads mamewah-formatted ini file
 import joystick                         # joystick.py, joystick class, uses pygame package (SDL bindings for games in Python)
-import MySQLdb
 import requests #@UnresolvedImport
 import pygame
 from xml.etree.ElementTree import fromstring
-from dummy_db import DummyDB
 # Set gettext function
 _ = gettext.gettext
 
@@ -100,8 +98,10 @@ class WinMain(WahCade, threading.Thread):
     """Wah!Cade Main Window"""          # This is the docstring belonging to the class, __doc__
 
     def __init__(self, config_opts):
-        threading.Thread.__init__(self)
         """initialise main Wah!Cade window"""   # Docstring for this method
+        
+        # begin the thread for reading from arduino
+        threading.Thread.__init__(self)        
         
         # Try connecting to a database, otherwise
         self.db_file = "confs" + sep + config_opts.db_config_file + ".txt"
@@ -111,10 +111,8 @@ class WinMain(WahCade, threading.Thread):
                 for line in f.readlines():
                     val = line.split('=')
                     self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
-                #requests.get("http://localhost:" + self.props['port'] + "/RcadeServer")
                 r = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']) # Attempt to make connection to server
-               # print r.status_code
-                self.connected_to_server = True
+                self.check_connection(r.status_code)
         except: # Any exception would mean some sort of failed server connection
             self.connected_to_server = False
         
@@ -304,6 +302,7 @@ class WinMain(WahCade, threading.Thread):
         self.lsGames_len = 0
         # Timers
         self.scrsave_time = time.time()
+        self.portal_time_last_played = time.time()
        
         ### Create options window
         self.options = WinOptions(self)
@@ -437,24 +436,31 @@ class WinMain(WahCade, threading.Thread):
         self.player_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/"
         self.score_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/score/"
         
+        self.connected_to_arduino = False
+        
         if self.connected_to_server:
-            # Map rom name to associated game name
-            romToName = {}
-            for sublist in self.lsGames: 
-                romToName[sublist[1]] = sublist[0]
-            
-            # Get a list of games already on the server
-            data = requests.get(self.game_url)
-            data = fromstring(data.text)
-            games_on_server = []
-            for game in data.getiterator('game'):
-                games_on_server.append(game.find('romName').text)
-    
-            # Add games to the server if not on the server
-            for rom in self.supported_games:
-                if rom not in games_on_server and rom in romToName:
-                    post_data = {"romName":rom, "gameName":romToName[rom]}
-                    requests.post(self.game_url, post_data)                    
+            try:
+                # Map rom name to associated game name
+                romToName = {}
+                for sublist in self.lsGames: 
+                    romToName[sublist[1]] = sublist[0]
+                
+                # Get a list of games already on the server
+                data = requests.get(self.game_url)
+                self.check_connection(data.status_code)
+                data = fromstring(data.text)
+                games_on_server = []
+                for game in data.getiterator('game'):
+                    games_on_server.append(game.find('romName').text)
+        
+                # Add games to the server if not on the server
+                for rom in self.supported_games:
+                    if rom not in games_on_server and rom in romToName:
+                        post_data = {"romName":rom, "gameName":romToName[rom]}
+                        r = requests.post(self.game_url, post_data)
+                        self.check_connection(r.status_code)
+            except e:
+                self.connected_to_server = False                    
 
         # Setup login
         self.current_players = []
@@ -462,20 +468,30 @@ class WinMain(WahCade, threading.Thread):
         try:
             self.rfid_reader = serial.Serial('/dev/ttyUSB0', 9600)
             self.connected_to_arduino = True
+            print "Successfully connected to arduino at /dev/ttyUSB0" # TODO: Change this to system directory
         except:
-            print "Failed to connect to arduino on /dev/ttyUSB0"
             self.connected_to_arduino = False
+            print "Failed to connect to arduino at /dev/ttyUSB0"
         if self.connected_to_server:# and self.connected_to_arduino:
             self.user.set_text("Not Logged In")
             self.user.show()
+            self.running = True
+        self.recent_log = False
+        self.timer_existing = False
+        self.not_in_database = True
+        self.last_log = ''
         r = requests.get(self.player_url) #get all players                          
         self.player_names = ['Terek Campbell', 'Zach McGaughey', 'Riley Moses', 'John Kelly', 'Devin Wilson']
-        self.player_rfids = ['52000032DCBC', '5100FFE36C21', '5200001A9BD3', '52000003C697', '52000007EFBA']
+        self.player_rfids = ['52000032DCBC', '5100FFE36C21', '5200001A9BD3', '52000003C697', '']
         data = fromstring(r.text)
-#        for player in data.getiterator('player'): #TODO: read these in
-#            self.player_names.append(player.find('name').text) # parse player name from xml
-#            self.player_rfids.append(player.find('playerID').text) # parse player RFID's from xml
             
+        if self.connected_to_arduino:
+            self.start()
+            
+    #        for player in data.getiterator('player'): #TODO: read these in
+    #            self.player_names.append(player.find('name').text) # parse player name from xml
+    #            self.player_rfids.append(player.find('playerID').text) # parse player RFID's from xml
+                
         pygame.init()
         
         sound_files = os.listdir('sounds/')
@@ -527,7 +543,7 @@ class WinMain(WahCade, threading.Thread):
         # Input defaults
         self.pointer_grabbed = False
        
-        # Get keyboard, mouse & arduino events
+        # Get keyboard and mouse events
         self.sclGames.connect('update', self.on_sclGames_changed)           # scrolled_list.py
         self.sclGames.connect('mouse-left-click', self.on_sclGames_changed)
         self.sclGames.connect('mouse-right-click', self.on_winMain_key_press)
@@ -535,9 +551,6 @@ class WinMain(WahCade, threading.Thread):
         self.winMain.connect('destroy', self.on_winMain_destroy)
         self.winMain.connect('focus-in-event', self.on_winMain_focus_in)
         self.winMain.connect('focus-out-event', self.on_winMain_focus_out)
-#        self.rfid = RfidReader(self)
-#        self.rfid.begin()
-        self.start()
         self.winMain.add_events(
             gtk.gdk.POINTER_MOTION_MASK |
             gtk.gdk.SCROLL_MASK |
@@ -574,6 +587,8 @@ class WinMain(WahCade, threading.Thread):
         """done, quit the application"""
         # Stop video playing if necessary
         self.stop_video()
+        # Tells the thread to terminate properly
+        self.running = False
         # Save ini files
         self.wahcade_ini.write()
         self.emu_ini.write()
@@ -725,45 +740,73 @@ class WinMain(WahCade, threading.Thread):
                             else:
                                 post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.current_players[0]}
                             r = requests.post(self.score_url, post_data)
-                            
+                            self.check_connection(r.status_code)
+             
+    def check_connection(self, status_code):
+        if (status_code - 200) < 100 and (status_code - 200) >= 0:
+            self.connected_to_server = True
+        else:
+            self.connected_to_server = False
+        
+             
     def log_in(self, player_rfid):
+        print 'logging in'
+        self.scrsave_time = time.time()
+        if self.scrsaver.running:
+            self.scrsaver.stop_scrsaver()
+            self.start_timer('scrsave')
+
         if self.connected_to_arduino:
-            print "Connected to arduino"
-            name_from_rfid = ''
+            player_name = ''
+            if self.recent_log and self.last_log == player_rfid: # Prevents the reader from logging someone in and then out immediately
+                return
+            if not self.timer_existing:
+                self.timer_existing = True
+                self.start_timer('login')
             for line in self.player_rfids:
                 if line == player_rfid:
-                    name_from_rfid = self.player_names[self.player_rfids.index(line)]
+                    player_name = self.player_names[self.player_rfids.index(line)]
                     break
-#            print "name from rfid =", name_from_rfid
-            print name_from_rfid
-            if name_from_rfid in self.current_players:          # If player is logged in, log them out
-                self.log_out(name_from_rfid)
+            if player_name in self.current_players:          # If player is logged in, log them out
+                self.recent_log = True
+                self.last_log = player_rfid
+                self.log_out(player_name)
             elif len(self.current_players) == 4:                #Max players
-                print "Max players logged in, please have someone logout and try again"
+                print "The maximum number of players are logged in. Please have someone logout and try again"
                 return
-            elif not name_from_rfid == '':                      # Log the player in
-                self.current_players.append(name_from_rfid)
+            elif player_name != '':                      # Log the player in
+                self.recent_log = True
+                self.last_log = player_rfid
+                self.current_players.append(player_name)
                 self.user.set_text(self.get_logged_in_user_string(self.current_players))   
             else:                                               # if player doesn't exist then add them to DB
-#                self.register_new_player(player_name) # TODO: Call this function directly
-                self.identify.sclIDs._update_display() # bring up new player list
-                self.show_window('identify')
-#                self.current_players.append(name_from_rfid)
-#                self.user.set_text(self.get_logged_in_user_string(self.current_players))   
+                self.register_new_player(player_rfid)
+                if self.not_in_database:
+                    return
+                else:
+                    self.log_in(player_rfid)
         else:                                                   # if not connected to arduino
             if len(self.current_players) == 4: #Max players
                 return
             r = requests.get(self.player_url) #get all players                          
             players = []
             data = fromstring(r.text)
+            
             for player in data.getiterator('player'):
                 players.append(player.find('name').text) # parse player name from xml
-                # NOTE: player_rfid is actually player_name in the lines below
-            if not player_rfid in players: # if player doesn't exist and add them to DB
+                
+            # NOTE: player_rfid is actually player_name in the lines below
+            if not player_rfid in players: # if player doesn't exist and add them to DB and log them in
+                print 'not in players'
                 self.register_new_player(player_rfid)
-            else:
+                self.current_players.append(player_rfid)
+                self.user.set_text(self.get_logged_in_user_string(self.current_players))
+            elif player_rfid in self.current_players:   #if player already logged in, log them out
+                self.log_out(player_rfid)
+            else:   #player not logged in, log them in
                 self.current_players.append(player_rfid)
                 self.user.set_text(self.get_logged_in_user_string(self.current_players))      
+
             
     def log_out(self, player_name = "All"):
         if player_name == "All":
@@ -774,17 +817,46 @@ class WinMain(WahCade, threading.Thread):
             self.user.set_text("Not logged in")
         else:
             self.user.set_text(self.get_logged_in_user_string(self.current_players))
-
-    def register_new_player(self, player_name, player_rfid = 123456789012):
-        # TODO: Do this check before displaying the identify window in on_winMain_key_press
-        if not self.connected_to_server:
-            print "Not connected to database"
-            return
-        post_data = {"name":player_name, "playerID":player_rfid}
-#        requests.post(self.player_url, post_data)
-#        self.ldap.remove(player_name) # Take them out of the unregistered people list
-        self.current_players.append(player_name) # TODO: remove this once integrated
-        self.user.set_text(self.get_logged_in_user_string(self.current_players))
+            
+    def register_new_player(self, player_rfid, player_name = ''): # TODO: Ultimately we will remove player_name from this function call
+        print 'registering'
+        if self.connected_to_arduino:
+            # bring up new player list
+            self.identify.setRFIDlbl(player_rfid)
+            self.identify.sclIDs._update_display()
+            self.show_window('identify')
+            while self.current_window == 'identify':
+                time.sleep(0.1)
+            player_name = self.selected_player
+            if not self.connected_to_server:
+                print "Not connected to database"
+                return
+            if player_name != '':
+                for line in self.player_names:
+                    if line == player_name:
+                        self.player_rfids[self.player_names.index(line)] = player_rfid
+                        self.not_in_database = False
+                        break
+                    else:
+                        self.not_in_database = True
+                if self.not_in_database: # TODO: Get rid of this in production? It should never happen 
+                    print "Sorry you're not in the employee database!"
+                post_data = {"name":player_name, "playerID":player_rfid}
+                r = requests.post(self.player_url, post_data)
+                print r.status_code
+#                self.ldap.remove(player_name) # Take them out of the unregistered people list
+            else:
+                print "No player name given, not updating lists"
+        else: # Not connected to arduino
+            if not self.connected_to_server:
+                print "Not connected to database"
+                return
+            post_data = {"name":player_name, "playerID":player_rfid}
+            r = requests.post(self.player_url, post_data)
+            print 'posting data', r.status_code
+    #        self.ldap.remove(player_name) # Take them out of the unregistered people list
+#            self.current_players.append(player_name) # TODO: remove this once integrated
+#            self.user.set_text(self.get_logged_in_user_string(self.current_players))
         
     def get_logged_in_user_string(self, current_users):
         index = 1
@@ -796,6 +868,10 @@ class WinMain(WahCade, threading.Thread):
             else:
                 string += ", " + user
         return string
+
+    def reset_recent_log(self):
+        self.recent_log = False
+        self.timer_existing = False
 
     def on_winMain_key_press(self, widget, event, *args):
         """key pressed - translate to mamewah setup"""
@@ -920,7 +996,7 @@ class WinMain(WahCade, threading.Thread):
                     break
             for mw_func in mw_functions:
                 # Which function?
-                if mw_func == 'ID_SHOW' and current_window != 'identify': #and self.connected_to_server:   # Show identify window any time
+                if mw_func == 'ID_SHOW' and current_window != 'identify' and self.connected_to_server: #and self.connected_to_server:   # Show identify window any time
                     if self.connected_to_arduino:
                         self.register_new_player("New player")
                     else:
@@ -1155,13 +1231,17 @@ class WinMain(WahCade, threading.Thread):
                         self.IDsScrollOverlay.show()
                     # Exit from identity window
                     if mw_func in ['ID_BACK']:
+                        if self.connected_to_arduino:
+                            self.selected_player = []
                         self.hide_window('identify')
                     elif mw_func in ['ID_SELECT'] and self.connected_to_server:
-                        selected_player = self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()]
-                        self.current_players.append(selected_player)
-                        self.user.set_text(self.get_logged_in_user_string(self.current_players))   
-#                            self.register_new_player(selected_player)
-                        self.hide_window('identify')
+                        if self.connected_to_arduino:
+                            self.selected_player = self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()]
+                            self.hide_window('identify')
+                        else:
+                            selected_player = self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()]
+                            self.log_in(selected_player)
+                            self.hide_window('identify')                            
                     # Scroll up 1 name
                     elif mw_func in ['ID_UP_1_NAME']:
                         self.identify.sclIDs.scroll((int(self.scroll_count / 20) * -1) - 1)
@@ -1234,6 +1314,8 @@ class WinMain(WahCade, threading.Thread):
             self.lblHighScoreData.set_markup(_('%s%s%s') % (self.highScoreDataMarkupHead, " NOT CONNECTED TO A DATABASE", self.highScoreDataMarkupTail))
         elif game_info['rom_name'] in self.supported_games:
             highScoreInfo = self.get_score_string()
+            self.lblHighScoreData.modify_font(pango.FontDescription(self.highScoreDataLayout['font-name']))#TODO
+            self.lblHighScoreData.set_text(highScoreInfo)
             self.lblHighScoreData.set_markup(_('%s%s%s') % (self.highScoreDataMarkupHead, highScoreInfo, self.highScoreDataMarkupTail))
         else:
             self.lblHighScoreData.set_markup(_('%s%s%s') % (self.highScoreDataMarkupHead, "  HIGH SCORE NOT SUPPORTED", self.highScoreDataMarkupTail))        
@@ -1271,27 +1353,22 @@ class WinMain(WahCade, threading.Thread):
             
             score_list = sorted(score_list, key = lambda score: int(score[1]), reverse = True) 
             
-            for name, score in score_list:
+            for name, score in score_list: #42 characters in each line
                 if index < 10: #format for leading spaces by numbers. Makes 1. match up with 10.
-                    score_string += "  "
-                if len(name) > 7:
-                    score_string += str(index) + ". " + name[:6] + ".\t" + " "*(24-len(score)) + score + "\n"
-                elif len(name) <= 3:
-                    score_string += str(index) + ". " + name + " "*(9-len(name)) + "\t" + " "*(24-len(score)) + score + "\n"
-                else:
-                    score_string += str(index) + ". " + name + " "*(7-len(name)) + "\t" + " "*(24-len(score)) + score + "\n"
+                    score_string += " " + str(index) + ". "
+                    score_string += '{0:<21}'.format(name) + '{0:>21}\n'.format(score)
                 index += 1
             while index <= 10: #fill in un-used score spots
                 if index < 10:
-                    score_string += "  "
-                score_string += str(index) + ". " + "-"*12 + "\t" + " "*(24-6) + "-"*9 + "\n"
+                    score_string += " "
+                score_string += str(index) + ". " + '{0:<21}'.format("-"*12) + '{0:>21}\n'.format("-"*9)
                 index += 1
         else: #no high scores recorded
             score_string = ''
             while index <= 10:
                 if index < 10:
-                    score_string += "  "
-                score_string += str(index) + ". " + "-"*12 + "\t" + " "*(24-6) + "-"*9 + "\n"
+                    score_string += " "
+                score_string += str(index) + ". " + '{0:<21}'.format("-"*12) + '{0:>21}\n'.format("-"*9)
                 index += 1
             
         return score_string
@@ -1299,14 +1376,16 @@ class WinMain(WahCade, threading.Thread):
     def on_scrsave_timer(self):
         """timer event - check to see if we need to start video or screen saver"""
         sound_time = random.randint((5*60), (15*60))
-        if int(time.time() - self.scrsave_time) >= sound_time:
+        if int(time.time() - self.portal_time_last_played) >= sound_time and int(time.time() - self.scrsave_time) > self.scrsave_delay:
+            pygame.mixer.init()
             pygame.mixer.music.load(self.sounds[random.randrange(0, len(self.sounds))])
             pygame.mixer.music.play()
-            self.scrsave_time = time.time()
+            self.portal_time_last_played = time.time()
+            #pygame.mixer.quit If you want to re-initialize mixer with different args
         # Use timer for screen saver to log a person out after period of inactivity
         auto_log_out_delay = 90
-        if int(time.time() - self.scrsave_time) >= auto_log_out_delay and self.current_players != '':
-            self.log_out('All')
+        if int(time.time() - self.scrsave_time) >= auto_log_out_delay and self.current_players != []:
+            self.log_out()
         # Need to start screen saver?
         if int(time.time() - self.scrsave_time) >= self.scrsave_delay:
             # Yes, stop any vids playing
@@ -1808,6 +1887,7 @@ class WinMain(WahCade, threading.Thread):
         hs_data_lay = layout_info['main']['HighScoreData']
         self.highScoreDataMarkupHead = ('<span color="%s" size="%s">' % (hs_data_lay['text-col'], hs_data_lay['font-size']))
         self.highScoreDataMarkupTail = '</span>'
+        self.highScoreDataLayout = hs_data_lay
         
         # Formatting for the games overlay letters
         overlay_lay = layout_info['main']['ScrollOverlay']
@@ -2466,7 +2546,10 @@ class WinMain(WahCade, threading.Thread):
         elif timer_type == 'record':
             self.timeout = 2; # Number of seconds till the video recorder times out
             self.recorder_timer = gobject.timeout_add(self.timeout * 1000, self.stop_recording_video)
-
+        # Login timer
+        elif timer_type == 'login':
+            self.timeout = 5; # Number of seconds till recent_log times out
+            self.login_timer = gobject.timeout_add(self.timeout * 1000, self.reset_recent_log)
 
     def display_splash(self):
         """show splash screen"""
@@ -2706,16 +2789,21 @@ class WinMain(WahCade, threading.Thread):
     # Begins the thread for reading RFID's
     def run(self):
         if self.connected_to_arduino:
-            while(True):
-                if self.rfid_reader.inWaiting() > 0:
-    #                print "Before register " + str(self.rfid_reader.inWaiting())
+            time.sleep(2)
+            self.rfid_reader.flushInput() # Flushes anything that might be sitting in the input buffer
+            while(self.running):
+                if self.rfid_reader.inWaiting() >= 12:
+#                    print "Before reading " + str(self.rfid_reader.inWaiting())
                     scannedRfid = self.rfid_reader.read(12)
-                    print "Scanned RFID in run method: " + scannedRfid
-                    self.log_in(scannedRfid)
-    #                self.register_new_player(scannedRfid)
-    #                print "After register, before flush " + str(self.rfid_reader.inWaiting())
+#                    print "Scanned RFID before cut: " + scannedRfid
+                    if len(scannedRfid) == 12 and scannedRfid.isalnum():
+                        self.log_in(scannedRfid)
+                    else:
+                        print "Error during read, please rescan your card"
+#                    print "After register, before flush " + str(self.rfid_reader.inWaiting())
                     self.rfid_reader.flushInput()
-    #                print "After flush " + str(self.rfid_reader.inWaiting())
+#                    print "After flush " + str(self.rfid_reader.inWaiting()) + "\n"
+                    time.sleep(0.125)
 
     def get_server_popular_games(self):
         data = requests.get("http://localhost:8080/RcadeServer/game/popular?renderXML=true")
