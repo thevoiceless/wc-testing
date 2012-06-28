@@ -730,6 +730,11 @@ class WinMain(WahCade, threading.Thread):
                             print "parse high score:", r.status_code
              
     def log_in(self, player_rfid):
+        self.scrsave_time = time.time()
+        if self.scrsaver.running:
+            self.scrsaver.stop_scrsaver()
+            self.start_timer('scrsave')
+
         if self.connected_to_arduino:
             player_name = ''
             if self.recent_log and self.last_log == player_rfid: # Prevents the reader from logging someone in and then out immediately
