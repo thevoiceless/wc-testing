@@ -741,6 +741,7 @@ class WinMain(WahCade, threading.Thread):
         
              
     def log_in(self, player_rfid):
+        print 'logging in'
         self.scrsave_time = time.time()
         if self.scrsaver.running:
             self.scrsaver.stop_scrsaver()
@@ -787,6 +788,7 @@ class WinMain(WahCade, threading.Thread):
                 
             # NOTE: player_rfid is actually player_name in the lines below
             if not player_rfid in players: # if player doesn't exist and add them to DB and log them in
+                print 'not in players'
                 self.register_new_player(player_rfid)
                 self.current_players.append(player_rfid)
                 self.user.set_text(self.get_logged_in_user_string(self.current_players))
@@ -808,6 +810,7 @@ class WinMain(WahCade, threading.Thread):
             self.user.set_text(self.get_logged_in_user_string(self.current_players))
             
     def register_new_player(self, player_rfid, player_name = ''): # TODO: Ultimately we will remove player_name from this function call
+        print 'registering'
         if self.connected_to_arduino:
             # bring up new player list
             self.identify.setRFIDlbl(player_rfid)
@@ -819,7 +822,7 @@ class WinMain(WahCade, threading.Thread):
             if not self.connected_to_server:
                 print "Not connected to database"
                 return
-            if player_name is not None:
+            if player_name != '':
                 for line in self.player_names:
                     if line == player_name:
                         self.player_rfids[self.player_names.index(line)] = player_rfid
@@ -830,7 +833,8 @@ class WinMain(WahCade, threading.Thread):
                 if self.not_in_database: # TODO: Get rid of this in production? It should never happen 
                     print "Sorry you're not in the employee database!"
                 post_data = {"name":player_name, "playerID":player_rfid}
-#                requests.post(self.player_url, post_data)
+                r = requests.post(self.player_url, post_data)
+                print r.status_code
 #                self.ldap.remove(player_name) # Take them out of the unregistered people list
             else:
                 print "No player name given, not updating lists"
@@ -839,10 +843,11 @@ class WinMain(WahCade, threading.Thread):
                 print "Not connected to database"
                 return
             post_data = {"name":player_name, "playerID":player_rfid}
-    #        requests.post(self.player_url, post_data)
+            r = requests.post(self.player_url, post_data)
+            print 'posting data', r.status_code
     #        self.ldap.remove(player_name) # Take them out of the unregistered people list
-            self.current_players.append(player_name) # TODO: remove this once integrated
-            self.user.set_text(self.get_logged_in_user_string(self.current_players))
+#            self.current_players.append(player_name) # TODO: remove this once integrated
+#            self.user.set_text(self.get_logged_in_user_string(self.current_players))
         
     def get_logged_in_user_string(self, current_users):
         index = 1
