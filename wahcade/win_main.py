@@ -998,6 +998,8 @@ class WinMain(WahCade, threading.Thread):
                     else:
                         self.identify.sclIDs._update_display()
                         self.show_window('identify')
+                if mw_func == 'BACK' and current_window != 'main':
+                    self.hide_window(current_window)
                 if current_window == 'main':
                     # Display first n letters of selected game when scrolling quickly
                     if self.scroll_count > self.showOverlayThresh:
