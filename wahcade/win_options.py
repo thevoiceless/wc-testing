@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 ###
-# Application: wah!cade
+# Application: Rcade
 # File:        win_options.py
 # Description: options window
 # Copyright (c) 2005-2010   Andy Balcombe <http://www.anti-particle.com>
@@ -94,7 +94,7 @@ class WinOptions(WahCade):
                 #['Launch External Application', 'external'],
                 [_('Music Options'), 'music'],
                 [_('Video Recording Options'), 'record_video'],
-                [_('About...'), 'about'],
+                [_('About'), 'about'],
                 [_('Exit Wah!Cade'), 'exit']],
                 #[_('Close Arcade'), 'shutdown']],
             'list_options':

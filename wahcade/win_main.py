@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 ###
-# Application: wah!cade
+# Application: Rcade
 # File:        wahcade.py
 # Description: Main Window
 # Copyright (c) 2005-2010   Andy Balcombe <http://www.anti-particle.com>
@@ -101,7 +101,7 @@ class WinMain(WahCade, threading.Thread):
     def __init__(self, config_opts):
         """Initialise main Wah!Cade window"""   # Docstring for this method
         
-        # begin the thread for reading from arduino
+        # Begin the thread for reading from arduino
         threading.Thread.__init__(self)        
         
         # Try connecting to a database, otherwise
@@ -167,7 +167,7 @@ class WinMain(WahCade, threading.Thread):
         self.delaymovieprev = self.wahcade_ini.getint('delay_before_movie_preview')
         self.exit_movie_file = self.wahcade_ini.get('exit_movie_file') 
         self.layout = self.wahcade_ini.get('layout')
-        self.splash_use = self.wahcade_ini.getint('splash_use',1)
+        self.use_splash = self.wahcade_ini.getint('use_splash',1)
         self.splash_show_text = self.wahcade_ini.getint('splash_show_text',1)
         self.splash_border_width = self.wahcade_ini.getint('splash_border_width',10)
         
@@ -189,12 +189,12 @@ class WinMain(WahCade, threading.Thread):
         self.check_params(config_opts)
 
         ### LOCK FILE
-        self.lck_filename = os.path.join(CONFIG_DIR, 'emulator.lck')
+        self.lock_filename = os.path.join(CONFIG_DIR, 'emulator.lck')
         ### remove lock file if it exists
-        if os.path.exists(self.lck_filename):
+        if os.path.exists(self.lock_filename):
             self.log_msg('Lock file found: Removing')
-            os.remove(self.lck_filename)
-            if not os.path.exists(self.lck_filename):
+            os.remove(self.lock_filename)
+            if not os.path.exists(self.lock_filename):
                 self.log_msg('Lock File removed successfully')
 
         ### WINDOW SETUP            
@@ -206,7 +206,7 @@ class WinMain(WahCade, threading.Thread):
         self.lblGameListIndicator = gtk.Label()     # http://www.pygtk.org/docs/pygtk/class-gtklabel.html
         self.lblEmulatorName = gtk.Label()
         self.lblGameSelected = gtk.Label()
-        if self.splash_use == 1:
+        if self.use_splash == 1:
             self.display_splash()
         if gst_media_imported:
             self.drwVideo = gst_media.VideoWidget()
@@ -300,7 +300,7 @@ class WinMain(WahCade, threading.Thread):
         random.seed()
         # Build list
         self.lsGames = []
-        self.lsGames_len = 0
+        self.lsGames_len = len(self.lsGames)
         # Timers
         self.scrsave_time = time.time()
         self.portal_time_last_played = time.time()
@@ -403,7 +403,7 @@ class WinMain(WahCade, threading.Thread):
                               'screensaver': self._screensaver_items,
                               'identify' : self._identify_items,
                               'popular' : self._popular_items}
-          
+        
         # Initialize and show primary Fixd containers, and populate appropriately
         self.fixd.show()
         self.winMain.add(self.fixd)
@@ -523,7 +523,7 @@ class WinMain(WahCade, threading.Thread):
         # Show the window to the user
         self.winMain.present()
         
-        if self.splash_use == 1:
+        if self.use_splash == 1:
             ### Hide splash
             self.splash.destroy()
         self.do_events()                # wc_common.py
@@ -665,13 +665,13 @@ class WinMain(WahCade, threading.Thread):
                     #break
         # Remove Lock File workaround
         self.log_msg("Here", "debug")
-        if os.path.exists(self.lck_filename):
+        if os.path.exists(self.lock_filename):
             self.log_msg('Lock file found: Waiting ' + str(self.lck_time))
             self.wait_with_events(self.lck_time)
             self.log_msg('Lock time elapsed, removing file')
             try:
-                os.remove(self.lck_filename)
-                if not os.path.exists(self.lck_filename):
+                os.remove(self.lock_filename)
+                if not os.path.exists(self.lock_filename):
                     self.log_msg('Lock File removed successfully')
             except:
                 self.log_msg("WARNING: Could not remove lock file, remove manually or restart Wah!Cade")
@@ -898,7 +898,7 @@ class WinMain(WahCade, threading.Thread):
 
     def on_winMain_key_press(self, widget, event, *args):
         """Respond to key presses"""
-        if not os.path.exists(self.lck_filename):
+        if not os.path.exists(self.lock_filename):
             current_window = self.current_window
             mw_keys = []
             mw_key = ''
@@ -1656,7 +1656,7 @@ class WinMain(WahCade, threading.Thread):
             args = newargs[0] + '.' + newargs[1]
         cmd = '%s %s' % (emulator_executable, args)
         # Write lock file for emulator
-        f = open(self.lck_filename, 'w')
+        f = open(self.lock_filename, 'w')
         f.write(cmd)
         f.close()
 
