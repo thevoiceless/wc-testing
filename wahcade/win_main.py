@@ -37,6 +37,7 @@ import subprocess
 from subprocess import Popen
 import yaml #@UnresolvedImport
 import serial
+import Queue
 
 
 ## GTK Modules
@@ -481,11 +482,12 @@ class WinMain(WahCade, threading.Thread):
         self.not_in_database = True
         self.last_log = ''
         r = requests.get(self.player_url) #get all players         
-        self.player_info = [['Terek Campbell', '52000032DCBC'],
+        self.player_info = [['Terek Campbell', '52000032DCBC'], 
                             ['Zach McGaughey', '5100FFE36C21'],
                             ['Riley Moses', '5200001A9BD3'], 
                             ['John Kelly', '52000003C697'],
-                            ['Devin Wilson', '']]    
+                            ['Devin Wilson', '']]  
+        self.log_in_queue = Queue.Queue()  
         data = fromstring(r.text)
             
         if self.connected_to_arduino:
@@ -644,32 +646,6 @@ class WinMain(WahCade, threading.Thread):
 
     def on_winMain_focus_in(self, *args):
         """window received focus"""
-        # If returning from a game rather than something like ALT+Tab
-        if self.launched_game:
-            self.launched_game = False
-            # If the game supports high scores run the HiToText executions
-            if self.current_rom in self.supported_games and self.current_players != '':
-                htt_command = self.htt_read
-                if not onWindows:
-                    htt_command = "mono " + self.htt_read
-                #testString = commands.getoutput("wine HiToText.exe -r " + self.mame_dir + "hi" + sep + self.current_rom + ".hi 2>/dev/null")
-                #testString = commands.getoutput("mono HiToText.exe -r " + self.mame_dir + "hi" + sep + self.current_rom + ".hi")
-                testString = commands.getoutput(htt_command + "hi" + sep + self.current_rom + ".hi")
-                if 'Error' in testString:
-                    #testString = commands.getoutput("wine HiToText.exe -r " + self.mame_dir + "nvram" + sep + self.current_rom + ".nv 2>/dev/null")
-                    #testString = commands.getoutput("mono HiToText.exe -r " + self.mame_dir + "nvram" + sep + self.current_rom + ".nv")
-                    testString = commands.getoutput(htt_command + "nvram" + sep + self.current_rom + ".nv")
-                if not 'Error' in testString and testString != '' and not 'Exception' in testString:
-                    valid_string = ''
-                    for i in testString:
-                        if (ord(i)<128 and ord(i)>31) or ord(i) == 13 or ord(i) == 10:
-                            valid_string += i
-                        else:
-                            valid_string += '?'
-                    testString = valid_string
-                    if self.connected_to_server:
-                        self.parse_high_score_text(testString)
-            
         self.pointer_grabbed = False
         if self.sclGames.use_mouse and not self.showcursor:
             # Need to grab?
@@ -702,6 +678,36 @@ class WinMain(WahCade, threading.Thread):
                     self.log_msg('Lock File removed successfully')
             except:
                 self.log_msg("WARNING: Could not remove lock file, remove manually or restart Wah!Cade")
+                
+        # If returning from a game rather than something like ALT+Tab
+        if self.launched_game:
+            self.message.hide()
+            self.launched_game = False
+            while not self.log_in_queue.empty():
+                self.log_in(self.log_in_queue.get())
+                print self.current_players
+            # If the game supports high scores run the HiToText executions
+            if self.current_rom in self.supported_games and self.current_players != '':
+                htt_command = self.htt_read
+                if not onWindows:
+                    htt_command = "mono " + self.htt_read
+                #testString = commands.getoutput("wine HiToText.exe -r " + self.mame_dir + "hi" + sep + self.current_rom + ".hi 2>/dev/null")
+                #testString = commands.getoutput("mono HiToText.exe -r " + self.mame_dir + "hi" + sep + self.current_rom + ".hi")
+                testString = commands.getoutput(htt_command + "hi" + sep + self.current_rom + ".hi")
+                if 'Error' in testString:
+                    #testString = commands.getoutput("wine HiToText.exe -r " + self.mame_dir + "nvram" + sep + self.current_rom + ".nv 2>/dev/null")
+                    #testString = commands.getoutput("mono HiToText.exe -r " + self.mame_dir + "nvram" + sep + self.current_rom + ".nv")
+                    testString = commands.getoutput(htt_command + "nvram" + sep + self.current_rom + ".nv")
+                if not 'Error' in testString and testString != '' and not 'Exception' in testString:
+                    valid_string = ''
+                    for i in testString:
+                        if (ord(i)<128 and ord(i)>31) or ord(i) == 13 or ord(i) == 10:
+                            valid_string += i
+                        else:
+                            valid_string += '?'
+                    testString = valid_string
+                    if self.connected_to_server:
+                        self.parse_high_score_text(testString)
 
     def on_winMain_focus_out(self, *args):
         """window lost focus"""
@@ -752,7 +758,6 @@ class WinMain(WahCade, threading.Thread):
         
              
     def log_in(self, player_rfid):
-        print 'logging in'
         self.scrsave_time = time.time()
         if self.scrsaver.running:
             self.scrsaver.stop_scrsaver()
@@ -768,6 +773,7 @@ class WinMain(WahCade, threading.Thread):
             for v in self.player_info:
                 if v[1] == player_rfid:
                     player_name = v[0]
+                    break
             if player_name in self.current_players:          # If player is logged in, log them out
                 self.recent_log = True
                 self.last_log = player_rfid
@@ -820,14 +826,13 @@ class WinMain(WahCade, threading.Thread):
             self.user.set_text(self.get_logged_in_user_string(self.current_players))
             
     def register_new_player(self, player_rfid, player_name = ''): # TODO: Ultimately we will remove player_name from this function call
-        print 'registering'
         if self.connected_to_arduino:
             # bring up new player list
             self.identify.setRFIDlbl(player_rfid)
             self.identify.sclIDs._update_display()
             self.show_window('identify')
             while self.current_window == 'identify':
-                time.sleep(0.1)
+                self.wait_with_events(0.1)
             player_name = self.selected_player
             if not self.connected_to_server:
                 print "Not connected to database"
@@ -844,7 +849,6 @@ class WinMain(WahCade, threading.Thread):
                     print "Sorry you're not in the employee database!"
                 post_data = {"name":player_name, "playerID":player_rfid}
                 r = requests.post(self.player_url, post_data)
-                print r.status_code
 #                self.ldap.remove(player_name) # Take them out of the unregistered people list
             else:
                 print "No player name given, not updating lists"
@@ -1235,7 +1239,7 @@ class WinMain(WahCade, threading.Thread):
                         if self.connected_to_arduino:
                             self.selected_player = []
                         self.hide_window('identify')
-                    elif mw_func in ['ID_SELECT'] and self.connected_to_server:
+                    elif mw_func in ['ID_SELECT']:
                         if self.connected_to_arduino:
                             self.selected_player = self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()]
                             self.hide_window('identify')
@@ -2698,7 +2702,7 @@ class WinMain(WahCade, threading.Thread):
         elif window_name == 'popular':
             child_win = self.popular.winPop
         # Show given child window
-        if child_win:            
+        if child_win:
             self.stop_video()
             child_win.show()
             try:
@@ -2793,12 +2797,14 @@ class WinMain(WahCade, threading.Thread):
             self.rfid_reader.flushInput() # Flushes anything that might be sitting in the input buffer
             while(self.running):
                 if self.rfid_reader.inWaiting() >= 12:
-#                    self.in_game()
 #                    print "Before reading " + str(self.rfid_reader.inWaiting())
                     scannedRfid = self.rfid_reader.read(12)
 #                    print "Scanned RFID before cut: " + scannedRfid
                     if len(scannedRfid) == 12 and scannedRfid.isalnum():
-                        self.log_in(scannedRfid)
+                        if self.in_game():
+                            self.log_in_queue.put(scannedRfid)
+                        else:
+                            self.log_in(scannedRfid)
                     else:
                         print "Error during read, please rescan your card"
 #                    print "After register, before flush " + str(self.rfid_reader.inWaiting())
@@ -2809,11 +2815,12 @@ class WinMain(WahCade, threading.Thread):
     def in_game(self):
         try:
             if self.p.poll() is None:
-                print "ingame"
+                print "MAME has focus, adding to queue"
+                return True
             else:
-                print "in Rcade after exit"
+                print "in Rcade (after game ended), logging in"
         except:
-            print "in Rcade"
+            print "in Rcade, logging in"
 
     def get_server_popular_games(self):
         data = requests.get("http://localhost:8080/RcadeServer/game/popular?renderXML=true")
