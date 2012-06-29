@@ -805,7 +805,7 @@ class WinMain(WahCade, threading.Thread):
             # NOTE: player_rfid is actually player_name in the lines below
             if not player_rfid in players: # if player doesn't exist and add them to DB and log them in
                 print 'not in players'
-                self.register_new_player(player_rfid)
+                self.register_new_player(123456, player_rfid)
                 self.current_players.append(player_rfid)
                 self.user.set_text(self.get_logged_in_user_string(self.current_players))
             elif player_rfid in self.current_players:   #if player already logged in, log them out
@@ -845,8 +845,6 @@ class WinMain(WahCade, threading.Thread):
                         break
                     else:
                         self.not_in_database = True
-                if self.not_in_database: # TODO: Get rid of this in production? It should never happen 
-                    print "Sorry you're not in the employee database!"
                 post_data = {"name":player_name, "playerID":player_rfid}
                 r = requests.post(self.player_url, post_data)
 #                self.ldap.remove(player_name) # Take them out of the unregistered people list
@@ -857,8 +855,7 @@ class WinMain(WahCade, threading.Thread):
                 print "Not connected to database"
                 return
             post_data = {"name":player_name, "playerID":player_rfid}
-            r = requests.post(self.player_url, post_data)
-            print 'posting data', r.status_code
+            requests.post(self.player_url, post_data)
     #        self.ldap.remove(player_name) # Take them out of the unregistered people list
 #            self.current_players.append(player_name) # TODO: remove this once integrated
 #            self.user.set_text(self.get_logged_in_user_string(self.current_players))
@@ -1007,6 +1004,8 @@ class WinMain(WahCade, threading.Thread):
                     else:
                         self.identify.sclIDs._update_display()
                         self.show_window('identify')
+                if mw_func == 'BACK' and current_window != 'main':
+                    self.hide_window(current_window)
                 if current_window == 'main':
                     # Display first n letters of selected game when scrolling quickly
                     if self.scroll_count > self.showOverlayThresh:
@@ -1259,6 +1258,7 @@ class WinMain(WahCade, threading.Thread):
                     elif mw_func == 'ID_DOWN_1_LETTER':
                         self.play_clip('DOWN_1_LETTER')
                         self.identify.sclIDs.jumpToLetter(mw_func)
+                        
                 elif current_window == 'popular':
                     if mw_func in ['POPULAR_SHOW']:
                         self.hide_window('popular')
@@ -1266,6 +1266,21 @@ class WinMain(WahCade, threading.Thread):
                         self.popular.sclPop.scroll(-1)
                     elif mw_func in ['POP_DOWN_1_GAME']:
                         self.popular.sclPop.scroll(1)
+                    elif mw_func == 'LAUNCH_GAME':
+                        self.play_clip('LAUNCH_GAME')
+                        self.sclGames.set_selected_item(self.popular.sclPop.get_selected_item())
+                        self.launch_auto_apps_then_game()
+                    elif mw_func == 'LAUNCH_GAME_WITH_OPTIONS1':
+                        self.play_clip('LAUNCH_GAME_WITH_OPTIONS1')
+                        self.sclGames.set_selected_item(self.popular.sclPop.get_selected_item())
+                        self.launch_auto_apps_then_game(
+                            self.emu_ini.get('alt_commandline_format_1'))
+                    elif mw_func == 'LAUNCH_GAME_WITH_OPTIONS2':
+                        self.play_clip('LAUNCH_GAME_WITH_OPTIONS2')
+                        self.sclGames.set_selected_item(self.popular.sclPop.get_selected_item())
+                        self.launch_auto_apps_then_game(
+                            self.emu_ini.get('alt_commandline_format_2'))
+                        
             # Force games list update if using mouse scroll wheel
             if 'MOUSE_SCROLLUP' in mw_keys or 'MOUSE_SCROLLDOWN' in mw_keys:
                 if widget == self.winMain:
@@ -2823,7 +2838,7 @@ class WinMain(WahCade, threading.Thread):
             print "in Rcade, logging in"
 
     def get_server_popular_games(self):
-        data = requests.get("http://localhost:8080/RcadeServer/game/popular?renderXML=true")
+        data = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/game/popular?renderXML=true")
         data = fromstring(data.text)
         gList = []
         for game in data.getiterator('game'):
