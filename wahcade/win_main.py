@@ -752,7 +752,6 @@ class WinMain(WahCade, threading.Thread):
         
              
     def log_in(self, player_rfid):
-        print 'logging in'
         self.scrsave_time = time.time()
         if self.scrsaver.running:
             self.scrsaver.stop_scrsaver()
@@ -799,7 +798,7 @@ class WinMain(WahCade, threading.Thread):
             # NOTE: player_rfid is actually player_name in the lines below
             if not player_rfid in players: # if player doesn't exist and add them to DB and log them in
                 print 'not in players'
-                self.register_new_player(player_rfid)
+                self.register_new_player(123456, player_rfid)
                 self.current_players.append(player_rfid)
                 self.user.set_text(self.get_logged_in_user_string(self.current_players))
             elif player_rfid in self.current_players:   #if player already logged in, log them out
@@ -820,7 +819,6 @@ class WinMain(WahCade, threading.Thread):
             self.user.set_text(self.get_logged_in_user_string(self.current_players))
             
     def register_new_player(self, player_rfid, player_name = ''): # TODO: Ultimately we will remove player_name from this function call
-        print 'registering'
         if self.connected_to_arduino:
             # bring up new player list
             self.identify.setRFIDlbl(player_rfid)
@@ -840,8 +838,6 @@ class WinMain(WahCade, threading.Thread):
                         break
                     else:
                         self.not_in_database = True
-                if self.not_in_database: # TODO: Get rid of this in production? It should never happen 
-                    print "Sorry you're not in the employee database!"
                 post_data = {"name":player_name, "playerID":player_rfid}
                 r = requests.post(self.player_url, post_data)
                 print r.status_code
@@ -853,8 +849,7 @@ class WinMain(WahCade, threading.Thread):
                 print "Not connected to database"
                 return
             post_data = {"name":player_name, "playerID":player_rfid}
-            r = requests.post(self.player_url, post_data)
-            print 'posting data', r.status_code
+            requests.post(self.player_url, post_data)
     #        self.ldap.remove(player_name) # Take them out of the unregistered people list
 #            self.current_players.append(player_name) # TODO: remove this once integrated
 #            self.user.set_text(self.get_logged_in_user_string(self.current_players))
@@ -1003,6 +998,8 @@ class WinMain(WahCade, threading.Thread):
                     else:
                         self.identify.sclIDs._update_display()
                         self.show_window('identify')
+                if mw_func == 'BACK' and current_window != 'main':
+                    self.hide_window(current_window)
                 if current_window == 'main':
                     # Display first n letters of selected game when scrolling quickly
                     if self.scroll_count > self.showOverlayThresh:
@@ -1235,7 +1232,7 @@ class WinMain(WahCade, threading.Thread):
                         if self.connected_to_arduino:
                             self.selected_player = []
                         self.hide_window('identify')
-                    elif mw_func in ['ID_SELECT'] and self.connected_to_server:
+                    elif mw_func in ['ID_SELECT']:
                         if self.connected_to_arduino:
                             self.selected_player = self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()]
                             self.hide_window('identify')
@@ -2832,7 +2829,7 @@ class WinMain(WahCade, threading.Thread):
             print "in Rcade"
 
     def get_server_popular_games(self):
-        data = requests.get("http://localhost:8080/RcadeServer/game/popular?renderXML=true")
+        data = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/game/popular?renderXML=true")
         data = fromstring(data.text)
         gList = []
         for game in data.getiterator('game'):
