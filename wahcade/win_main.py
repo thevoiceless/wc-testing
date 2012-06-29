@@ -1230,7 +1230,7 @@ class WinMain(WahCade, threading.Thread):
                         if self.connected_to_arduino:
                             self.selected_player = []
                         self.hide_window('identify')
-                    elif mw_func in ['ID_SELECT'] and self.connected_to_server:
+                    elif mw_func in ['ID_SELECT']:
                         if self.connected_to_arduino:
                             self.selected_player = self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()]
                             self.hide_window('identify')
@@ -2811,7 +2811,7 @@ class WinMain(WahCade, threading.Thread):
             print "in Rcade"
 
     def get_server_popular_games(self):
-        data = requests.get("http://localhost:8080/RcadeServer/game/popular?renderXML=true")
+        data = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/game/popular?renderXML=true")
         data = fromstring(data.text)
         gList = []
         for game in data.getiterator('game'):
