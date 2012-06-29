@@ -184,6 +184,14 @@ class ScrollList(object):
     def get_selected(self):
         """return index of currently selected item"""
         return self._selectedIndex
+    
+    def set_selected_item(self, item):
+        index = self.ls.index(item)
+        self._selectedIndex = index
+        self._update_display()
+    
+    def get_selected_item(self):
+        return self.ls[self._selectedIndex]
 
     def modify_font(self, pango_font_desc):
         """set list font"""

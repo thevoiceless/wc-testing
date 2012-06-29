@@ -1255,6 +1255,7 @@ class WinMain(WahCade, threading.Thread):
                     elif mw_func == 'ID_DOWN_1_LETTER':
                         self.play_clip('DOWN_1_LETTER')
                         self.identify.sclIDs.jumpToLetter(mw_func)
+                        
                 elif current_window == 'popular':
                     if mw_func in ['POPULAR_SHOW']:
                         self.hide_window('popular')
@@ -1262,6 +1263,21 @@ class WinMain(WahCade, threading.Thread):
                         self.popular.sclPop.scroll(-1)
                     elif mw_func in ['POP_DOWN_1_GAME']:
                         self.popular.sclPop.scroll(1)
+                    elif mw_func == 'LAUNCH_GAME':
+                        self.play_clip('LAUNCH_GAME')
+                        self.sclGames.set_selected_item(self.popular.sclPop.get_selected_item())
+                        self.launch_auto_apps_then_game()
+                    elif mw_func == 'LAUNCH_GAME_WITH_OPTIONS1':
+                        self.play_clip('LAUNCH_GAME_WITH_OPTIONS1')
+                        self.sclGames.set_selected_item(self.popular.sclPop.get_selected_item())
+                        self.launch_auto_apps_then_game(
+                            self.emu_ini.get('alt_commandline_format_1'))
+                    elif mw_func == 'LAUNCH_GAME_WITH_OPTIONS2':
+                        self.play_clip('LAUNCH_GAME_WITH_OPTIONS2')
+                        self.sclGames.set_selected_item(self.popular.sclPop.get_selected_item())
+                        self.launch_auto_apps_then_game(
+                            self.emu_ini.get('alt_commandline_format_2'))
+                        
             # Force games list update if using mouse scroll wheel
             if 'MOUSE_SCROLLUP' in mw_keys or 'MOUSE_SCROLLDOWN' in mw_keys:
                 if widget == self.winMain:
