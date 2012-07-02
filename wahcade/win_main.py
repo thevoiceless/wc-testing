@@ -83,12 +83,8 @@ from win_scrsaver import WinScrSaver    # Screen saver window
 from win_history import WinHistory      # History viewer
 from win_cpviewer import WinCPViewer    # Control panel viewer window
 from win_identify import WinIdentify    # Identify window
-<<<<<<< HEAD
-from win_popular import WinPopular      # Popular games window   #@UnresolvedImport
-=======
 from win_popular import WinPopular      # Popular games window
 from win_playerSelect import WinPlayerSelect #Player selection window
->>>>>>> d8bcfb481456cc56b650574cdcf425b11fc82acd
 #from rfid_reader import *               # Gets input from RFID reader
 import threading
 import filters                          # filters.py, routines to read/write mamewah filters and lists
@@ -481,49 +477,33 @@ class WinMain(WahCade, threading.Thread):
         except:
             self.connected_to_arduino = False
             print "Failed to connect to arduino at /dev/ttyUSB0"
+        if self.connected_to_arduino:
+            self.start()
         if self.connected_to_server:
             self.user.set_text("Not Logged In")
             self.user.show()
-            self.running = True
-        self.recent_log = False
-        self.timer_existing = False
-        self.not_in_database = True
-        self.last_log = ''
-<<<<<<< HEAD
-        r = requests.get(self.player_url) #get all players
-        data = fromstring(r.text)
-        self.player_info = []
-#        for player in data.getiterator('player'): #TODO: read these in. Does the following line do what I want it to?
-#            self.player_info.append((player.find('name').text, player.find('playerID').text)) # parse player name and RFID from xml
-        self.player_info = [['Terek Campbell', '52000032DCBC'], 
-                            ['Zach McGaughey', '5100FFE36C21'],
-                            ['Riley Moses', '5200001A9BD3'], 
-                            ['John Kelly', '52000003C697'],
-                            ['Devin Wilson', '']]
-        print "player_info: ", self.player_info
-        self.log_in_queue = Queue.Queue()  
-=======
-        if self.connected_to_server:
-            r = requests.get(self.player_url) # Get all players         
+            r = requests.get(self.player_url) #get all players
+            data = fromstring(r.text)
+            self.player_info = []
+#            for player in data.getiterator('player'): #TODO: read these in. Does the following line do what I want it to?
+#                self.player_info.append((player.find('name').text, player.find('playerID').text)) # parse player name and RFID from xml
             self.player_info = [['Terek Campbell', '52000032DCBC'], 
                                 ['Zach McGaughey', '5100FFE36C21'],
                                 ['Riley Moses', '5200001A9BD3'], 
                                 ['John Kelly', '52000003C697'],
-                                ['Devin Wilson', '']]  
+                                ['Devin Wilson', '']]
+            print "player_info: ", self.player_info
+            self.running = True
             self.log_in_queue = Queue.Queue()  
-            data = fromstring(r.text)
->>>>>>> d8bcfb481456cc56b650574cdcf425b11fc82acd
-            
-        if self.connected_to_arduino:
-            self.start()
 
-<<<<<<< HEAD
-        self.identify.Setup_IDs_list()    
-=======
-#        for player in data.getiterator('player'): #TODO: read these in. Does the following line do what I want it to?
-#            self.player_info.append((player.find('name').text, player.find('playerID').text)) # parse player name and rfid from xml
-             
->>>>>>> d8bcfb481456cc56b650574cdcf425b11fc82acd
+        
+        
+        self.recent_log = False
+        self.timer_existing = False
+        self.not_in_database = True
+        self.last_log = ''
+        self.identify.Setup_IDs_list()   
+         
         pygame.init()
         
         sound_files = os.listdir('sounds/')
