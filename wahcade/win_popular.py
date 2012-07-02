@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 ###
-# Application: wah!cade
+# Application: Rcade
 # File:        win_popular.py
 # Description: Window that displays a ScrollList containing poopular games for the user to choose from
 ###

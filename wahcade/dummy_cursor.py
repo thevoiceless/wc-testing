@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 ###
-# Application: wah!cade
+# Application: Rcade
 # File:        dummy_cursor.py
 # Description: Temporary class used when a database connection can't be established
 ###

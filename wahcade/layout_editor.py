@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 #
 ###
-# Application: wah!cade
+# Application: Rcade
 # File:        layout_editor.py
 # Description: Wah!Cade Layout Editor
 # Copyright (c) 2005-2010   Andy Balcombe <http://www.anti-particle.com>

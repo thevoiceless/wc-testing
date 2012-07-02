@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 ###
-# Application: wah!cade
+# Application: Rcade
 # File:        scrolled_list.py
 # Description: Transparent Scrolled List Widget
 # Copyright (c) 2005-2010   Andy Balcombe <http://www.anti-particle.com>

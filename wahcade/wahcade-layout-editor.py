@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 ###
-# Application: wah!cade
+# Application: Rcade
 # File:        wahcade-layout-editor
 # Description: starts the wah!cade layout editor
 # Copyright (c) 2005-2010   Andy Balcombe <http://www.anti-particle.com>

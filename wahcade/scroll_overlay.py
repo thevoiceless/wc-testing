@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 ###
-# Application: wah!cade
+# Application: Rcade
 # File:        scroll_overlay.py
 # Description: Transparent/Opaque Indicator For Use With Scrolling List
 # Copyright (c) 2012  John Kelly <john.kelly@readytalk.com>

@@ -27,10 +27,10 @@ import gettext
 
 """constants"""
 #application constants
-APP_NAME = 'wahcade'
+APP_NAME = 'Rcade'
 APP_PATH = os.path.abspath(os.getcwd())
-VERSION = 'bzr-devel'
-VERSION_NAME = "mahcade"
+VERSION = 'beta'
+VERSION_NAME = "Rcade-devel"
 LAYOUT_GLADE_FILE = os.path.join(APP_PATH, 'glade', 'layout_editor.glade')
 SETUP_GLADE_FILE = os.path.join(APP_PATH, 'glade', 'wahcade_setup.glade')
 LOCALE_DIR = os.path.join(APP_PATH, 'locale')
