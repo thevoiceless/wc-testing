@@ -68,13 +68,6 @@ class WinIdentify(WahCade):
         self.sclIDs.connect('update', self.on_sclIDs_changed)
         self.sclIDs.connect('mouse-left-click', self.on_sclIDs_changed)
         self.sclIDs.connect('mouse-double-click', self.ID_selected)
-        # Set up IDs
-        self.sclIDs.ls = [l for l in self.lsIDs]
-        self.sclIDs.ls.sort()
-        #print self.sclIDs.ls
-        
-        ## TODO: Exclude IDs already matched to RFID values
-        
         # Init window
         self.lblPrompt.set_text("Unknown RFID:")
         self.lblRFID.set_text("____________")
@@ -95,12 +88,15 @@ class WinIdentify(WahCade):
     def ID_selected(self, *args):
         """ID selected"""
         return
+
+    def Setup_IDs_list(self):
+        self.sclIDs.ls = [l for l in self.lsIDs]
+        self.sclIDs.ls.sort()
+#        print "Before deletions: ", self.sclIDs.ls
+        # Exclude IDs already matched to RFID values
+        for v in self.WinMain.player_info:
+            if v[0] in self.sclIDs.ls and v[1] != '':
+                self.sclIDs.ls.remove(v[0])
+#        print "After deletions: ", self.sclIDs.ls
+
     
-    ## TODO: Add ability to jump alphabetically
-        
-        
-        
-        
-        
-
-
