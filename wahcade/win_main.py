@@ -102,6 +102,8 @@ class WinMain(WahCade, threading.Thread):
     def __init__(self, config_opts):
         """Initialize main Rcade window"""   # Docstring for this method
         
+        self.listIndex = 0
+        
         # Begin the thread for reading from arduino
         threading.Thread.__init__(self)        
         
@@ -1111,14 +1113,14 @@ class WinMain(WahCade, threading.Thread):
                         self.remove_current_game()
                     elif mw_func == 'LAUNCH_GAME':
                         self.play_clip('LAUNCH_GAME')
-                        self.launch_auto_apps_then_game()
+                        self.launch_auto_apps_then_game(self.sclGames)
                     elif mw_func == 'LAUNCH_GAME_WITH_OPTIONS1':
                         self.play_clip('LAUNCH_GAME_WITH_OPTIONS1')
-                        self.launch_auto_apps_then_game(
+                        self.launch_auto_apps_then_game(self.sclGames, 
                             self.emu_ini.get('alt_commandline_format_1'))
                     elif mw_func == 'LAUNCH_GAME_WITH_OPTIONS2':
                         self.play_clip('LAUNCH_GAME_WITH_OPTIONS2')
-                        self.launch_auto_apps_then_game(
+                        self.launch_auto_apps_then_game(self.sclGames, 
                             self.emu_ini.get('alt_commandline_format_2'))
                     elif mw_func == 'MENU_SHOW':
                         self.play_clip('MENU_SHOW')
@@ -1323,17 +1325,17 @@ class WinMain(WahCade, threading.Thread):
                         self.popular.sclPop.scroll(1)
                     elif mw_func == 'LAUNCH_GAME':
                         self.play_clip('LAUNCH_GAME')
-                        self.sclGames.set_selected_item(self.popular.sclPop.get_selected_item())
-                        self.launch_auto_apps_then_game()
+                        #self.sclGames.set_selected_item(self.popular.sclPop.get_selected_item())
+                        self.launch_auto_apps_then_game(self.popular.sclPop)
                     elif mw_func == 'LAUNCH_GAME_WITH_OPTIONS1':
                         self.play_clip('LAUNCH_GAME_WITH_OPTIONS1')
-                        self.sclGames.set_selected_item(self.popular.sclPop.get_selected_item())
-                        self.launch_auto_apps_then_game(
+                        #self.sclGames.set_selected_item(self.popular.sclPop.get_selected_item())
+                        self.launch_auto_apps_then_game(self.popular.sclPop, 
                             self.emu_ini.get('alt_commandline_format_1'))
                     elif mw_func == 'LAUNCH_GAME_WITH_OPTIONS2':
                         self.play_clip('LAUNCH_GAME_WITH_OPTIONS2')
-                        self.sclGames.set_selected_item(self.popular.sclPop.get_selected_item())
-                        self.launch_auto_apps_then_game(
+                        #self.sclGames.set_selected_item(self.popular.sclPop.get_selected_item())
+                        self.launch_auto_apps_then_game(self.popular.sclPop, 
                             self.emu_ini.get('alt_commandline_format_2'))
                 elif current_window == 'playerselect':
                     if mw_func in ['PS_BACK']:
@@ -1560,8 +1562,19 @@ class WinMain(WahCade, threading.Thread):
             new_idx = file_lists[current_idx]
         return new_idx
 
-    def launch_auto_apps_then_game(self, game_cmdline_args=''):
+    def launch_auto_apps_then_game(self, theList, game_cmdline_args=''):
         """Call any automatically launched external applications, then run currently selected game"""
+        print self.lsGames[self.sclGames.get_selected()]
+        print theList.get_selected_item()
+        
+        i = 0
+        for tuple in self.lsGames:
+            if tuple[0] == theList.get_selected_item():
+                self.listIndex = i
+                break
+            i += 1
+        print i
+        
         self.external_app_queue = self.emu_ini.get('auto_launch_apps').split(',')
         # Get it into correct order
         self.external_app_queue.reverse()
@@ -1581,13 +1594,13 @@ class WinMain(WahCade, threading.Thread):
         if self.music_enabled and not d['play_music']:
             self.gstMusic.pause()
         # Replace markers with actual values
-        opts = opts.replace('[name]', self.lsGames[self.sclGames.get_selected()][GL_ROM_NAME])
-        opts = opts.replace('[year]', self.lsGames[self.sclGames.get_selected()][GL_YEAR])
-        opts = opts.replace('[manufacturer]', self.lsGames[self.sclGames.get_selected()][GL_MANUFACTURER])
-        opts = opts.replace('[clone_of]', self.lsGames[self.sclGames.get_selected()][GL_CLONE_OF])
-        opts = opts.replace('[display_type]', self.lsGames[self.sclGames.get_selected()][GL_DISPLAY_TYPE])
-        opts = opts.replace('[screen_type]', self.lsGames[self.sclGames.get_selected()][GL_SCREEN_TYPE])
-        opts = opts.replace('[category]', self.lsGames[self.sclGames.get_selected()][GL_CATEGORY])
+        opts = opts.replace('[name]', self.lsGames[self.listIndex][GL_ROM_NAME])
+        opts = opts.replace('[year]', self.lsGames[self.listIndex][GL_YEAR])
+        opts = opts.replace('[manufacturer]', self.lsGames[self.listIndex][GL_MANUFACTURER])
+        opts = opts.replace('[clone_of]', self.lsGames[self.listIndex][GL_CLONE_OF])
+        opts = opts.replace('[display_type]', self.lsGames[self.listIndex][GL_DISPLAY_TYPE])
+        opts = opts.replace('[screen_type]', self.lsGames[self.listIndex][GL_SCREEN_TYPE])
+        opts = opts.replace('[category]', self.lsGames[self.listIndex][GL_CATEGORY])
         # Automatically rotate to emulator based on the [autorotate] flag being present.
         # This is typically for the MAME emulator since all other emulators known to work use a single orientation factor.
         screen_set = {0: '',
@@ -1618,12 +1631,13 @@ class WinMain(WahCade, threading.Thread):
         # Get rom name
         if self.lsGames_len == 0:
             return
-        rom = self.lsGames[self.sclGames.get_selected()][GL_ROM_NAME]
+        #rom = self.lsGames[self.sclGames.get_selected()][GL_ROM_NAME]
+        rom = self.lsGames[self.listIndex][GL_ROM_NAME]
             
         # Show launch message
         self.message.display_message(
             _('Starting...'),
-            '%s: %s' % (rom, self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME]))
+            '%s: %s' % (rom, self.lsGames[self.listIndex][GL_GAME_NAME]))
             
 
         # Erase scores from hi score file of current game
@@ -1775,7 +1789,7 @@ class WinMain(WahCade, threading.Thread):
         if rom not in self.emu_favs_list:
             self.emu_favs_list[rom] = [
                 rom,
-                self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME],
+                self.lsGames[self.listIndex][GL_GAME_NAME],
                 0,
                 0]
         self.emu_favs_list[rom][FAV_TIMES_PLAYED] += 1
@@ -1809,8 +1823,8 @@ class WinMain(WahCade, threading.Thread):
                 self.histview.app_number = app_number
                 # Display game history
                 self.histview.set_history(
-                    self.lsGames[self.sclGames.get_selected()][GL_ROM_NAME],
-                    self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME])
+                    self.lsGames[self.listIndex][GL_ROM_NAME],
+                    self.lsGames[self.listIndex][GL_GAME_NAME])
             else:
                 self.auto_launch_external_app(cmdline_args=game_cmdline_args)
         elif app_name == 'wahcade-cp-viewer':
@@ -1818,10 +1832,10 @@ class WinMain(WahCade, threading.Thread):
                 # Set app number so cpviewer can be closed by same keypress that started it
                 self.cpviewer.app_number = app_number
                 # Display control panel info
-                cpvw_rom = self.lsGames[self.sclGames.get_selected()][GL_ROM_NAME]
+                cpvw_rom = self.lsGames[self.listIndex][GL_ROM_NAME]
                 # Use clone name if necessary
-                if self.lsGames[self.sclGames.get_selected()][GL_CLONE_OF] != '':
-                    cpvw_rom = self.lsGames[self.sclGames.get_selected()][GL_CLONE_OF]
+                if self.lsGames[self.listIndex][GL_CLONE_OF] != '':
+                    cpvw_rom = self.lsGames[self.listIndex][GL_CLONE_OF]
                 self.cpviewer.display_game_details(cpvw_rom)
             else:
                 self.auto_launch_external_app(cmdline_args=game_cmdline_args)
