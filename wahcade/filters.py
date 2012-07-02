@@ -532,7 +532,7 @@ def read_filtered_list(list_filename):
         f, file_enc = open_file(list_filename, 'w')
         f.close()
     #open file
-    f, file_enc = open_file(list_filename, 'r')
+    f = open(list_filename, 'r')
     lines = f.readlines()
     f.close()
     lines = [s.strip() for s in lines]

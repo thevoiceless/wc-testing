@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 #
 ###
-# Application: wah!cade
-# File:        wahcade
+# Application: Rcade
+# File:        wahcade.py
 # Description: starts the wah!cade app
 # Copyright (c) 2005-2010   Andy Balcombe <http://www.anti-particle.com>
 ###
