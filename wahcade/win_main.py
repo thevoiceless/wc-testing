@@ -84,22 +84,21 @@ from win_history import WinHistory      # History viewer
 from win_cpviewer import WinCPViewer    # Control panel viewer window
 from win_identify import WinIdentify    # Identify window
 from win_popular import WinPopular      # Popular games window
-#from rfid_reader import *               # Gets input from RFID reader
 import threading
 import filters                          # filters.py, routines to read/write mamewah filters and lists
 from mamewah_ini import MameWahIni      # Reads mamewah-formatted ini file
 import joystick                         # joystick.py, joystick class, uses pygame package (SDL bindings for games in Python)
-import requests #@UnresolvedImport
+import requests
 import pygame
 from xml.etree.ElementTree import fromstring
 # Set gettext function
 _ = gettext.gettext
 
 class WinMain(WahCade, threading.Thread):
-    """Wah!Cade Main Window"""          # This is the docstring belonging to the class, __doc__
+    """Rcade Main Window"""          # This is the docstring belonging to the class, __doc__
 
     def __init__(self, config_opts):
-        """Initialise main Wah!Cade window"""   # Docstring for this method
+        """Initialize main Rcade window"""   # Docstring for this method
         
         # Begin the thread for reading from arduino
         threading.Thread.__init__(self)        
@@ -478,14 +477,15 @@ class WinMain(WahCade, threading.Thread):
         self.timer_existing = False
         self.not_in_database = True
         self.last_log = ''
-        r = requests.get(self.player_url) # Get all players         
-        self.player_info = [['Terek Campbell', '52000032DCBC'], 
-                            ['Zach McGaughey', '5100FFE36C21'],
-                            ['Riley Moses', '5200001A9BD3'], 
-                            ['John Kelly', '52000003C697'],
-                            ['Devin Wilson', '']]  
-        self.log_in_queue = Queue.Queue()  
-        data = fromstring(r.text)
+        if self.connected_to_server:
+            r = requests.get(self.player_url) # Get all players         
+            self.player_info = [['Terek Campbell', '52000032DCBC'], 
+                                ['Zach McGaughey', '5100FFE36C21'],
+                                ['Riley Moses', '5200001A9BD3'], 
+                                ['John Kelly', '52000003C697'],
+                                ['Devin Wilson', '']]  
+            self.log_in_queue = Queue.Queue()  
+            data = fromstring(r.text)
             
         if self.connected_to_arduino:
             self.start()
