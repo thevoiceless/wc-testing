@@ -83,6 +83,7 @@ from win_history import WinHistory      # History viewer
 from win_cpviewer import WinCPViewer    # Control panel viewer window
 from win_identify import WinIdentify    # Identify window
 from win_popular import WinPopular      # Popular games window
+from win_playerSelect import WinPlayerSelect #Player selection window
 #from rfid_reader import *               # Gets input from RFID reader
 import threading
 import filters                          # filters.py, routines to read/write mamewah filters and lists
@@ -298,6 +299,9 @@ class WinMain(WahCade, threading.Thread):
         # Init random engine
         random.seed()
         # Build list
+        self.current_players = []
+        self.score_processing_queue = []
+        self.upload_queue = []
         self.lsGames = []
         self.lsGames_len = 0
         # Timers
@@ -325,6 +329,9 @@ class WinMain(WahCade, threading.Thread):
         ### Create popular games window
         self.popular = WinPopular(self)
         self.popular.winPop.hide()
+        ### Create player select window
+        self.player_select = WinPlayerSelect(self)
+        self.player_select.winPlayers.hide()
         
         self.hide_window()
         
@@ -398,12 +405,17 @@ class WinMain(WahCade, threading.Thread):
         self._popular_items = [
             (-1, self.popular.lblHeading, "Header"),
             (-1, self.popular.sclPop, "PopList"),]
+        self._player_select_items = [
+            (-1, self.player_select.lblScore, "lblScore"),
+            (-1, self.player_select.lbl1, "lbl1"),
+            (-1, self.player_select.sclPlayers, "playersList")]
         self._layout_items = {'main': self._main_items,
                               'options': self._options_items,
                               'message': self._message_items,
                               'screensaver': self._screensaver_items,
                               'identify' : self._identify_items,
-                              'popular' : self._popular_items}
+                              'popular' : self._popular_items,
+                              'playerselect' : self._player_select_items}
           
         # Initialize and show primary Fixd containers, and populate appropriately
         self.fixd.show()
@@ -463,7 +475,6 @@ class WinMain(WahCade, threading.Thread):
                 self.connected_to_server = False                    
 
         # Setup login
-        self.current_players = []
         self.unregistered_users = []
         try:
             self.rfid_reader = serial.Serial('/dev/ttyUSB0', 9600)
@@ -487,7 +498,8 @@ class WinMain(WahCade, threading.Thread):
                             ['John Kelly', '52000003C697'],
                             ['Devin Wilson', '']]    
         data = fromstring(r.text)
-            
+        
+        self.selected_player = ""
         if self.connected_to_arduino:
             self.start()
 
@@ -710,6 +722,8 @@ class WinMain(WahCade, threading.Thread):
         
     def parse_high_score_text(self, text_string):
         """Parse the text file for high scores. 0 scores are not sent"""
+        if len(self.current_players) > 1:
+            multiple_score_list = []
         high_score_table = {}
         index = 1
         # Go through each line of the the high score result
@@ -722,30 +736,72 @@ class WinMain(WahCade, threading.Thread):
                     index += 1
                     for column in line:
                         high_score_table[column] = '' # Initialize dictionary values
-                else:
-                    for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
-                        high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
-                    if 'SCORE' in high_score_table: # If high score table has score
-                        if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB
-#                            r = requests.get(self.player_url) #get all players                          
-#                            players = []
-#                            data = fromstring(r.text)
-#                            for player in data.getiterator('player'):
-#                                players.append(player.find('name').text) # parse player name from xml
-#                            if not self.user.get_text() in players: # if player doesn't exist and add them to DB
-#                                randNum = random.randint(1, 5000) #TODO: replacing RFID for now
-#                                post_data = {"name":self.user.get_text(), "playerID":randNum}
-#                                r = requests.post(self.player_url, post_data)
-#                            del players[:]
-                            if 'NAME' in high_score_table:
-                                post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": '0', "game":self.current_rom, "player":self.user.get_text()}                         
-                            else:
-                                post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.current_players[0]}
-                            r = requests.post(self.score_url, post_data)
-                            self.check_connection(r.status_code)
+                else: #not the first (heading) line
+                    if len(self.current_players) == 1:
+                        for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
+                            high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
+                        if 'SCORE' in high_score_table: # If high score table has score
+                            if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB
+                                if 'NAME' in high_score_table:
+                                    post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": '0', "game":self.current_rom, "player":self.user.get_text()}                         
+                                else:
+                                    post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.current_players[0]}
+                                r = requests.post(self.score_url, post_data)
+                                self.check_connection(r.status_code)
+                    else: #TODO handle multiple players scores coming back
+                        for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
+                            high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
+                        if 'SCORE' in high_score_table: # If high score table has score
+                            if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB                                                                
+                                if 'NAME' in high_score_table:
+                                    post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": '0', "game":self.current_rom, "player":""}                         
+                                    multiple_score_list.append(post_data)
+                                else:
+                                    post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":""}
+                                    multiple_score_list.append(post_data)
+
+        if len(self.current_players) > 1:
+            self.upload_queue = []
+            self.score_processing_queue = []
+            
+            for score in multiple_score_list:
+                self.score_processing_queue.append(score)
+            # Set the labels for display
+            self.player_select.lbl1.set_text(self.score_processing_queue[len(self.score_processing_queue)-1]['score'] + "   " + self.score_processing_queue[len(self.score_processing_queue)-1]['arcadeName'])               
+            self.show_window('playerselect')    
+
+    def close_dialog(self, widget, data = None):
+        """When the player select screen closes, this method starts"""
+        if len(self.score_processing_queue) != 0 and self.selected_player != '':
+            score_to_associate = self.score_processing_queue.pop()
+            score_to_associate['player'] = self.selected_player
+            self.upload_queue.append(score_to_associate)
+            self.selected_player = ''
+        
+        #If there are more scores to be processed, to update the display, we reopen the window
+        if len(self.score_processing_queue) >=1:
+            self.player_select.lbl1.set_text(self.score_processing_queue[len(self.score_processing_queue)-1]['score'] + "   " + self.score_processing_queue[len(self.score_processing_queue)-1]['arcadeName'])               
+            self.show_window('playerselect')
+            return
+        
+        if len(self.score_processing_queue) == 0:
+            self.post_upload()
+            return
+        
+    def post_upload(self):
+        if len(self.upload_queue) != 0:
+            to_upload = self.upload_queue.pop()            
+            r = requests.post(self.score_url, to_upload)
+            self.check_connection(r.status_code)
+            self.current_window = 'main'
+            self.winMain.present()
+        else:
+            self.score_processing_queue = []
+            self.upload_queue = []
+
              
     def check_connection(self, status_code):
-        if (status_code - 200) < 100 and (status_code - 200) >= 0:
+        if ((status_code - 200) < 100 and (status_code - 200) >= 0) or status_code == 500:
             self.connected_to_server = True
         else:
             self.connected_to_server = False
@@ -797,7 +853,6 @@ class WinMain(WahCade, threading.Thread):
                 
             # NOTE: player_rfid is actually player_name in the lines below
             if not player_rfid in players: # if player doesn't exist and add them to DB and log them in
-                print 'not in players'
                 self.register_new_player(123456, player_rfid)
                 self.current_players.append(player_rfid)
                 self.user.set_text(self.get_logged_in_user_string(self.current_players))
@@ -987,6 +1042,8 @@ class WinMain(WahCade, threading.Thread):
                         self.log_msg("  joystick: cleared_events",1)
             # Get mamewah function from key
             for mw_key in mw_keys:
+                if mw_key == 'DIK_SLASH':
+                    self.show_window('playerselect')
                 mw_functions = self.ctrlr_ini.reverse_get(mw_key)
                 if mw_functions:
                     break
@@ -1257,6 +1314,26 @@ class WinMain(WahCade, threading.Thread):
                         self.popular.sclPop.scroll(-1)
                     elif mw_func in ['POP_DOWN_1_GAME']:
                         self.popular.sclPop.scroll(1)
+                elif current_window == 'playerselect':
+                    if mw_func in ['PS_BACK']:
+                        self.hide_window('playerselect')
+                    # Exit from identity window
+                    elif mw_func in ['PS_SELECT']:
+                        if self.connected_to_arduino:
+                            pass
+#                            self.selected_player = self.player_select.sclPlayers.ls[self.player_select.sclPlayers.get_selected()]
+#                            self.hide_window('playerselect')
+                        else:
+                            self.selected_player = self.player_select.sclPlayers.ls[self.player_select.sclPlayers.get_selected()]
+                            self.hide_window('playerselect')                            
+                    # Scroll up 1 name
+                    elif mw_func in ['PS_UP_1_NAME']:
+                        self.player_select.sclPlayers.scroll((int(self.scroll_count / 20) * -1) - 1)
+                    # Scroll down 1 name
+                    elif mw_func in ['PS_DOWN_1_NAME']:
+                        self.player_select.sclPlayers.scroll(int(self.scroll_count / 20) + 1)
+                            
+
             # Force games list update if using mouse scroll wheel
             if 'MOUSE_SCROLLUP' in mw_keys or 'MOUSE_SCROLLDOWN' in mw_keys:
                 if widget == self.winMain:
@@ -1520,6 +1597,7 @@ class WinMain(WahCade, threading.Thread):
         self.message.display_message(
             _('Starting...'),
             '%s: %s' % (rom, self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME]))
+            
 
         # Erase scores from hi score file of current game
         # Executable must be in same directory
@@ -1987,6 +2065,20 @@ class WinMain(WahCade, threading.Thread):
         # Other stuff
         pop.lblHeading.set_text(_('Popular Games'))
             
+        # Set up Player Select window
+        plyr = self.player_select
+        plyr_lay = layout_info['playerselect']['fixdSelect']
+        self.fixd.move(plyr.winPlayers, 0, 0)
+        plyr.winPlayers.set_size_request(main_lay['width'], main_lay['height'])
+        plyr.winPlayers.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(idtfy_lay['background-col']))
+        plyr.winPlayers.move(plyr.imgBackground, 0, 0)
+        plyr.imgBackground.set_size_request(main_lay['width'], main_lay['height'])
+        plyr_img = plyr_lay['use-image']
+        if not os.path.dirname(plyr_img):
+            plyr_img = os.path.join(self.layout_path, plyr_img)
+        plyr.imgBackground.set_from_file(plyr_img)
+        
+        
         # Set up all Widgets
         for w_set_name in self._layout_items.keys():
             wset_layout_info = layout_info[w_set_name]
@@ -2084,6 +2176,10 @@ class WinMain(WahCade, threading.Thread):
                     # Move widgets to the correct places; move_in_fixd is for the scroll overlay
                     if isinstance(widget, gtk.Widget):
                         self.popular.winPop.move(widget, w_lay['x'], w_lay['y'])
+                elif w_set_name == "playerselect":
+                    # Move widgets to the correct places; move_in_fixd is for the scroll overlay
+                    if isinstance(widget, gtk.Widget):
+                        self.player_select.winPlayers.move(widget, w_lay['x'], w_lay['y'])
                 else:
                     print "Orphaned widget detected. Did not belong to one of [main/options/message/screensaver/identify/popular]"
        
@@ -2210,7 +2306,6 @@ class WinMain(WahCade, threading.Thread):
         self.scrsaver.drwVideo.set_size_request(main_width, main_height)
         
         # Set all window items
-        #print self._layout_items
         for offset, widget in self._layout_items:
             # Get properties
             data = self.get_layout_item_properties(lines, offset)
@@ -2692,6 +2787,12 @@ class WinMain(WahCade, threading.Thread):
             child_win = self.identify.winID
         elif window_name == 'popular':
             child_win = self.popular.winPop
+        elif window_name == 'playerselect':
+            self.player_select.populate_list()
+            self.player_select.sclPlayers._update_display()
+            child_win = self.player_select.winPlayers
+            child_win.connect('hide', self.close_dialog)
+            self.player_select.sclPlayers.set_selected(0)
         # Show given child window
         if child_win:            
             self.stop_video()
@@ -2713,12 +2814,14 @@ class WinMain(WahCade, threading.Thread):
         self.cpviewer.winCPViewer.hide()
         self.identify.winID.hide()
         self.popular.winPop.hide()
+        self.player_select.winPlayers.hide()
         # "show" main
-        self.current_window = 'main'
-        self.winMain.present()
-        # Start timers again
-        self.start_timer('scrsave')
-        self.start_timer('video')
+        if window_name is not 'playerselect':
+            self.current_window = 'main'
+            self.winMain.present()
+            # Start timers again
+            self.start_timer('scrsave')
+            self.start_timer('video')
 
     def show_popular_games(self):
         popScl = ScrollList(self)
@@ -2811,7 +2914,7 @@ class WinMain(WahCade, threading.Thread):
             print "in Rcade"
 
     def get_server_popular_games(self):
-        data = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/game/popular?renderXML=true")
+        data = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/game/popular?count=10&renderXML=true")
         data = fromstring(data.text)
         gList = []
         for game in data.getiterator('game'):
