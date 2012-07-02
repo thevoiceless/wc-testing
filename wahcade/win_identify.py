@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 ###
-# Application: wah!cade
+# Application: Rcade
 # File:        win_identify.py
 # Description: Window that displays a ScrollList containing names for the player to choose from
 ###

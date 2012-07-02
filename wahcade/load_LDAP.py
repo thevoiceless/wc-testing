@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 ###
-# Application: wah!cade
+# Application: Rcade
 # File:        load_LDAP.py
 # Description: Connects to and loads from an Active Directory or LDAP server
 ###
