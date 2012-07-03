@@ -490,6 +490,7 @@ class WinMain(WahCade, threading.Thread):
         self.recent_log = False
         self.timer_existing = False
         self.not_in_database = True
+        self.running = True
         self.last_log = ''
         self.log_in_queue = Queue.Queue()
         if self.connected_to_server:
@@ -504,7 +505,6 @@ class WinMain(WahCade, threading.Thread):
                 self.start()
                 self.user.set_text("Not Logged In")
                 self.user.show()
-                self.running = True
                 # Get players from server
                 r = requests.get(self.player_url)
                 data = fromstring(r.text)
@@ -730,7 +730,6 @@ class WinMain(WahCade, threading.Thread):
                             valid_string += '?'
                     testString = valid_string
                     if self.connected_to_server:
-                        print self.current_p
                         self.parse_high_score_text(testString)
 
     def on_winMain_focus_out(self, *args):

@@ -290,9 +290,6 @@ class WahCade:
         """process any outstanding gtk events"""
         while gtk.events_pending():
             gtk.main_iteration(False)
-        
-    def do_show_window_event(self):
-        gtk.main_iteration(True)
 
     def get_path(self, check_path):
         """return a given path, with user expansion"""
