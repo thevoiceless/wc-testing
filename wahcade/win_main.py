@@ -52,6 +52,7 @@ import gobject                      # https://live.gnome.org/PyGObject
 gobject.threads_init()              # Initializes the the use of Python threading in the gobject module
 import pango                        # Library for rendering internationalized texts in high quality, http://zetcode.com/tutorials/pygtktutorial/pango/
 
+
 # Get system path separator
 sep = os.sep
 
@@ -242,6 +243,8 @@ class WinMain(WahCade, threading.Thread):
         self.IDsScrollOverlay = ScrollOverlay(self.lblIDsOverlayScrollLetters, self.IDsOverlayBG)
 
         # Create scroll list widget
+        self.scroll_selected_color = '#C5C5C5' #Default in case layout doesn't load
+        self.selected_player = ''
         self.sclGames = ScrollList(self) 
         self._main_images = [
             self.imgArtwork1,
@@ -436,10 +439,11 @@ class WinMain(WahCade, threading.Thread):
         self.load_emulator()
         
         # Load list of games supported by HiToText
-        self.supported_games = set()
+        self.supported_games = []
+        self.supported_games_name = []
         self.supported_game_file = open('supported_games.lst')
         for line in self.supported_game_file:
-            self.supported_games.add(line.strip())
+            self.supported_games.append(line.strip())
                 
         # Get a list of games already on the server
         self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
@@ -447,14 +451,19 @@ class WinMain(WahCade, threading.Thread):
         self.score_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/score/"
         
         self.connected_to_arduino = False
-        
+        self.nameToRom = {}
         if self.connected_to_server:
             try:
                 # Map rom name to associated game name
                 romToName = {}
                 for sublist in self.lsGames: 
                     romToName[sublist[1]] = sublist[0]
-                
+                    
+                    
+                for game in romToName:
+                    if game in self.supported_games:
+                        self.supported_games_name.append(romToName[game])
+             
                 # Get a list of games already on the server
                 data = requests.get(self.game_url)
                 self.check_connection(data.status_code)
@@ -574,6 +583,7 @@ class WinMain(WahCade, threading.Thread):
             'key-press-event', 'key-release-event', 'button-release-event',
             'scroll-event', 'motion-notify-event']
         [self.winMain.connect(kpev, self.on_winMain_key_press) for kpev in key_press_events]
+        self.sclGames._update_display()
         #[self.drwVideo.connect(kpev, self.on_winMain_key_press) for kpev in key_press_events]
         #key_press_events = ['key-press-event', 'key-release-event']
         #[self.drwVideo.connect(kpev, self.on_winMain_key_press) for kpev in key_press_events]
@@ -776,32 +786,42 @@ class WinMain(WahCade, threading.Thread):
 
     def close_dialog(self, widget, data = None):
         """When the player select screen closes, this method starts"""
-        if len(self.score_processing_queue) != 0 and self.selected_player != '':
-            score_to_associate = self.score_processing_queue.pop()
-            score_to_associate['player'] = self.selected_player
-            self.upload_queue.append(score_to_associate)
-            self.selected_player = ''
-        
-        #If there are more scores to be processed, to update the display, we reopen the window
-        if len(self.score_processing_queue) >=1:
-            self.player_select.lbl1.set_text(self.score_processing_queue[len(self.score_processing_queue)-1]['score'] + "   " + self.score_processing_queue[len(self.score_processing_queue)-1]['arcadeName'])               
-            self.show_window('playerselect')
-            return
-        
+        if len(self.score_processing_queue) > 0:
+            if self.selected_player != '':
+                score_to_associate = self.score_processing_queue.pop()
+                score_to_associate['player'] = self.selected_player
+                self.upload_queue.append(score_to_associate)
+                self.selected_player = ''
+                if len(self.score_processing_queue) > 1:
+                    self.player_select.lbl1.set_text(self.score_processing_queue[len(self.score_processing_queue)-1]['score'] + "   " + self.score_processing_queue[len(self.score_processing_queue)-1]['arcadeName'])               
+                    self.show_window('playerselect')
+            else:
+                if len(self.score_processing_queue) > 1:
+                    self.score_processing_queue.pop()
+                    self.player_select.lbl1.set_text(self.score_processing_queue[len(self.score_processing_queue)-1]['score'] + "   " + self.score_processing_queue[len(self.score_processing_queue)-1]['arcadeName'])               
+                    self.show_window('playerselect')
+                    return
+                else:
+                    self.score_processing_queue.pop()
         if len(self.score_processing_queue) == 0:
-            self.post_upload()
+            self.hide_window('playerselect')
+            if len(self.upload_queue) != 0:
+                self.post_upload()
+            else:
+                self.current_window = 'main'
+                self.winMain.present()
             return
         
     def post_upload(self):
-        if len(self.upload_queue) != 0:
+        """Post data for multiple players"""
+        while self.upload_queue:
             to_upload = self.upload_queue.pop()            
             r = requests.post(self.score_url, to_upload)
             self.check_connection(r.status_code)
-            self.current_window = 'main'
-            self.winMain.present()
-        else:
-            self.score_processing_queue = []
-            self.upload_queue = []
+        self.current_window = 'main'
+        self.winMain.present()
+        self.score_processing_queue = []
+        self.upload_queue = []
 
              
     def check_connection(self, status_code):
@@ -868,7 +888,7 @@ class WinMain(WahCade, threading.Thread):
             # If player doesn't exist and add them to DB and log them in
             if not player_rfid in players: # if player doesn't exist and add them to DB and log them in
 
-                self.register_new_player(123456, player_rfid)
+                self.register_new_player('0123456789ABC', player_rfid)
                 self.current_players.append(player_rfid)
                 self.user.set_text(self.get_logged_in_user_string(self.current_players))
             # If player already logged in, log them out
@@ -1353,6 +1373,7 @@ class WinMain(WahCade, threading.Thread):
                 elif current_window == 'playerselect':
                     if mw_func in ['PS_BACK']:
                         self.hide_window('playerselect')
+                        self.close_dialog(self.player_select)
                     # Exit from identity window
                     elif mw_func in ['PS_SELECT']:
                         if self.connected_to_arduino:
@@ -1361,7 +1382,8 @@ class WinMain(WahCade, threading.Thread):
 #                            self.hide_window('playerselect')
                         else:
                             self.selected_player = self.player_select.sclPlayers.ls[self.player_select.sclPlayers.get_selected()]
-                            self.hide_window('playerselect')                            
+                            self.close_dialog(self.player_select)
+#                            self.hide_window('playerselect')                            
                     # Scroll up 1 name
                     elif mw_func in ['PS_UP_1_NAME']:
                         self.player_select.sclPlayers.scroll((int(self.scroll_count / 20) * -1) - 1)
@@ -2002,6 +2024,8 @@ class WinMain(WahCade, threading.Thread):
         self.highScoreDataMarkupHead = ('<span color="%s" size="%s">' % (hs_data_lay['text-col'], hs_data_lay['font-size']))
         self.highScoreDataMarkupTail = '</span>'
         self.highScoreDataLayout = hs_data_lay
+        
+        self.scroll_selected_color = layout_info['main']['GameList']['supported-col']
         
         # Formatting for the games overlay letters
         overlay_lay = layout_info['main']['ScrollOverlay']
@@ -2832,7 +2856,7 @@ class WinMain(WahCade, threading.Thread):
             self.player_select.populate_list()
             self.player_select.sclPlayers._update_display()
             child_win = self.player_select.winPlayers
-            child_win.connect('hide', self.close_dialog)
+#            child_win.connect('hide', self.close_dialog)
             self.player_select.sclPlayers.set_selected(0)
         # Show given child window
         if child_win:
@@ -2855,7 +2879,7 @@ class WinMain(WahCade, threading.Thread):
         self.cpviewer.winCPViewer.hide()
         self.identify.winID.hide()
         self.popular.winPop.hide()
-        self.player_select.winPlayers.hide()
+        
         # "show" main
         if window_name is not 'playerselect':
             self.current_window = 'main'
@@ -2863,6 +2887,8 @@ class WinMain(WahCade, threading.Thread):
             # Start timers again
             self.start_timer('scrsave')
             self.start_timer('video')
+        else:
+            self.player_select.winPlayers.hide()
 
     def check_ext_on_game_launch(self, romext='*'):
         """Check that the correct extension is being used"""
