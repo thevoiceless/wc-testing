@@ -494,6 +494,8 @@ class WinMain(WahCade, threading.Thread):
         if self.connected_to_server:
             # List the contents of /dev/serial/by-id and follow the symbolic link to find where the Arduino is mounted
             try:
+                if not os.path.isdir("/dev/serial/by-id"):
+                    raise RuntimeError("Device not connected")
                 output = subprocess.Popen("ls /dev/serial/by-id -l | grep FTDI", stdout=subprocess.PIPE, shell=True).stdout.read()
                 # Split the output, only the end is relevant
                 result = output.split(' ')
