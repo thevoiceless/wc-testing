@@ -1564,20 +1564,12 @@ class WinMain(WahCade, threading.Thread):
 
     def launch_auto_apps_then_game(self, theList, game_cmdline_args=''):
         """Call any automatically launched external applications, then run currently selected game"""
-<<<<<<< HEAD
         
-        # Get game names; info is of form (Name, romName, otherData, moreData, stuffWeDontNeedhere, ...)
-        games = [info[0] for info in self.lsGames]
-        # Get index of entry matching currently selected item in theList
-        self.listIndex = games.index(theList.get_selected_item())
-=======
-        i = 0
-        for entry in self.lsGames:
-            if entry[0] == theList.get_selected_item():
-                self.listIndex = i
+        # Find the index of the selected item in the main list of games
+        for index, item in enumerate(self.lsGames):
+            if item[0] == theList.get_selected_item():
+                self.listIndex = index
                 break
-            i += 1
->>>>>>> f4ec80d3121318134507b73900c8598b5291ee0f
         
         self.external_app_queue = self.emu_ini.get('auto_launch_apps').split(',')
         # Get it into correct order
