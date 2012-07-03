@@ -103,8 +103,6 @@ class WinMain(WahCade, threading.Thread):
     def __init__(self, config_opts):
         """Initialize main Rcade window"""   # Docstring for this method
         
-        self.listIndex = 0
-        
         # Begin the thread for reading from arduino
         threading.Thread.__init__(self)        
         
@@ -132,6 +130,7 @@ class WinMain(WahCade, threading.Thread):
         debug_mode = False
         self.showOverlayThresh = 10
         self.showImgThresh = 6
+        self.listIndex = 0
         
         ### USER PROFILE
         self.userpath = os.path.expanduser(CONFIG_DIR)  # CONFIG_DIR comes from constants.py
@@ -245,7 +244,7 @@ class WinMain(WahCade, threading.Thread):
         self.IDsScrollOverlay = ScrollOverlay(self.lblIDsOverlayScrollLetters, self.IDsOverlayBG)
 
         # Create scroll list widget
-        self.scroll_selected_color = '#C5C5C5' #Default in case layout doesn't load
+        self.scroll_selected_color = '#C5C5C5' # Default in case layout doesn't load
         self.selected_player = ''
         self.sclGames = ScrollList(self) 
         self._main_images = [
@@ -486,13 +485,21 @@ class WinMain(WahCade, threading.Thread):
 
         # Setup login
         self.unregistered_users = []
+        # List the contents of /dev/serial/by-id and follow the symbolic link to find where the Arduino is mounted
         try:
-            self.rfid_reader = serial.Serial('/dev/ttyUSB0', 9600)
+            output = subprocess.Popen("ls /dev/serial/by-id -l | grep FTDI", stdout=subprocess.PIPE, shell=True).stdout.read()
+            # Split the output, only the end is relevant
+            result = output.split(' ')
+            # The last part of the result is the symbolic link target
+            arduino_mount = result[len(result) - 1].strip()
+            # Create the final path
+            arduino_mount = '/dev' + arduino_mount[arduino_mount.rfind('/'):]
+            self.rfid_reader = serial.Serial(arduino_mount, 9600)
             self.connected_to_arduino = True
-            print "Successfully connected to arduino at /dev/ttyUSB0" # TODO: Change this to system directory
+            print "Successfully connected to Arduino mounted at", arduino_mount # TODO: Change this to system directory
         except:
             self.connected_to_arduino = False
-            print "Failed to connect to arduino at /dev/ttyUSB0"
+            print "Failed to connect to Arduino"
         if self.connected_to_server:
             self.user.set_text("Not Logged In")
             self.user.show()
@@ -831,9 +838,10 @@ class WinMain(WahCade, threading.Thread):
     def check_connection(self, status_code):
         if ((status_code - 200) < 100 and (status_code - 200) >= 0) or status_code == 500:
             self.connected_to_server = True
+            print "Successfully connected to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
         else:
             self.connected_to_server = False
-        
+            print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
              
     def log_in(self, player_rfid):
         """Log in"""
@@ -1458,7 +1466,8 @@ class WinMain(WahCade, threading.Thread):
                     self.current_emu,
                     (i + 1))
                 self.display_scaled_image(img, img_filename, self.keep_aspect, img.get_data('text-rotation'))
-    
+        self.sclGames.truncate()
+        
     def get_score_string(self):
         """Parse Scores from DB into display string"""
         r = requests.get(self.game_url + self.current_rom + "/highscore")
@@ -2249,7 +2258,7 @@ class WinMain(WahCade, threading.Thread):
                         self.player_select.winPlayers.move(widget, w_lay['x'], w_lay['y'])
                 else:
                     print "Orphaned widget detected. Did not belong to one of [main/options/message/screensaver/identify/popular]"
-       
+        
         # Load histview and cpviewer layouts
         # Still in use?
         self.histview.load_layout(self.histview.layout_filename)
