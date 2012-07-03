@@ -492,19 +492,17 @@ class WinMain(WahCade, threading.Thread):
         self.not_in_database = True
         self.running = True
         self.last_log = ''
-        self.log_in_queue = Queue.Queue()
         if self.connected_to_server:
             try:
                 self.rfid_reader = serial.Serial('/dev/ttyUSB0', 9600)
                 self.connected_to_arduino = True
+                self.start()
                 print "Successfully connected to arduino at /dev/ttyUSB0"
             except:
                 self.connected_to_arduino = False
                 print "Failed to connect to arduino at /dev/ttyUSB0"
             if self.connected_to_arduino:
-                self.start()
-                self.user.set_text("Not Logged In")
-                self.user.show()
+                self.log_in_queue = Queue.Queue()
                 # Get players from server
                 r = requests.get(self.player_url)
                 data = fromstring(r.text)
@@ -514,6 +512,8 @@ class WinMain(WahCade, threading.Thread):
 #                                    ['Zach McGaughey', '5100FFE36C21'],
 #                                    ['Riley Moses', '5200001A9BD3'], 
 #                                    ['John Kelly', '52000003C697']]
+            self.user.set_text("Not Logged In")
+            self.user.show()
         # Generate unregistered user list
         self.identify.Setup_IDs_list()
 
@@ -706,9 +706,10 @@ class WinMain(WahCade, threading.Thread):
             self.message.hide()
             self.launched_game = False
             # Call log_in with any RFID's that were scanned while MAME had control
-            while not self.log_in_queue.empty():
-                self.log_in(self.log_in_queue.get())
-                print self.current_players
+            if self.connected_to_arduino:
+                while not self.log_in_queue.empty():
+                    self.log_in(self.log_in_queue.get())
+#                    print self.current_players
             # If the game supports high scores run the HiToText executions
             if self.current_rom in self.supported_games and len(self.current_players) != 0:
                 htt_command = self.htt_read
@@ -868,7 +869,6 @@ class WinMain(WahCade, threading.Thread):
                 self.last_log = player_rfid
                 self.current_players.append(player_name)
                 self.user.set_text(self.get_logged_in_user_string(self.current_players))   
-                print "In log_in player_info: ", self.player_info   
             # If player doesn't exist then add them to DB
             else:
                 self.register_new_player(player_rfid)
@@ -2687,10 +2687,6 @@ class WinMain(WahCade, threading.Thread):
         # Joystick
         elif timer_type == 'joystick' and (self.joyint == 1):
             self.joystick_timer = gobject.timeout_add(50, self.joy.poll, self.on_winMain_key_press)
-        # Video recording
-        elif timer_type == 'record':
-            self.timeout = 2; # Number of seconds till the video recorder times out
-            self.recorder_timer = gobject.timeout_add(self.timeout * 1000, self.stop_recording_video)
         # Login timer
         elif timer_type == 'login':
             self.timeout = 5; # Number of seconds till recent_log times out
@@ -2934,7 +2930,6 @@ class WinMain(WahCade, threading.Thread):
         self.wait_with_events(1.00)
         window_name = 'MAME: %s [%s]' % (self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME], rom)
         os.system('recordmydesktop --full-shots --fps 16 --no-frame --windowid $(xwininfo -name ' + "\'" + str(window_name) + "\'" + ' | awk \'/Window id:/ {print $4}\') -o \'recorded games\'/' + rom + '_highscore &')
-#        self.start_timer('record') # Doesn't work at the moment # TODO: Get rid of this entirely
 
     def stop_recording_video(self):
         """Stop recording by killing RecordMyDesktop"""

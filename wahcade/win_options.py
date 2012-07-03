@@ -120,8 +120,7 @@ class WinOptions(WahCade):
                 [_('Previous Track'), 'previous_track'],
                 [_('Select Track / Directory'), 'show_music_dir']],
             'record_video':
-                [[_('On Game Launch'), 'recording_launch'],
-                [_('On Keypress (Not implemented)'), 'recording_keypress'],
+                [[_('On'), 'recording_launch'],
                 [_('Off'), 'recording_off']],
             'exit':
                 [[_('Exit to Desktop'), 'exit_desktop'],
@@ -136,7 +135,6 @@ class WinOptions(WahCade):
         # Init window
         #self.lblHeading.set_ellipsize(pango.ELLIPSIZE_START)
         self.record = False
-        self.on_keypress = False
 
     def on_sclOptions_changed(self, *args):
         """options menu selected item changed"""
@@ -231,10 +229,8 @@ class WinOptions(WahCade):
         elif menu_level == 'record_video':
             [self.lsOptions.append(menu_item) for menu_item in self._menus[menu_level][:3]] # Generates list choices
             self.sclOptions.set_selected(0) # Sets which option is selected when opened
-            if self.record and not self.on_keypress:
-                self.lblSettingValue.set_text('Record on game launch')  # What "Current Setting:" says
-            elif self.record and self.on_keypress:
-                self.lblSettingValue.set_text('Record on keypress')  # What "Current Setting:" says                
+            if self.record:
+                self.lblSettingValue.set_text('On')  # What "Current Setting:" says
             else:
                 self.lblSettingValue.set_text('Off')  # What "Current Setting:" says
         elif menu_level == 'generate_list':
@@ -343,15 +339,9 @@ class WinOptions(WahCade):
         elif self.current_menu == 'record_video':
             if menu_item == 'recording_launch':
                 self.record = True
-                self.on_keypress = False
                 self.lblSettingValue.set_text('Record on game launch')  # What "Current Setting:" says
-            elif menu_item == 'recording_keypress':
-                self.record = True
-                self.on_keypress = True
-                self.lblSettingValue.set_text('Record on keypress')  # What "Current Setting:" says
             elif menu_item == 'recording_off':
                 self.record = False
-                self.on_keypress = False
                 self.lblSettingValue.set_text('Off')  # What "Current Setting:" says
         elif self.current_menu == 'emu_list':
             # Emulator list menu, so switch to selected emulator
