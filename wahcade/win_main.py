@@ -103,8 +103,6 @@ class WinMain(WahCade, threading.Thread):
     def __init__(self, config_opts):
         """Initialize main Rcade window"""   # Docstring for this method
         
-        self.listIndex = 0
-        
         # Begin the thread for reading from arduino
         threading.Thread.__init__(self)        
         
@@ -132,6 +130,7 @@ class WinMain(WahCade, threading.Thread):
         debug_mode = False
         self.showOverlayThresh = 10
         self.showImgThresh = 6
+        self.listIndex = 0
         
         ### USER PROFILE
         self.userpath = os.path.expanduser(CONFIG_DIR)  # CONFIG_DIR comes from constants.py
@@ -246,7 +245,7 @@ class WinMain(WahCade, threading.Thread):
         self.IDsScrollOverlay = ScrollOverlay(self.lblIDsOverlayScrollLetters, self.IDsOverlayBG)
 
         # Create scroll list widget
-        self.scroll_selected_color = '#C5C5C5' #Default in case layout doesn't load
+        self.scroll_selected_color = '#C5C5C5' # Default in case layout doesn't load
         self.selected_player = ''
         self.sclGames = ScrollList(self) 
         self._main_images = [
@@ -487,39 +486,53 @@ class WinMain(WahCade, threading.Thread):
                 self.connected_to_server = False                    
 
         # Setup login
+        self.player_info = []
         self.unregistered_users = []
-        try:
-            self.rfid_reader = serial.Serial('/dev/ttyUSB0', 9600)
-            self.connected_to_arduino = True
-            print "Successfully connected to arduino at /dev/ttyUSB0" # TODO: Change this to system directory
-        except:
-            self.connected_to_arduino = False
-            print "Failed to connect to arduino at /dev/ttyUSB0"
+        self.recent_log = False
+        self.timer_existing = False
+        self.not_in_database = True
+        self.running = True
+        self.last_log = ''
+        if self.connected_to_server:
+            # List the contents of /dev/serial/by-id and follow the symbolic link to find where the Arduino is mounted
+            try:
+                if not os.path.isdir("/dev/serial/by-id"):
+                    raise RuntimeError("Device not connected")
+                output = subprocess.Popen("ls /dev/serial/by-id -l | grep FTDI", stdout=subprocess.PIPE, shell=True).stdout.read()
+                # Split the output, only the end is relevant
+                result = output.split(' ')
+                # The last part of the result is the symbolic link target
+                arduino_mount = result[len(result) - 1].strip()
+                # Create the final path
+                arduino_mount = '/dev' + arduino_mount[arduino_mount.rfind('/'):]
+                self.rfid_reader = serial.Serial(arduino_mount, 9600)
+                self.connected_to_arduino = True
+                print "Successfully connected to Arduino mounted at", arduino_mount
+                self.start()
+            except:
+                self.connected_to_arduino = False
+                print "Failed to connect to Arduino"
         if self.connected_to_server:
             self.user.set_text("Not Logged In")
             self.user.show()
             self.running = True
-        self.recent_log = False
-        self.timer_existing = False
-        self.not_in_database = True
-        self.last_log = ''
-#        for player in data.getiterator('player'): #TODO: read these in. Does the following line do what I want it to?
-#            self.player_info.append((player.find('name').text, player.find('playerID').text)) # parse player name and RFID from xml
-        self.player_info = [['Terek Campbell', '52000032DCBC'], 
-                            ['Zach McGaughey', '5100FFE36C21'],
-                            ['Riley Moses', '5200001A9BD3'], 
-                            ['John Kelly', '52000003C697'],
-                            ['Devin Wilson', '']]
-#        print "player_info: ", self.player_info
-        self.log_in_queue = Queue.Queue()  
-        if self.connected_to_server:
-            r = requests.get(self.player_url) # Get all players         
-            data = fromstring(r.text)
-            
-        if self.connected_to_arduino:
-            self.start()
-
+            if self.connected_to_arduino:
+                self.log_in_queue = Queue.Queue()
+                # Get players from server
+                r = requests.get(self.player_url)
+                data = fromstring(r.text)
+                for player in data.getiterator('player'):
+                    self.player_info.append((player.find('name').text, player.find('playerID').text)) # parse player name and RFID from xml
+#                self.player_info = [['Terek Campbell', '52000032DCBC'], 
+#                                    ['Zach McGaughey', '5100FFE36C21'],
+#                                    ['Riley Moses', '5200001A9BD3'], 
+#                                    ['John Kelly', '52000003C697']
+#                                    ['Devin Wilson, '52000007EFBA']]
+            self.user.set_text("Not Logged In")
+            self.user.show()
+        # Generate unregistered user list
         self.identify.Setup_IDs_list()
+
         pygame.init()
         
         sound_files = os.listdir('sounds/')
@@ -616,7 +629,7 @@ class WinMain(WahCade, threading.Thread):
         """Done, quit the application"""
         # Stop video playing if necessary
         self.stop_video()
-        # Tells the thread to terminate properly
+        # Tells the arduino thread to terminate properly
         self.running = False
         # Save ini files
         self.wahcade_ini.write()
@@ -708,11 +721,13 @@ class WinMain(WahCade, threading.Thread):
         if self.launched_game:
             self.message.hide()
             self.launched_game = False
-            while not self.log_in_queue.empty():
-                self.log_in(self.log_in_queue.get())
-                print self.current_players
+            # Call log_in with any RFID's that were scanned while MAME had control
+            if self.connected_to_arduino:
+                while not self.log_in_queue.empty():
+                    self.log_in(self.log_in_queue.get())
+#                    print self.current_players
             # If the game supports high scores run the HiToText executions
-            if self.current_rom in self.supported_games and self.current_players != '':
+            if self.current_rom in self.supported_games and len(self.current_players) != 0:
                 htt_command = self.htt_read
                 if not onWindows:
                     htt_command = "mono " + self.htt_read
@@ -767,8 +782,7 @@ class WinMain(WahCade, threading.Thread):
                                 else:
                                     post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.current_players[0]}
                                 r = requests.post(self.score_url, post_data)
-                                self.check_connection(r.status_code)
-                    else: #TODO handle multiple players scores coming back
+                    else: #TODO: handle multiple players scores coming back
                         for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
                             high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
                         if 'SCORE' in high_score_table: # If high score table has score
@@ -833,12 +847,13 @@ class WinMain(WahCade, threading.Thread):
     def check_connection(self, status_code):
         if ((status_code - 200) < 100 and (status_code - 200) >= 0) or status_code == 500:
             self.connected_to_server = True
+            print "Successfully connected to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
         else:
             self.connected_to_server = False
-        
+            print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
              
     def log_in(self, player_rfid):
-        """Log in"""
+        """Logs a player in"""
         self.scrsave_time = time.time()
         if self.scrsaver.running:
             self.scrsaver.stop_scrsaver()
@@ -861,7 +876,8 @@ class WinMain(WahCade, threading.Thread):
                 self.recent_log = True
                 self.last_log = player_rfid
                 self.log_out(player_name)
-#            elif len(self.current_players) == 4:                #Max players
+            # Max players
+#            elif len(self.current_players) == 4:
 #                print "The maximum number of players are logged in. Please have someone logout and try again"
 #                return
             # Log the player in
@@ -870,7 +886,6 @@ class WinMain(WahCade, threading.Thread):
                 self.last_log = player_rfid
                 self.current_players.append(player_name)
                 self.user.set_text(self.get_logged_in_user_string(self.current_players))   
-                print "In log_in player_info: ", self.player_info   
             # If player doesn't exist then add them to DB
             else:
                 self.register_new_player(player_rfid)
@@ -907,7 +922,7 @@ class WinMain(WahCade, threading.Thread):
 
             
     def log_out(self, player_name = "All"):
-        """Log out"""
+        """Logs a player out"""
         if player_name == "All":
             self.current_players = []
         else:
@@ -928,9 +943,9 @@ class WinMain(WahCade, threading.Thread):
                 self.wait_with_events(0.1)
             player_name = self.selected_player
             if player_name != '':
-                self.player_info.append((player_name, player_rfid)) # parse player name and RFID from xml
+                self.player_info.append([player_name, player_rfid]) # parse player name and RFID from xml
                 post_data = {"name":player_name, "playerID":player_rfid}
-#                requests.post(self.player_url, post_data) # TODO: Need this?
+                r = requests.post(self.player_url, post_data)
                 self.identify.sclIDs.ls.remove(player_name)
                 self.name_not_given = False
             else:
@@ -956,7 +971,7 @@ class WinMain(WahCade, threading.Thread):
         return string
 
     def reset_recent_log(self):
-        """Reset recent_log"""
+        """Reset's vars for preventing a user from rapidly logging in"""
         self.recent_log = False
         self.timer_existing = False
 
@@ -1022,7 +1037,6 @@ class WinMain(WahCade, threading.Thread):
                 else:
                     return
             elif event.type == gtk.gdk.KEY_PRESS:
-
                 if debug_mode:
                     self.log_msg("  key-press",1)
                 if joystick_key:
@@ -1078,14 +1092,12 @@ class WinMain(WahCade, threading.Thread):
                         self.log_msg("  joystick: cleared_events",1)
             # Get mamewah function from key
             for mw_key in mw_keys:
-                if mw_key == 'DIK_SLASH':
-                    self.show_window('playerselect')
                 mw_functions = self.ctrlr_ini.reverse_get(mw_key)
                 if mw_functions:
                     break
             for mw_func in mw_functions:
                 # Which function?
-                if mw_func == 'ID_SHOW' and current_window != 'identify' and self.connected_to_server: #and self.connected_to_server:   # Show identify window any time
+                if mw_func == 'ID_SHOW' and current_window != 'identify' and self.connected_to_server:  # Show identify window any time
                     if self.connected_to_arduino:
                         self.register_new_player("New player")
                     else:
@@ -1229,7 +1241,7 @@ class WinMain(WahCade, threading.Thread):
                         self.play_clip('EXIT_WITH_CHOICE')
                         self.options.set_menu('exit')
                         self.show_window('options')
-                    elif mw_func == 'POPULAR_SHOW':
+                    elif mw_func == 'POPULAR_SHOW' and self.connected_to_server:
                         self.popular.set_games_list(self.get_server_popular_games())
                         self.popular.sclPop._update_display()
                         self.show_window('popular')
@@ -1322,17 +1334,14 @@ class WinMain(WahCade, threading.Thread):
                         self.IDsScrollOverlay.show()
                     # Exit from identity window
                     if mw_func in ['ID_BACK']:
-                        if self.connected_to_arduino:
+                        if self.connected_to_arduino: # TODO: Is this line needed?
                             self.selected_player = ''
                         self.hide_window('identify')
                     elif mw_func in ['ID_SELECT']:
-                        if self.connected_to_arduino:
-                            self.selected_player = self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()]
-                            self.hide_window('identify')
-                        else:
-                            selected_player = self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()]
-                            self.log_in(selected_player)
-                            self.hide_window('identify')                            
+                        self.selected_player = self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()]
+                        if not self.connected_to_arduino:
+                            self.log_in(self.selected_player)
+                        self.hide_window('identify')
                     elif mw_func in ['ID_UP_1_NAME']:
                         self.identify.sclIDs.scroll((int(self.scroll_count / 20) * -1) - 1)
                     elif mw_func in ['ID_DOWN_1_NAME']:
@@ -1370,14 +1379,8 @@ class WinMain(WahCade, threading.Thread):
                         self.close_dialog(self.player_select)
                     # Exit from identity window
                     elif mw_func in ['PS_SELECT']:
-                        if self.connected_to_arduino:
-                            pass
-#                            self.selected_player = self.player_select.sclPlayers.ls[self.player_select.sclPlayers.get_selected()]
-#                            self.hide_window('playerselect')
-                        else:
-                            self.selected_player = self.player_select.sclPlayers.ls[self.player_select.sclPlayers.get_selected()]
-                            self.close_dialog(self.player_select)
-#                            self.hide_window('playerselect')                            
+                        self.selected_player = self.player_select.sclPlayers.ls[self.player_select.sclPlayers.get_selected()]
+                        self.hide_window('playerselect')
                     # Scroll up 1 name
                     elif mw_func in ['PS_UP_1_NAME']:
                         self.player_select.sclPlayers.scroll((int(self.scroll_count / 20) * -1) - 1)
@@ -1460,7 +1463,8 @@ class WinMain(WahCade, threading.Thread):
                     self.current_emu,
                     (i + 1))
                 self.display_scaled_image(img, img_filename, self.keep_aspect, img.get_data('text-rotation'))
-    
+        self.sclGames.truncate()
+        
     def get_score_string(self):
         """Parse Scores from DB into display string"""
         r = requests.get(self.game_url + self.current_rom + "/highscore")
@@ -1772,7 +1776,7 @@ class WinMain(WahCade, threading.Thread):
         else:
             self.p = Popen(cmd, shell=True)
         
-        # Begins video recording of game
+        # Begins video recording of rom
         if self.options.record:
             self.start_recording_video(rom)
         sts = self.p.wait()
@@ -2250,7 +2254,7 @@ class WinMain(WahCade, threading.Thread):
                         self.player_select.winPlayers.move(widget, w_lay['x'], w_lay['y'])
                 else:
                     print "Orphaned widget detected. Did not belong to one of [main/options/message/screensaver/identify/popular]"
-       
+        
         # Load histview and cpviewer layouts
         # Still in use?
         self.histview.load_layout(self.histview.layout_filename)
@@ -2697,10 +2701,6 @@ class WinMain(WahCade, threading.Thread):
         # Joystick
         elif timer_type == 'joystick' and (self.joyint == 1):
             self.joystick_timer = gobject.timeout_add(50, self.joy.poll, self.on_winMain_key_press)
-        # Video recording
-        elif timer_type == 'record':
-            self.timeout = 2; # Number of seconds till the video recorder times out
-            self.recorder_timer = gobject.timeout_add(self.timeout * 1000, self.stop_recording_video)
         # Login timer
         elif timer_type == 'login':
             self.timeout = 5; # Number of seconds till recent_log times out
@@ -2856,7 +2856,6 @@ class WinMain(WahCade, threading.Thread):
             self.player_select.populate_list()
             self.player_select.sclPlayers._update_display()
             child_win = self.player_select.winPlayers
-#            child_win.connect('hide', self.close_dialog)
             self.player_select.sclPlayers.set_selected(0)
         # Show given child window
         if child_win:
@@ -2944,17 +2943,16 @@ class WinMain(WahCade, threading.Thread):
         self.wait_with_events(1.00)
         window_name = 'MAME: %s [%s]' % (self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME], rom)
         os.system('recordmydesktop --full-shots --fps 16 --no-frame --windowid $(xwininfo -name ' + "\'" + str(window_name) + "\'" + ' | awk \'/Window id:/ {print $4}\') -o \'recorded games\'/' + rom + '_highscore &')
-#        self.start_timer('record') # Doesn't work at the moment
 
     def stop_recording_video(self):
         """Stop recording by killing RecordMyDesktop"""
         return os.system('kill `ps -e | awk \'/recordmydesktop/{a=$1}END{print a}\'`')
 
     def run(self):
-        time.sleep(2)
-        # Flush anything that might be sitting in the input buffer
+        """Catches any RFID swipes and sends them to log_in"""
         self.rfid_reader.flushInput()
         while(self.running):
+            # Checks if there is an RFID waiting in the output buffer of the arduino
             if self.rfid_reader.inWaiting() >= 12:
 #                print "Before reading " + str(self.rfid_reader.inWaiting())
                 scannedRfid = self.rfid_reader.read(12)
@@ -2962,7 +2960,7 @@ class WinMain(WahCade, threading.Thread):
                 if len(scannedRfid) == 12 and scannedRfid.isalnum():
                     if self.in_game():
                         self.log_in_queue.put(scannedRfid)
-                    else:
+                    elif self.current_window != 'identify' and self.current_window != 'playerselect':
                         self.log_in(scannedRfid)
                 else:
                     print "Error during read, please rescan your card"
@@ -2978,15 +2976,18 @@ class WinMain(WahCade, threading.Thread):
                 print "MAME has focus, adding to queue"
                 return True
             else:
+                pass
                 print "In Rcade (after game ended), logging in"
         except:
+            pass
             print "In Rcade, logging in"
 
     def get_server_popular_games(self):
         """Query the server for popular games"""
         data = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/game/popular?count=10&renderXML=true")
-        data = fromstring(data.text)
         gList = []
-        for game in data.getiterator('game'):
-            gList.append(game.find('gameName').text)
+        if data.text != "":
+            data = fromstring(data.text)
+            for game in data.getiterator('game'):
+                gList.append(game.find('gameName').text)
         return gList

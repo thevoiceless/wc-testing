@@ -392,7 +392,7 @@ class ScrollList(object):
             eb.set_visible_window(False)
             self.fixd.add(eb)
             self._rows.append((eb, lbl))
-        # Colours
+        # Colors
         self.modify_fg(gtk.STATE_NORMAL, self._fg_col)
         self.modify_highlight_bg(gtk.STATE_NORMAL, self._hl_bg_col)
 
@@ -452,5 +452,17 @@ class ScrollList(object):
             else:
                 self._rows[i][1].set_text(self.ls[top_ls_idx + i])
 
+                
+    def truncate(self):
+        """Truncate labels that are longer than the width of the ScrollList"""
+        # TODO: Find a good way of doing this
+#        top_ls_idx = self._selectedIndex - self._hl_row
+#        for i in range(self.num_rows):
+#            j = 45
+#            while self._rows[i][1].get_layout().get_pixel_size()[0] > self.width:
+#                self._rows[i][1].set_text(self.ls[top_ls_idx + i][:j].strip() + "...")
+#                j -= 1
+        return
+    
     def get_name(self):
         return "ScrolledList"

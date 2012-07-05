@@ -76,6 +76,7 @@ class WinIdentify(WahCade):
         self.on_keypress = False
         
     def setRFIDlbl(self, value):
+        """Sets RFID number"""
         self.lblRFID.set_text(value)
         
     def on_sclIDs_changed(self, *args):
@@ -90,13 +91,14 @@ class WinIdentify(WahCade):
         return
 
     def Setup_IDs_list(self):
+        """Generates the list of unregistered users"""
         self.sclIDs.ls = [l for l in self.lsIDs]
         self.sclIDs.ls.sort()
 #        print "Before deletions: ", self.sclIDs.ls
         # Exclude IDs already matched to RFID values
         if self.WinMain.connected_to_arduino:
             for v in self.WinMain.player_info:
-                if v[0] in self.sclIDs.ls and v[1] != '':
+                if v[0] in self.sclIDs.ls:
                     self.sclIDs.ls.remove(v[0])
 #        print "After deletions: ", self.sclIDs.ls
 
