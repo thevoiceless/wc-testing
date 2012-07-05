@@ -154,6 +154,7 @@ class WinMain(WahCade, threading.Thread):
         self.lck_time = self.wahcade_ini.getint('lock_time')        # getint comes from mamewah_ini.py
         self.keep_aspect = self.wahcade_ini.getint('keep_image_aspect')
         self.scrsave_delay = self.wahcade_ini.getint('delay')
+        self.auto_logout_delay = self.wahcade_ini.getint('log_out')
         self.layout_orientation = self.wahcade_ini.getint('layout_orientation', 0)
         self.screentype = self.wahcade_ini.getint('fullscreen', 0)
         self.intro_movie = self.wahcade_ini.get('intro_movie_file')
@@ -294,6 +295,13 @@ class WinMain(WahCade, threading.Thread):
         self.video_player = None
         self.drwVideo.show()
         self.fixd.add(self.drwVideo)
+        
+        # Load list of games supported by HiToText
+        self.supported_games = []
+        self.supported_games_name = []
+        self.supported_game_file = open('supported_games.lst')
+        for line in self.supported_game_file:
+            self.supported_games.append(line.strip())
 
         # List
         self.sclGames.auto_update = False
@@ -440,12 +448,6 @@ class WinMain(WahCade, threading.Thread):
         self.layout_file = ''
         self.load_emulator()
         
-        # Load list of games supported by HiToText
-        self.supported_games = []
-        self.supported_games_name = []
-        self.supported_game_file = open('supported_games.lst')
-        for line in self.supported_game_file:
-            self.supported_games.append(line.strip())
 
         # Get a list of games already on the server
         self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
@@ -779,7 +781,7 @@ class WinMain(WahCade, threading.Thread):
                         if 'SCORE' in high_score_table: # If high score table has score
                             if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB
                                 if 'NAME' in high_score_table:
-                                    post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": '0', "game":self.current_rom, "player":self.user.get_text()}                         
+                                    post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.user.get_text()}                         
                                 else:
                                     post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.current_players[0]}
                                 r = requests.post(self.score_url, post_data)
@@ -789,7 +791,7 @@ class WinMain(WahCade, threading.Thread):
                         if 'SCORE' in high_score_table: # If high score table has score
                             if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB                                                                
                                 if 'NAME' in high_score_table:
-                                    post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": '0', "game":self.current_rom, "player":""}                         
+                                    post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":""}                         
                                     multiple_score_list.append(post_data)
                                 else:
                                     post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":""}
@@ -813,7 +815,7 @@ class WinMain(WahCade, threading.Thread):
                 score_to_associate['player'] = self.selected_player
                 self.upload_queue.append(score_to_associate)
                 self.selected_player = ''
-                if len(self.score_processing_queue) > 1:
+                if len(self.score_processing_queue) > 0:
                     self.player_select.lbl1.set_text(self.score_processing_queue[len(self.score_processing_queue)-1]['score'] + "   " + self.score_processing_queue[len(self.score_processing_queue)-1]['arcadeName'])               
                     self.show_window('playerselect')
             else:
@@ -1376,6 +1378,7 @@ class WinMain(WahCade, threading.Thread):
                     elif mw_func in ['PS_SELECT']:
                         self.selected_player = self.player_select.sclPlayers.ls[self.player_select.sclPlayers.get_selected()]
                         self.hide_window('playerselect')
+                        self.close_dialog(self.player_select)
                     # Scroll up 1 name
                     elif mw_func in ['PS_UP_1_NAME']:
                         self.player_select.sclPlayers.scroll((int(self.scroll_count / 20) * -1) - 1)
@@ -1514,8 +1517,7 @@ class WinMain(WahCade, threading.Thread):
             self.portal_time_last_played = time.time()
             #pygame.mixer.quit If you want to re-initialize mixer with different args
         # Use timer for screen saver to log a person out after period of inactivity
-        auto_log_out_delay = 90
-        if int(time.time() - self.scrsave_time) >= auto_log_out_delay and self.current_players != []:
+        if int(time.time() - self.scrsave_time) >= self.auto_logout_delay and self.current_players != []:
             self.log_out()
         # Need to start screen saver?
         if int(time.time() - self.scrsave_time) >= self.scrsave_delay:

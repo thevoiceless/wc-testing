@@ -18,6 +18,7 @@ shuffle_music               0                              #shuffle music playli
 ### (Global) Screen-Saver Options ###
 delay                       300                            #screen saver delay in seconds (0 to disable)
 slide_duration              5                              #screen saver image / movie display in seconds
+log_out                     90                             #auto log out time in seconds
 
 ### Audio Options ###
 enable_sounds               0                              #N/A
