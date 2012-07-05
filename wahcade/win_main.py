@@ -932,9 +932,9 @@ class WinMain(WahCade, threading.Thread):
         """Add a new player to the database"""
         if self.connected_to_arduino:
             # Bring up new player list
+            self.show_window('identify')
             self.identify.setRFIDlbl(player_rfid)
             self.identify.sclIDs._update_display()
-            self.show_window('identify')
             while self.current_window == 'identify':
                 self.wait_with_events(0.1)
             player_name = self.selected_player
@@ -1328,10 +1328,9 @@ class WinMain(WahCade, threading.Thread):
                         overlayLetters = self.identify.sclIDs.ls[ self.identify.sclIDs.get_selected() ][ 0 : self.IDsScrollOverlay.charShowCount ]
                         self.IDsScrollOverlay.set_markup( _('%s%s%s') % (self.IDsOverlayMarkupHead, overlayLetters, self.IDsOverlayMarkupTail) )
                         self.IDsScrollOverlay.show()
-                    # Exit from identity window
+                    # Exit from identify window
                     if mw_func in ['ID_BACK']:
-                        if self.connected_to_arduino: # TODO: Is this line needed?
-                            self.selected_player = ''
+                        self.selected_player = ''
                         self.hide_window('identify')
                     elif mw_func in ['ID_SELECT']:
                         self.selected_player = self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()]
