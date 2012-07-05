@@ -1097,8 +1097,8 @@ class WinMain(WahCade, threading.Thread):
                     if self.connected_to_arduino:
                         self.register_new_player("New player")
                     else:
-                        self.identify.sclIDs._update_display()
                         self.show_window('identify')
+                        self.identify.sclIDs._update_display()
                 if mw_func == 'BACK' and current_window != 'main':
                     self.hide_window(current_window)
                 if current_window == 'main':
