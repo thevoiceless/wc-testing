@@ -115,6 +115,7 @@ class WinMain(WahCade, threading.Thread):
                     val = line.split('=')
                     self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
                 r = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']) # Attempt to make connection to server
+                print "here init 1"
                 self.check_connection(r.status_code)
         except: # Any exception would mean some sort of failed server connection
             self.connected_to_server = False
@@ -468,7 +469,8 @@ class WinMain(WahCade, threading.Thread):
              
                 # Get a list of games already on the server
                 data = requests.get(self.game_url)
-                self.check_connection(data.status_code)
+#                print "here init 2"
+#                self.check_connection(data.status_code)
                 data = fromstring(data.text)
                 games_on_server = []
                 for game in data.getiterator('game'):
@@ -479,7 +481,8 @@ class WinMain(WahCade, threading.Thread):
                     if rom not in games_on_server and rom in romToName:
                         post_data = {"romName":rom, "gameName":romToName[rom]}
                         r = requests.post(self.game_url, post_data)
-                        self.check_connection(r.status_code)
+#                        print "here init 3"
+#                        self.check_connection(r.status_code)
             except e:
                 self.connected_to_server = False                    
 
@@ -835,6 +838,7 @@ class WinMain(WahCade, threading.Thread):
         while self.upload_queue:
             to_upload = self.upload_queue.pop()            
             r = requests.post(self.score_url, to_upload)
+            print "here post"
             self.check_connection(r.status_code)
         self.current_window = 'main'
         self.winMain.present()
@@ -852,11 +856,6 @@ class WinMain(WahCade, threading.Thread):
              
     def log_in(self, player_rfid):
         """Logs a player in"""
-        self.scrsave_time = time.time()
-        if self.scrsaver.running:
-            self.scrsaver.stop_scrsaver()
-            self.start_timer('scrsave')
-
         if self.connected_to_arduino:
             player_name = ''
             # Prevents the reader from logging someone in and then out immediately
@@ -892,8 +891,6 @@ class WinMain(WahCade, threading.Thread):
                 self.log_in(player_rfid)
         # If not connected to arduino
         else:
-            if len(self.current_players) == 4:      # Max players
-                return
             # Get all players
             r = requests.get(self.player_url)
             players = []
@@ -2953,33 +2950,35 @@ class WinMain(WahCade, threading.Thread):
         while(self.running):
             # Checks if there is an RFID waiting in the output buffer of the arduino
             if self.rfid_reader.inWaiting() >= 12:
+                self.scrsave_time = time.time()
+                if self.scrsaver.running:
+                    self.scrsaver.stop_scrsaver()
+                    self.start_timer('scrsave')
 #                print "Before reading " + str(self.rfid_reader.inWaiting())
                 scannedRfid = self.rfid_reader.read(12)
 #                print "Scanned RFID before cut: " + scannedRfid
                 if len(scannedRfid) == 12 and scannedRfid.isalnum():
                     if self.in_game():
                         self.log_in_queue.put(scannedRfid)
-                    elif self.current_window != 'identify' and self.current_window != 'playerselect':
+                    elif self.current_window == 'main':
                         self.log_in(scannedRfid)
                 else:
                     print "Error during read, please rescan your card"
 #                print "After register, before flush " + str(self.rfid_reader.inWaiting())
                 self.rfid_reader.flushInput()
 #                print "After flush " + str(self.rfid_reader.inWaiting()) + "\n"
-                time.sleep(0.125)
+            time.sleep(0.125)
 
     def in_game(self):
         """Check if a game is running"""
+        print "Logging in"
         try:
             if self.p.poll() is None:
-                print "MAME has focus, adding to queue"
                 return True
             else:
-                pass
-                print "In Rcade (after game ended), logging in"
+                return False
         except:
-            pass
-            print "In Rcade, logging in"
+            return False
 
     def get_server_popular_games(self):
         """Query the server for popular games"""

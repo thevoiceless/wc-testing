@@ -227,7 +227,7 @@ class WinOptions(WahCade):
                 # All other lists
                 [self.lsOptions.append(menu_item) for menu_item in self._menus[menu_level][:3]]
         elif menu_level == 'record_video':
-            [self.lsOptions.append(menu_item) for menu_item in self._menus[menu_level][:3]] # Generates list choices
+            [self.lsOptions.append(menu_item) for menu_item in self._menus[menu_level][:2]] # Generates list choices
             self.sclOptions.set_selected(0) # Sets which option is selected when opened
             if self.record:
                 self.lblSettingValue.set_text('On')  # What "Current Setting:" says
@@ -339,7 +339,7 @@ class WinOptions(WahCade):
         elif self.current_menu == 'record_video':
             if menu_item == 'recording_launch':
                 self.record = True
-                self.lblSettingValue.set_text('Record on game launch')  # What "Current Setting:" says
+                self.lblSettingValue.set_text('On')  # What "Current Setting:" says
             elif menu_item == 'recording_off':
                 self.record = False
                 self.lblSettingValue.set_text('Off')  # What "Current Setting:" says
