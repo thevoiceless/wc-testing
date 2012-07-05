@@ -503,7 +503,8 @@ class WinMain(WahCade, threading.Thread):
                 arduino_mount = '/dev' + arduino_mount[arduino_mount.rfind('/'):]
                 self.rfid_reader = serial.Serial(arduino_mount, 9600)
                 self.connected_to_arduino = True
-                print "Successfully connected to Arduino mounted at", arduino_mount # TODO: Change this to system directory
+                print "Successfully connected to Arduino mounted at", arduino_mount
+                self.start()
             except:
                 self.connected_to_arduino = False
                 print "Failed to connect to Arduino"
@@ -521,7 +522,8 @@ class WinMain(WahCade, threading.Thread):
 #                self.player_info = [['Terek Campbell', '52000032DCBC'], 
 #                                    ['Zach McGaughey', '5100FFE36C21'],
 #                                    ['Riley Moses', '5200001A9BD3'], 
-#                                    ['John Kelly', '52000003C697']]
+#                                    ['John Kelly', '52000003C697']
+#                                    ['Devin Wilson, '52000007EFBA']]
             self.user.set_text("Not Logged In")
             self.user.show()
         # Generate unregistered user list
@@ -2854,7 +2856,6 @@ class WinMain(WahCade, threading.Thread):
             self.player_select.populate_list()
             self.player_select.sclPlayers._update_display()
             child_win = self.player_select.winPlayers
-#            child_win.connect('hide', self.close_dialog)
             self.player_select.sclPlayers.set_selected(0)
         # Show given child window
         if child_win:
@@ -2959,7 +2960,7 @@ class WinMain(WahCade, threading.Thread):
                 if len(scannedRfid) == 12 and scannedRfid.isalnum():
                     if self.in_game():
                         self.log_in_queue.put(scannedRfid)
-                    else:
+                    elif self.current_window != 'identify' and self.current_window != 'playerselect':
                         self.log_in(scannedRfid)
                 else:
                     print "Error during read, please rescan your card"
@@ -2972,14 +2973,14 @@ class WinMain(WahCade, threading.Thread):
         """Check if a game is running"""
         try:
             if self.p.poll() is None:
-#                print "MAME has focus, adding to queue"
+                print "MAME has focus, adding to queue"
                 return True
             else:
                 pass
-#                print "In Rcade (after game ended), logging in"
+                print "In Rcade (after game ended), logging in"
         except:
             pass
-#            print "In Rcade, logging in"
+            print "In Rcade, logging in"
 
     def get_server_popular_games(self):
         """Query the server for popular games"""
