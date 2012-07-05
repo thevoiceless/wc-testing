@@ -33,15 +33,14 @@ gobject.threads_init()
 import pango
 
 class ScrollList(object):
-    """custom scroll list control"""
+    """Custom scroll list control"""
 
     def __init__(self, WinMain):
-        """create custom scroll list control"""
+        """Create custom scroll list control"""
         # Properties
         # Initialize list before assigning WinMain, otherwise the list won't exist yet
         self.ls = []
         self.WinMain = WinMain
-        self.WinMain.supported_games_name = []
         self.width, self.height = 10, 10  # Changing these doesn't seem to do anything
         self.angle = 0
         self.auto_update = False
@@ -77,7 +76,7 @@ class ScrollList(object):
         self.set_size_request(self.width, self.height)
 
     def __setattr__(self, var_name, var_value):
-        """capture setting of attributes in order to reset _oldIndex"""
+        """Capture setting of attributes in order to reset _oldIndex"""
         self.__dict__[var_name] = var_value
         if self.__dict__[var_name] == self.ls:
             self._oldIndex = -1
@@ -149,20 +148,20 @@ class ScrollList(object):
             
 
     def connect(self, signal_name, callback, *args):
-        """connect callback functions to signals"""
+        """Connect callback functions to signals"""
         if signal_name in self.signals:
             self.signals[signal_name] = callback
         else:
             raise #TypeError, 'unknown signal name'
 
     def scroll(self, scroll_by):
-        """scroll list by given number of rows"""
+        """Scroll list by given number of rows"""
         self.set_selected(self._selectedIndex + scroll_by)
         # Comment out the next line if updating while scrolling creates problems
         self.update()
 
     def update(self):
-        """has scroll list position changed"""
+        """Check if the scroll list position changed"""
         if self._selectedIndex != self._oldIndex:
             # List position changed
             self._oldIndex = self._selectedIndex
@@ -175,15 +174,15 @@ class ScrollList(object):
             return False
 
     def get_data(self, k):
-        """call gobject get_data"""
+        """Call gobject get_data"""
         return self.fixd.get_data(k)
 
     def set_data(self, k, v):
-        """call gobject set_data"""
+        """Call gobject set_data"""
         self.fixd.set_data(k, v)
 
     def get_selected(self):
-        """return index of currently selected item"""
+        """Return index of currently selected item"""
         return self._selectedIndex
     
     def set_selected_item(self, item):
@@ -195,14 +194,14 @@ class ScrollList(object):
         return self.ls[self._selectedIndex]
 
     def modify_font(self, pango_font_desc):
-        """set list font"""
+        """Set list font"""
         # Save font description
         self._pango_font_desc = pango_font_desc
         # Call resize, which will force rows to be recalculated & displayed
         self.set_size_request(self.width, self.height)
 
     def modify_highlight_bg(self, gtk_state, hl_bg_col):
-        """set list highlighted bar colour"""
+        """Set list highlighted bar color"""
         self._hl_bg_col = hl_bg_col
         self.arwScrollTop.modify_bg(gtk_state, self._hl_bg_col)
         self.arwScrollBottom.modify_bg(gtk_state, self._hl_bg_col)
@@ -210,11 +209,11 @@ class ScrollList(object):
             self._rows[i][0].modify_bg(gtk_state, self._hl_bg_col)
 
     def modify_highlight_fg(self, gtk_state, hl_fg_col):
-        """set list highlighted text colour"""
+        """Set list highlighted text color"""
         self._hl_fg_col = hl_fg_col
 
     def modify_fg(self, gtk_state, fg_col):
-        """set list foreground colour"""
+        """Set list foreground color"""
         self._fg_col = fg_col   # Color of title text
         self.arwScrollTop.modify_fg(gtk_state, self._fg_col)
         self.arwScrollBottom.modify_fg(gtk_state, self._fg_col)
@@ -222,14 +221,14 @@ class ScrollList(object):
             self._rows[i][1].modify_fg(gtk_state, self._fg_col)
 
     def get_parent(self):
-        """return the parent of the scrolled list"""
+        """Return the parent of the scrolled list"""
         return self.fixd.get_parent()
     
     def reparent(self, parent):
         self.fixd.reparent(parent)
 
     def set_property(self, property_name, property_value):
-        """set property"""
+        """Set property"""
         if property_name in self.properties:
             self.properties[property_name] = property_value
         if property_name.lower() == 'xalign':
@@ -238,11 +237,11 @@ class ScrollList(object):
                 self._rows[i][1].set_property('xalign', property_value)
 
     def set_angle(self, angle):
-        """set rotation angle"""
+        """Set rotation angle"""
         self.angle = angle
 
     def set_size_request(self, width, height):
-        """change size"""
+        """Change size"""
         self.width, self.height = width, height
         # Get font size
         font_size = int(self._pango_font_desc.get_size() / pango.SCALE)
@@ -323,15 +322,15 @@ class ScrollList(object):
         #print "num_rows=",self.num_rows, "   _hl_row=", self._hl_row
 
     def show(self):
-        """show"""
+        """Show"""
         self.fixd.show()
 
     def hide(self):
-        """hide"""
+        """Hide"""
         self.fixd.hide()
 
     def _on_mouse_button(self, widget, event, idx):
-        """mouse button clicked"""
+        """Mouse button clicked"""
         if self.use_mouse:
             if event.type == gtk.gdk.BUTTON_PRESS:
                 if event.button == 1:
@@ -353,7 +352,7 @@ class ScrollList(object):
         return True
 
     def _create_container(self):
-        """create list container"""
+        """Create list container"""
         # Create fixed layout to put list labels on
         self.fixd = gtk.Fixed()
         self.fixd.set_size_request(self.width, self.height)
@@ -371,7 +370,7 @@ class ScrollList(object):
         self.fixd.add(self.arwScrollBottom)
 
     def _create_list_labels(self):
-        """create labels as rows"""
+        """Create labels as rows"""
         # Remove any existing rows
         [self.fixd.remove(row[0]) for row in self._rows]
         # Create labels
@@ -397,7 +396,7 @@ class ScrollList(object):
         self.modify_highlight_bg(gtk.STATE_NORMAL, self._hl_bg_col)
 
     def set_selected(self, idx_to_select):
-        """scroll to and highight given item in list"""
+        """Scroll to and highlight given item in list"""
         len_ls = len(self.ls)
         if len_ls == 0:
             self._update_display()
@@ -424,28 +423,19 @@ class ScrollList(object):
                 self.update()
 
     def _update_display(self):
-        """display the list in the correct position"""
+        """Display the list in the correct position"""
         top_ls_idx = self._selectedIndex - self._hl_row
         len_ls = len(self.ls)
         # Display scroll limiters?
         if self.display_limiters:
             self.arwScrollTop.set_property('visible', (top_ls_idx > 0))
             self.arwScrollBottom.set_property('visible', (top_ls_idx < (len_ls - self.num_rows)))
-            #if len_ls <= self.num_rows and ((top_ls_idx + self._selectedIndex) > 0):
-            #    self.arwScrollBottom.set_property('visible', False)
-            #    self.arwScrollTop.set_property('visible', False)
-            #else:
-            #    self.arwScrollBottom.set_property('visible', (top_ls_idx < 1))
-            #    self.arwScrollTop.set_property('visible',
-            #        (top_ls_idx > (len_ls - self.num_rows - 1)))
         # Display items
-        #print "ls_idx=", self._selectedIndex, "  top_ls_idx=", top_ls_idx, "  num_rows=", self.num_rows, "  len(ls)=",len_ls, "  hl_row=",self._hl_row
         for i in range(self.num_rows):
             if (top_ls_idx + i > (len_ls - 1)) or ((top_ls_idx + i) < 0):
                 self._rows[i][1].set_text('')
             elif self.WinMain.current_window == 'main' or self.WinMain.current_window == 'popular':
                 if len(self.WinMain.lsGames) > 0 and self.WinMain.lsGames[top_ls_idx + i][1] in self.WinMain.supported_games:
-#            elif self.ls[top_ls_idx + i] in self.WinMain.supported_games_name:
                     if '&' in self.ls[top_ls_idx + i]:
                         self._rows[i][1].set_markup(('<span color="%s">%s%s') % (self.WinMain.scroll_selected_color, self.ls[top_ls_idx + i].replace('&', '&amp;'), '</span>'))
                     else:
