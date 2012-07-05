@@ -115,7 +115,6 @@ class WinMain(WahCade, threading.Thread):
                     val = line.split('=')
                     self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
                 r = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']) # Attempt to make connection to server
-                print "here init 1"
                 self.check_connection(r.status_code)
         except: # Any exception would mean some sort of failed server connection
             self.connected_to_server = False
@@ -471,7 +470,6 @@ class WinMain(WahCade, threading.Thread):
              
                 # Get a list of games already on the server
                 data = requests.get(self.game_url)
-#                print "here init 2"
 #                self.check_connection(data.status_code)
                 data = fromstring(data.text)
                 games_on_server = []
@@ -483,7 +481,6 @@ class WinMain(WahCade, threading.Thread):
                     if rom not in games_on_server and rom in romToName:
                         post_data = {"romName":rom, "gameName":romToName[rom]}
                         r = requests.post(self.game_url, post_data)
-#                        print "here init 3"
 #                        self.check_connection(r.status_code)
             except e:
                 self.connected_to_server = False                    
@@ -1409,7 +1406,6 @@ class WinMain(WahCade, threading.Thread):
         # Get info to display in bottom right box
         if len(self.lsGames) == 0: # Fixes error when switching lists with empty games
             return
-        
         game_info = filters.get_game_dict(self.lsGames[self.sclGames.get_selected()])
         self.current_rom = game_info['rom_name']
         # Check for game ini file
@@ -1658,8 +1654,7 @@ class WinMain(WahCade, threading.Thread):
         if self.lsGames_len == 0:
             return
         #rom = self.lsGames[self.sclGames.get_selected()][GL_ROM_NAME]
-        rom = self.lsGames[self.listIndex][GL_ROM_NAME]
-            
+        rom = self.lsGames[self.listIndex][GL_ROM_NAME]            
         # Show launch message
         self.message.display_message(
             _('Starting...'),
@@ -2591,6 +2586,7 @@ class WinMain(WahCade, threading.Thread):
             self.lsGames = flist_sorted
             self.lsGames_len = len(self.lsGames)
         # Setup scroll list
+        # "All Games" list is always the first list
         if self.current_list_idx == 0:
             self.sclGames.ls = [l[0] for l in self.lsGames]
         else:
@@ -2622,6 +2618,7 @@ class WinMain(WahCade, threading.Thread):
                     self.current_emu, self.current_list_idx)),
                 self.lsGames)
             # Update displays
+            self.hide_window('options')
             self.sclGames.set_selected(self.sclGames.get_selected() - 1)
             self.sclGames.update()
 
