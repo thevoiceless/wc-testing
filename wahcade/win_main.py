@@ -1033,7 +1033,6 @@ class WinMain(WahCade, threading.Thread):
                 else:
                     return
             elif event.type == gtk.gdk.KEY_PRESS:
-
                 if debug_mode:
                     self.log_msg("  key-press",1)
                 if joystick_key:
@@ -1089,14 +1088,12 @@ class WinMain(WahCade, threading.Thread):
                         self.log_msg("  joystick: cleared_events",1)
             # Get mamewah function from key
             for mw_key in mw_keys:
-                if mw_key == 'DIK_SLASH':
-                    self.show_window('playerselect')
                 mw_functions = self.ctrlr_ini.reverse_get(mw_key)
                 if mw_functions:
                     break
             for mw_func in mw_functions:
                 # Which function?
-                if mw_func == 'ID_SHOW' and current_window != 'identify' and self.connected_to_server: #and self.connected_to_server:   # Show identify window any time
+                if mw_func == 'ID_SHOW' and current_window != 'identify' and self.connected_to_server:  # Show identify window any time
                     if self.connected_to_arduino:
                         self.register_new_player("New player")
                     else:
@@ -1240,7 +1237,7 @@ class WinMain(WahCade, threading.Thread):
                         self.play_clip('EXIT_WITH_CHOICE')
                         self.options.set_menu('exit')
                         self.show_window('options')
-                    elif mw_func == 'POPULAR_SHOW':
+                    elif mw_func == 'POPULAR_SHOW' and self.connected_to_server:
                         self.popular.set_games_list(self.get_server_popular_games())
                         self.popular.sclPop._update_display()
                         self.show_window('popular')
@@ -2986,8 +2983,9 @@ class WinMain(WahCade, threading.Thread):
     def get_server_popular_games(self):
         """Query the server for popular games"""
         data = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/game/popular?count=10&renderXML=true")
-        data = fromstring(data.text)
         gList = []
-        for game in data.getiterator('game'):
-            gList.append(game.find('gameName').text)
+        if data.text != "":
+            data = fromstring(data.text)
+            for game in data.getiterator('game'):
+                gList.append(game.find('gameName').text)
         return gList

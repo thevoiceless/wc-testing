@@ -3,7 +3,7 @@
  0
  main.png
  1
- 21503
+ 3709594
  16777215
 False
  0
@@ -21,7 +21,7 @@ False
 True
  1
  0
- 52223
+ 39372
 SF Atarian System Extended
 False
 False
@@ -34,7 +34,7 @@ False
 True
  0
  0
- 52223
+ 39372
 SF Atarian System Extended
 False
 False
@@ -57,10 +57,10 @@ False
  97
  370
  605
-False
+True
  0
  0
- 255
+ 3709594
 Sans
 True
 False
@@ -203,7 +203,7 @@ False
 True
  1
  0
- 21503
+ 39372
 SF Atarian System Extended
 False
 False
@@ -296,12 +296,12 @@ False
  0
  options.png
  1
- 10485760
- 16777215
+ 1207040
+ 8191915
 True
  1
  0
- 255
+ 2472960
 SF Atarian System Extended
 True
 False
@@ -314,7 +314,7 @@ False
 True
  1
  0
- 65280
+ 8191915
 SF Atarian System Extended
 False
 False
@@ -327,7 +327,7 @@ False
 True
  1
  0
- 16777215
+ 2263808
 SF Atarian System Extended
 True
 False
@@ -357,7 +357,7 @@ False
 True
  1
  3289650
- 255
+ 8537087
 SF Atarian System Extended
 True
 False
@@ -370,7 +370,7 @@ False
 True
  1
  3289650
- 65280
+ 2475519
 SF Atarian System Extended
 False
 False
@@ -549,3 +549,8 @@ False
  748
  1024
  20
+scroll-overlay-70.png
+ 100
+ 100
+ 120
+ 118
