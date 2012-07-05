@@ -130,6 +130,7 @@ class WinMain(WahCade, threading.Thread):
         debug_mode = False
         self.showOverlayThresh = 10
         self.showImgThresh = 6
+        self.showHighScoreThresh = 10
         self.listIndex = 0
         
         ### USER PROFILE
@@ -802,7 +803,9 @@ class WinMain(WahCade, threading.Thread):
                 self.score_processing_queue.append(score)
             # Set the labels for display
             self.player_select.lbl1.set_text(self.score_processing_queue[len(self.score_processing_queue)-1]['score'] + "   " + self.score_processing_queue[len(self.score_processing_queue)-1]['arcadeName'])               
-            self.show_window('playerselect')    
+            self.show_window('playerselect')
+            self.player_select.sclPlayers._update_display()
+                
 
     def close_dialog(self, widget, data = None):
         """When the player select screen closes, this method starts"""
@@ -837,7 +840,6 @@ class WinMain(WahCade, threading.Thread):
         while self.upload_queue:
             to_upload = self.upload_queue.pop()            
             r = requests.post(self.score_url, to_upload)
-            print "here post"
             self.check_connection(r.status_code)
         self.current_window = 'main'
         self.winMain.present()
@@ -930,9 +932,9 @@ class WinMain(WahCade, threading.Thread):
         """Add a new player to the database"""
         if self.connected_to_arduino:
             # Bring up new player list
+            self.show_window('identify')
             self.identify.setRFIDlbl(player_rfid)
             self.identify.sclIDs._update_display()
-            self.show_window('identify')
             while self.current_window == 'identify':
                 self.wait_with_events(0.1)
             player_name = self.selected_player
@@ -1065,6 +1067,7 @@ class WinMain(WahCade, threading.Thread):
                                 self.current_emu,
                                 (i + 1))
                             self.display_scaled_image(img, img_filename, self.keep_aspect, img.get_data('text-rotation'))
+                self.on_sclGames_changed()
                 self.gamesScrollOverlay.hide()
                 self.IDsScrollOverlay.hide()
                 # Keyboard released, update labels, images, etc
@@ -1091,7 +1094,7 @@ class WinMain(WahCade, threading.Thread):
                     break
             for mw_func in mw_functions:
                 # Which function?
-                if mw_func == 'ID_SHOW' and current_window != 'identify' and self.connected_to_server:  # Show identify window any time
+                if mw_func == 'ID_SHOW' and current_window != 'identify' and current_window != 'playerselect' and self.connected_to_server:  # Show identify window any time
                     if self.connected_to_arduino:
                         self.register_new_player("New player")
                     else:
@@ -1326,10 +1329,9 @@ class WinMain(WahCade, threading.Thread):
                         overlayLetters = self.identify.sclIDs.ls[ self.identify.sclIDs.get_selected() ][ 0 : self.IDsScrollOverlay.charShowCount ]
                         self.IDsScrollOverlay.set_markup( _('%s%s%s') % (self.IDsOverlayMarkupHead, overlayLetters, self.IDsOverlayMarkupTail) )
                         self.IDsScrollOverlay.show()
-                    # Exit from identity window
+                    # Exit from identify window
                     if mw_func in ['ID_BACK']:
-                        if self.connected_to_arduino: # TODO: Is this line needed?
-                            self.selected_player = ''
+                        self.selected_player = ''
                         self.hide_window('identify')
                     elif mw_func in ['ID_SELECT']:
                         self.selected_player = self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()]
@@ -1431,16 +1433,19 @@ class WinMain(WahCade, threading.Thread):
             game_info['sound_status']))
         self.lblCatVer.set_text(game_info['category'])
 
-        # Get high score data and display it        
-        if not self.connected_to_server:
-            self.lblHighScoreData.set_markup(_('%s%s%s') % (self.highScoreDataMarkupHead, " NOT CONNECTED TO A DATABASE", self.highScoreDataMarkupTail))
-        elif game_info['rom_name'] in self.supported_games:
-            highScoreInfo = self.get_score_string()
-            self.lblHighScoreData.modify_font(pango.FontDescription(self.highScoreDataLayout['font-name']))#TODO
-            self.lblHighScoreData.set_text(highScoreInfo)
-            self.lblHighScoreData.set_markup(_('%s%s%s') % (self.highScoreDataMarkupHead, highScoreInfo, self.highScoreDataMarkupTail))
+        # Get high score data and display it
+        if self.scroll_count < self.showHighScoreThresh:    
+            if not self.connected_to_server:
+                self.lblHighScoreData.set_markup(_('%s%s%s') % (self.highScoreDataMarkupHead, " NOT CONNECTED TO A DATABASE", self.highScoreDataMarkupTail))
+            elif game_info['rom_name'] in self.supported_games:
+                highScoreInfo = self.get_score_string()
+                self.lblHighScoreData.modify_font(pango.FontDescription(self.highScoreDataLayout['font-name']))#TODO
+                self.lblHighScoreData.set_text(highScoreInfo)
+                self.lblHighScoreData.set_markup(_('%s%s%s') % (self.highScoreDataMarkupHead, highScoreInfo, self.highScoreDataMarkupTail))
+            else:
+                self.lblHighScoreData.set_markup(_('%s%s%s') % (self.highScoreDataMarkupHead, "  HIGH SCORE NOT SUPPORTED", self.highScoreDataMarkupTail))        
         else:
-            self.lblHighScoreData.set_markup(_('%s%s%s') % (self.highScoreDataMarkupHead, "  HIGH SCORE NOT SUPPORTED", self.highScoreDataMarkupTail))        
+            self.lblHighScoreData.set_text("")
         # Start video timer
         if self.scrsaver.movie_type not in ('intro', 'exit'):
             self.start_timer('video')
