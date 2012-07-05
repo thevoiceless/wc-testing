@@ -443,14 +443,14 @@ class ScrollList(object):
         for i in range(self.num_rows):
             if (top_ls_idx + i > (len_ls - 1)) or ((top_ls_idx + i) < 0):
                 self._rows[i][1].set_text('')
-            elif self.ls[top_ls_idx + i] in self.WinMain.supported_games_name:
+            elif len(self.WinMain.lsGames) > 0 and self.WinMain.lsGames[top_ls_idx + i][1] in self.WinMain.supported_games:
+#            elif self.ls[top_ls_idx + i] in self.WinMain.supported_games_name:
                 if '&' in self.ls[top_ls_idx + i]:
                     self._rows[i][1].set_markup(('<span color="%s">%s%s') % (self.WinMain.scroll_selected_color, self.ls[top_ls_idx + i].replace('&', '&amp;'), '</span>'))
                 else:
                     self._rows[i][1].set_markup(('<span color="%s">%s%s') % (self.WinMain.scroll_selected_color, self.ls[top_ls_idx + i], '</span>'))      
             else:
                 self._rows[i][1].set_text(self.ls[top_ls_idx + i])
-#        print self.WinMain.supported_games_name
 
     def get_name(self):
         return "ScrolledList"
