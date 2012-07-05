@@ -812,7 +812,7 @@ class WinMain(WahCade, threading.Thread):
                 score_to_associate['player'] = self.selected_player
                 self.upload_queue.append(score_to_associate)
                 self.selected_player = ''
-                if len(self.score_processing_queue) > 1:
+                if len(self.score_processing_queue) > 0:
                     self.player_select.lbl1.set_text(self.score_processing_queue[len(self.score_processing_queue)-1]['score'] + "   " + self.score_processing_queue[len(self.score_processing_queue)-1]['arcadeName'])               
                     self.show_window('playerselect')
             else:
@@ -1381,6 +1381,7 @@ class WinMain(WahCade, threading.Thread):
                     elif mw_func in ['PS_SELECT']:
                         self.selected_player = self.player_select.sclPlayers.ls[self.player_select.sclPlayers.get_selected()]
                         self.hide_window('playerselect')
+                        self.close_dialog(self.player_select)
                     # Scroll up 1 name
                     elif mw_func in ['PS_UP_1_NAME']:
                         self.player_select.sclPlayers.scroll((int(self.scroll_count / 20) * -1) - 1)

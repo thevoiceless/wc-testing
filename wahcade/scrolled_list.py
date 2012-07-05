@@ -38,7 +38,7 @@ class ScrollList(object):
     def __init__(self, WinMain):
         """create custom scroll list control"""
         # Properties
-        # Initialize list before assignming WinMain, otherwise the list won't exist yet
+        # Initialize list before assigning WinMain, otherwise the list won't exist yet
         self.ls = []
         self.WinMain = WinMain
         self.WinMain.supported_games_name = []
