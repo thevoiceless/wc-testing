@@ -41,7 +41,6 @@ class ScrollList(object):
         # Initialize list before assigning WinMain, otherwise the list won't exist yet
         self.ls = []
         self.WinMain = WinMain
-        self.WinMain.supported_games_name = []
         self.width, self.height = 10, 10  # Changing these doesn't seem to do anything
         self.angle = 0
         self.auto_update = False
