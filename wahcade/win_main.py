@@ -115,7 +115,6 @@ class WinMain(WahCade, threading.Thread):
                     val = line.split('=')
                     self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
                 r = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']) # Attempt to make connection to server
-                print "here init 1"
                 self.check_connection(r.status_code)
         except: # Any exception would mean some sort of failed server connection
             self.connected_to_server = False
