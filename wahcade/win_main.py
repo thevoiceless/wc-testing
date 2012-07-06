@@ -115,7 +115,6 @@ class WinMain(WahCade, threading.Thread):
                     val = line.split('=')
                     self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
                 r = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']) # Attempt to make connection to server
-                print "here init 1"
                 self.check_connection(r.status_code)
         except: # Any exception would mean some sort of failed server connection
             self.connected_to_server = False
@@ -472,7 +471,6 @@ class WinMain(WahCade, threading.Thread):
              
                 # Get a list of games already on the server
                 data = requests.get(self.game_url)
-#                print "here init 2"
 #                self.check_connection(data.status_code)
                 data = fromstring(data.text)
                 games_on_server = []
@@ -484,7 +482,6 @@ class WinMain(WahCade, threading.Thread):
                     if rom not in games_on_server and rom in romToName:
                         post_data = {"romName":rom, "gameName":romToName[rom]}
                         r = requests.post(self.game_url, post_data)
-#                        print "here init 3"
 #                        self.check_connection(r.status_code)
             except e:
                 self.connected_to_server = False                    
@@ -935,9 +932,9 @@ class WinMain(WahCade, threading.Thread):
         """Add a new player to the database"""
         if self.connected_to_arduino:
             # Bring up new player list
+            self.show_window('identify')
             self.identify.setRFIDlbl(player_rfid)
             self.identify.sclIDs._update_display()
-            self.show_window('identify')
             while self.current_window == 'identify':
                 self.wait_with_events(0.1)
             player_name = self.selected_player
@@ -1332,10 +1329,9 @@ class WinMain(WahCade, threading.Thread):
                         overlayLetters = self.identify.sclIDs.ls[ self.identify.sclIDs.get_selected() ][ 0 : self.IDsScrollOverlay.charShowCount ]
                         self.IDsScrollOverlay.set_markup( _('%s%s%s') % (self.IDsOverlayMarkupHead, overlayLetters, self.IDsOverlayMarkupTail) )
                         self.IDsScrollOverlay.show()
-                    # Exit from identity window
+                    # Exit from identify window
                     if mw_func in ['ID_BACK']:
-                        if self.connected_to_arduino: # TODO: Is this line needed?
-                            self.selected_player = ''
+                        self.selected_player = ''
                         self.hide_window('identify')
                     elif mw_func in ['ID_SELECT']:
                         self.selected_player = self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()]
@@ -1412,7 +1408,6 @@ class WinMain(WahCade, threading.Thread):
         # Get info to display in bottom right box
         if len(self.lsGames) == 0: # Fixes error when switching lists with empty games
             return
-        
         game_info = filters.get_game_dict(self.lsGames[self.sclGames.get_selected()])
         self.current_rom = game_info['rom_name']
         # Check for game ini file
@@ -1475,10 +1470,15 @@ class WinMain(WahCade, threading.Thread):
         # String returned from server containing high scores
         score_string = r.text
         index = 1
+        
         if score_string != '[]' and "Could not find" not in score_string:
             # Trim leading and trailing [] from string
             score_string = score_string[1:-1]
             score_list = score_string.split(",")
+            #Check for off chance data didn't download properly
+            for s in score_list:
+                if ':' not in s:
+                    return
             # Split the list into name's and scores
             score, name = zip(*(s.split(":") for s in score_list))
             score_list[:]=[]
@@ -1661,7 +1661,6 @@ class WinMain(WahCade, threading.Thread):
         #rom = self.lsGames[self.sclGames.get_selected()][GL_ROM_NAME]
         rom = romName
         title = [g[0] for g in self.lsGames if g[1] == rom][0]
-            
         # Show launch message
         self.message.display_message(
             _('Starting...'),
@@ -2603,6 +2602,7 @@ class WinMain(WahCade, threading.Thread):
             self.lsGames = gList
             self.lsGames_len = len(gList)
         # Setup scroll list
+        # "All Games" list is always the first list
         if self.current_list_idx == 0:
             self.sclGames.ls = [l[0] for l in self.lsGames]
         else:
@@ -2634,6 +2634,7 @@ class WinMain(WahCade, threading.Thread):
                     self.current_emu, self.current_list_idx)),
                 self.lsGames)
             # Update displays
+            self.hide_window('options')
             self.sclGames.set_selected(self.sclGames.get_selected() - 1)
             self.sclGames.update()
 
