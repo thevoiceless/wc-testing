@@ -526,9 +526,9 @@ class WinMain(WahCade, threading.Thread):
                 data = fromstring(r.text)
                 for player in data.getiterator('player'):
                     self.player_info.append((player.find('name').text, player.find('playerID').text)) # parse player name and RFID from xml
-#                self.player_info = [['Terek Campbell', '52000032DCBC'], 
+#                self.player_info = [['Terek Campbell', '52000032DCBC'],
 #                                    ['Zach McGaughey', '5100FFE36C21'],
-#                                    ['Riley Moses', '5200001A9BD3'], 
+#                                    ['Riley Moses', '5200001A9BD3'],
 #                                    ['John Kelly', '52000003C697']
 #                                    ['Devin Wilson, '52000007EFBA']]
             self.user.set_text("Not Logged In")
@@ -890,6 +890,8 @@ class WinMain(WahCade, threading.Thread):
             else:
                 self.register_new_player(player_rfid)
                 if self.name_not_given:
+                    self.recent_log = True
+                    self.last_log = player_rfid
                     return
                 self.log_in(player_rfid)
         # If not connected to arduino
@@ -1263,7 +1265,6 @@ class WinMain(WahCade, threading.Thread):
                         self.play_clip('OP_MENU_SELECT')
                         self.options.menu_selected()
                     elif mw_func == 'OP_MENU_HIDE':
-                        self.play_clip('OP_MENU_HIDE')
                         self.hide_window('options')
                     elif mw_func == 'OP_MENU_BACK':
                         self.play_clip('OP_MENU_BACK')
@@ -2628,6 +2629,7 @@ class WinMain(WahCade, threading.Thread):
             # Update displays
             self.sclGames.set_selected(self.sclGames.get_selected() - 1)
             self.sclGames.update()
+            
 
     def check_music_settings(self):
         """If possible, set gstMusic and gstSound"""
@@ -2943,7 +2945,7 @@ class WinMain(WahCade, threading.Thread):
         
     def start_recording_video(self, rom):
         """Start recording with RecordMyDesktop"""
-        self.wait_with_events(1.00)
+        self.wait_with_events(2.00)
         window_name = 'MAME: %s [%s]' % (self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME], rom)
         os.system('recordmydesktop --full-shots --fps 16 --no-frame --windowid $(xwininfo -name ' + "\'" + str(window_name) + "\'" + ' | awk \'/Window id:/ {print $4}\') -o \'recorded games\'/' + rom + '_highscore &')
 
