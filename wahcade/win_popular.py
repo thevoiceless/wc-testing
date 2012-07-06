@@ -69,11 +69,16 @@ class WinPopular(WahCade):
         # Update the display
         self.sclPop._update_display()
         pass
+
+    def get_selected_romname(self):
+        return self.romPop[self.sclPop.get_selected()]
     
     def Pop_selected(self):
+        print "Pop_selected"
         pass
     
     def set_games_list(self, games):
-        self.lsPop = games
-        self.sclPop.ls = [g for g in games]
+        self.lsPop = [g[0] for g in games]
+        self.romPop = [g[1] for g in games]
+        self.sclPop.ls = [g for g in self.lsPop]
         self.sclPop._update_display

@@ -128,7 +128,8 @@ def open_file(filename, filemode='r'):
     if file_enc.lower() == 'ascii' or file_enc.lower() == 'eur-kr':
         file_enc = 'utf-8'
     #open file using correct encoding
-    f = codecs.open(filename, mode=filemode, encoding=file_enc)
+#    f = codecs.open(filename, mode=filemode, encoding=file_enc)
+    f = codecs.open(filename, mode=filemode, encoding='utf-8-sig')
     return f, file_enc
 
 
@@ -532,7 +533,7 @@ def read_filtered_list(list_filename):
         f, file_enc = open_file(list_filename, 'w')
         f.close()
     #open file
-    f = open(list_filename, 'r')
+    f = codecs.open(list_filename, 'r', 'utf-8-sig')
     lines = f.readlines()
     f.close()
     lines = [s.strip() for s in lines]
@@ -552,7 +553,6 @@ def read_filtered_list(list_filename):
             l.append(item2)
         #done
         return l, len(l)
-
 
 def add_game_to_filtered_list(gd, file_obj=None, list_filename=None):
     """add game info in given dictionary to specified file or .lst file"""
@@ -694,11 +694,11 @@ def walk_dir(root, recurse=False, pattern='*', return_folders=False):
         fullname = os.path.normpath(os.path.join(root, name))
         # grab if it matches our pattern and entry type
         for pat in pat_list:
-            if pat == "*":
-                pat = '*'
-            else:
-                pat = '*.%s' % (pat)
-            print fullname
+#            if pat == "*":
+#                pat = '*'
+#            else:
+#                pat = '*.%s' % (pat)
+#            print fullname
             if fnmatch.fnmatch(fullname, pat):
                 #if os.path.isfile(fullname) or (return_folders and os.path.isdir(fullname)):
                 if return_folders:
@@ -709,7 +709,7 @@ def walk_dir(root, recurse=False, pattern='*', return_folders=False):
                         result.append(fullname)
                 continue
             else:
-                print "Cannot match:", fullname
+#                print "Cannot match:", fullname
                 continue
         # recursively scan other folders, appending results
         if recurse:

@@ -321,6 +321,7 @@ class WinMain(WahCade, threading.Thread):
         # Timers
         self.scrsave_time = time.time()
         self.portal_time_last_played = time.time()
+        self.portal_time = None
        
         ### Create options window
         self.options = WinOptions(self)
@@ -471,7 +472,6 @@ class WinMain(WahCade, threading.Thread):
              
                 # Get a list of games already on the server
                 data = requests.get(self.game_url)
-#                print "here init 2"
 #                self.check_connection(data.status_code)
                 data = fromstring(data.text)
                 games_on_server = []
@@ -483,7 +483,6 @@ class WinMain(WahCade, threading.Thread):
                     if rom not in games_on_server and rom in romToName:
                         post_data = {"romName":rom, "gameName":romToName[rom]}
                         r = requests.post(self.game_url, post_data)
-#                        print "here init 3"
 #                        self.check_connection(r.status_code)
             except e:
                 self.connected_to_server = False                    
@@ -580,6 +579,7 @@ class WinMain(WahCade, threading.Thread):
             self.log_msg("Found intro movie file, attempting to play " + self.intro_movie)
         else:
             self.start_timer('scrsave')
+            self.start_timer('portal')
             if gst_media_imported and self.music_enabled:
                 self.gstMusic.play()
 
@@ -995,6 +995,7 @@ class WinMain(WahCade, threading.Thread):
                 self.scrsaver.stop_scrsaver()
                 #print "on_winMain_key_press: callifile_listsng start timer"
                 self.start_timer('scrsave')
+                self.start_timer('portal')
             if event.type == gtk.gdk.MOTION_NOTIFY and self.pointer_grabbed:
                 # Mouse moved
                 x, y = event.get_coords()
@@ -1153,14 +1154,14 @@ class WinMain(WahCade, threading.Thread):
                         self.remove_current_game()
                     elif mw_func == 'LAUNCH_GAME':
                         self.play_clip('LAUNCH_GAME')
-                        self.launch_auto_apps_then_game(self.sclGames)
+                        self.launch_auto_apps_then_game(self.lsGames[self.sclGames.get_selected()][1])
                     elif mw_func == 'LAUNCH_GAME_WITH_OPTIONS1':
                         self.play_clip('LAUNCH_GAME_WITH_OPTIONS1')
-                        self.launch_auto_apps_then_game(self.sclGames, 
+                        self.launch_auto_apps_then_game([g[1] for g in self.lsGames if g[0]==self.sclGames.get_selected_item()][0], 
                             self.emu_ini.get('alt_commandline_format_1'))
                     elif mw_func == 'LAUNCH_GAME_WITH_OPTIONS2':
                         self.play_clip('LAUNCH_GAME_WITH_OPTIONS2')
-                        self.launch_auto_apps_then_game(self.sclGames, 
+                        self.launch_auto_apps_then_game([g[1] for g in self.lsGames if g[0]==self.sclGames.get_selected_item()][0], 
                             self.emu_ini.get('alt_commandline_format_2'))
                     elif mw_func == 'MENU_SHOW':
                         self.play_clip('MENU_SHOW')
@@ -1361,16 +1362,16 @@ class WinMain(WahCade, threading.Thread):
                     elif mw_func == 'LAUNCH_GAME':
                         self.play_clip('LAUNCH_GAME')
                         #self.sclGames.set_selected_item(self.popular.sclPop.get_selected_item())
-                        self.launch_auto_apps_then_game(self.popular.sclPop)
+                        self.launch_auto_apps_then_game(self.popular.get_selected_romname())
                     elif mw_func == 'LAUNCH_GAME_WITH_OPTIONS1':
                         self.play_clip('LAUNCH_GAME_WITH_OPTIONS1')
                         #self.sclGames.set_selected_item(self.popular.sclPop.get_selected_item())
-                        self.launch_auto_apps_then_game(self.popular.sclPop, 
+                        self.launch_auto_apps_then_game(self.popular.get_selected_romname(), 
                             self.emu_ini.get('alt_commandline_format_1'))
                     elif mw_func == 'LAUNCH_GAME_WITH_OPTIONS2':
                         self.play_clip('LAUNCH_GAME_WITH_OPTIONS2')
                         #self.sclGames.set_selected_item(self.popular.sclPop.get_selected_item())
-                        self.launch_auto_apps_then_game(self.popular.sclPop, 
+                        self.launch_auto_apps_then_game(self.popular.get_selected_romname(), 
                             self.emu_ini.get('alt_commandline_format_2'))
                 elif current_window == 'playerselect':
                     if mw_func in ['PS_BACK']:
@@ -1411,7 +1412,6 @@ class WinMain(WahCade, threading.Thread):
         # Get info to display in bottom right box
         if len(self.lsGames) == 0: # Fixes error when switching lists with empty games
             return
-        
         game_info = filters.get_game_dict(self.lsGames[self.sclGames.get_selected()])
         self.current_rom = game_info['rom_name']
         # Check for game ini file
@@ -1474,10 +1474,15 @@ class WinMain(WahCade, threading.Thread):
         # String returned from server containing high scores
         score_string = r.text
         index = 1
+        
         if score_string != '[]' and "Could not find" not in score_string:
             # Trim leading and trailing [] from string
             score_string = score_string[1:-1]
             score_list = score_string.split(",")
+            #Check for off chance data didn't download properly
+            for s in score_list:
+                if ':' not in s:
+                    return
             # Split the list into name's and scores
             score, name = zip(*(s.split(":") for s in score_list))
             score_list[:]=[]
@@ -1511,16 +1516,20 @@ class WinMain(WahCade, threading.Thread):
                 index += 1
                 
         return score_string
-            
-    def on_scrsave_timer(self):
-        """Timer event - check to see if we need to start video or screen saver"""
+    
+    def portal_timer(self):
         sound_time = random.randint((5*60), (15*60))
-        if int(time.time() - self.portal_time_last_played) >= sound_time and int(time.time() - self.scrsave_time) > self.scrsave_delay:
+        #print int(time.time() - self.portal_time_last_played), '>=', sound_time
+        if int(time.time() - self.portal_time_last_played) >= sound_time:
             pygame.mixer.init()
             pygame.mixer.music.load(self.sounds[random.randrange(0, len(self.sounds))])
             pygame.mixer.music.play()
             self.portal_time_last_played = time.time()
             #pygame.mixer.quit If you want to re-initialize mixer with different args
+        return True
+            
+    def on_scrsave_timer(self):
+        """Timer event - check to see if we need to start video or screen saver"""
         # Use timer for screen saver to log a person out after period of inactivity
         if int(time.time() - self.scrsave_time) >= self.auto_logout_delay and self.current_players != []:
             self.log_out()
@@ -1597,24 +1606,18 @@ class WinMain(WahCade, threading.Thread):
             new_idx = file_lists[current_idx]
         return new_idx
 
-    def launch_auto_apps_then_game(self, theList, game_cmdline_args=''):
+    def launch_auto_apps_then_game(self, romName, game_cmdline_args=''):
         """Call any automatically launched external applications, then run currently selected game"""
-
-        # Find the index of the selected item in the main list of games
-        for index, item in enumerate(self.lsGames):
-            if item[0] == theList.get_selected_item():
-                self.listIndex = index
-                break
-        
+       
         self.external_app_queue = self.emu_ini.get('auto_launch_apps').split(',')
         # Get it into correct order
         self.external_app_queue.reverse()
         if self.external_app_queue == ['']:
             self.external_app_queue = []
-        if len(self.external_app_queue) > 0:
+        while self.external_app_queue:
             self.auto_launch_external_app(True, game_cmdline_args)
         else:
-            self.launch_game(game_cmdline_args)
+            self.launch_game(romName, game_cmdline_args)
 
     def get_launch_options(self, opts):
         """Returns parsed command line options"""
@@ -1625,13 +1628,14 @@ class WinMain(WahCade, threading.Thread):
         if self.music_enabled and not d['play_music']:
             self.gstMusic.pause()
         # Replace markers with actual values
-        opts = opts.replace('[name]', self.lsGames[self.listIndex][GL_ROM_NAME])
-        opts = opts.replace('[year]', self.lsGames[self.listIndex][GL_YEAR])
-        opts = opts.replace('[manufacturer]', self.lsGames[self.listIndex][GL_MANUFACTURER])
-        opts = opts.replace('[clone_of]', self.lsGames[self.listIndex][GL_CLONE_OF])
-        opts = opts.replace('[display_type]', self.lsGames[self.listIndex][GL_DISPLAY_TYPE])
-        opts = opts.replace('[screen_type]', self.lsGames[self.listIndex][GL_SCREEN_TYPE])
-        opts = opts.replace('[category]', self.lsGames[self.listIndex][GL_CATEGORY])
+        selected_index = self.sclGames.get_selected()
+        opts = opts.replace('[name]', self.lsGames[selected_index][GL_ROM_NAME])
+        opts = opts.replace('[year]', self.lsGames[selected_index][GL_YEAR])
+        opts = opts.replace('[manufacturer]', self.lsGames[selected_index][GL_MANUFACTURER])
+        opts = opts.replace('[clone_of]', self.lsGames[selected_index][GL_CLONE_OF])
+        opts = opts.replace('[display_type]', self.lsGames[selected_index][GL_DISPLAY_TYPE])
+        opts = opts.replace('[screen_type]', self.lsGames[selected_index][GL_SCREEN_TYPE])
+        opts = opts.replace('[category]', self.lsGames[selected_index][GL_CATEGORY])
         # Automatically rotate to emulator based on the [autorotate] flag being present.
         # This is typically for the MAME emulator since all other emulators known to work use a single orientation factor.
         screen_set = {0: '',
@@ -1653,7 +1657,7 @@ class WinMain(WahCade, threading.Thread):
         # Done
         return d
 
-    def launch_game(self, cmdline_args=''):
+    def launch_game(self, romName, cmdline_args=''):
         """Run currently selected game"""
         # Collect any memory "leaks"
         gc.collect()
@@ -1663,12 +1667,12 @@ class WinMain(WahCade, threading.Thread):
         if self.lsGames_len == 0:
             return
         #rom = self.lsGames[self.sclGames.get_selected()][GL_ROM_NAME]
-        rom = self.lsGames[self.listIndex][GL_ROM_NAME]
-            
+        rom = romName
+        title = [g[0] for g in self.lsGames if g[1] == rom][0]
         # Show launch message
         self.message.display_message(
             _('Starting...'),
-            '%s: %s' % (rom, self.lsGames[self.listIndex][GL_GAME_NAME]))
+            '%s: %s' % (rom, title))
             
 
         # Erase scores from hi score file of current game
@@ -1809,6 +1813,7 @@ class WinMain(WahCade, threading.Thread):
         #self.wait_with_events(0.25)
         self.start_timer('scrsave')
         self.start_timer('video')
+        self.start_timer('portal')
         if self.joy is not None:
             self.joy.joy_count('start')
         self.start_timer('joystick')
@@ -1836,7 +1841,7 @@ class WinMain(WahCade, threading.Thread):
         """Launch next app in list, then launch game"""
         if launch_game_after:
             self.launch_game_after = True
-        if len(self.external_app_queue) > 0:
+        if self.external_app_queue:
             self.launch_external_application(self.external_app_queue.pop(), True, cmdline_args)
         elif self.launch_game_after:
             self.launch_game_after = False
@@ -1933,7 +1938,7 @@ class WinMain(WahCade, threading.Thread):
         fav_name = os.path.join(CONFIG_DIR, 'files', '%s.fav' % (self.current_emu))
         if not os.path.isfile(fav_name):
             # Create favorites list if it doesn't exist
-            f = open(fav_name, 'w')
+            f = codecs.open(fav_name, 'w', 'utf-8-sig')
             f.close()
         self.emu_favs_list = filters.read_fav_list(fav_name)
         # Play videos?
@@ -2595,7 +2600,18 @@ class WinMain(WahCade, threading.Thread):
                     self.log_msg("%s not in list" % (fav[FAV_ROM_NAME]))
             self.lsGames = flist_sorted
             self.lsGames_len = len(self.lsGames)
+        elif self.current_list_ini.get('list_type') == 'xml_remote':
+            source = self.current_list_ini.get('source')
+            list_source = requests.get(source)
+            data = fromstring(list_source.text)
+            gList = []
+            if data.text != "":
+                for game in data.getiterator('game'):
+                    gList.append((game.find('gameName').text,)+(game.find('romName').text,)+("",)*11)
+            self.lsGames = gList
+            self.lsGames_len = len(gList)
         # Setup scroll list
+        # "All Games" list is always the first list
         if self.current_list_idx == 0:
             self.sclGames.ls = [l[0] for l in self.lsGames]
         else:
@@ -2627,6 +2643,7 @@ class WinMain(WahCade, threading.Thread):
                     self.current_emu, self.current_list_idx)),
                 self.lsGames)
             # Update displays
+            self.hide_window('options')
             self.sclGames.set_selected(self.sclGames.get_selected() - 1)
             self.sclGames.update()
             
@@ -2710,6 +2727,10 @@ class WinMain(WahCade, threading.Thread):
         elif timer_type == 'login':
             self.timeout = 5; # Number of seconds till recent_log times out
             self.login_timer = gobject.timeout_add(self.timeout * 1000, self.reset_recent_log)
+        elif timer_type == 'portal':
+            if self.portal_time:
+                gobject.source_remove(self.portal_time)
+            self.portal_time = gobject.timeout_add(2500, self.portal_timer)
 
     def display_splash(self):
         """Show splash screen"""
@@ -2890,6 +2911,7 @@ class WinMain(WahCade, threading.Thread):
             self.winMain.present()
             # Start timers again
             self.start_timer('scrsave')
+            self.start_timer('portal')
             self.start_timer('video')
         else:
             self.player_select.winPlayers.hide()
@@ -2996,5 +3018,5 @@ class WinMain(WahCade, threading.Thread):
         if data.text != "":
             data = fromstring(data.text)
             for game in data.getiterator('game'):
-                gList.append(game.find('gameName').text)
+                gList.append((game.find('gameName').text,game.find('romName').text))
         return gList
