@@ -553,7 +553,6 @@ def read_filtered_list(list_filename):
         #done
         return l, len(l)
 
-
 def add_game_to_filtered_list(gd, file_obj=None, list_filename=None):
     """add game info in given dictionary to specified file or .lst file"""
     if list_filename is not None:
@@ -694,11 +693,11 @@ def walk_dir(root, recurse=False, pattern='*', return_folders=False):
         fullname = os.path.normpath(os.path.join(root, name))
         # grab if it matches our pattern and entry type
         for pat in pat_list:
-            if pat == "*":
-                pat = '*'
-            else:
-                pat = '*.%s' % (pat)
-            print fullname
+#            if pat == "*":
+#                pat = '*'
+#            else:
+#                pat = '*.%s' % (pat)
+#            print fullname
             if fnmatch.fnmatch(fullname, pat):
                 #if os.path.isfile(fullname) or (return_folders and os.path.isdir(fullname)):
                 if return_folders:
@@ -709,7 +708,7 @@ def walk_dir(root, recurse=False, pattern='*', return_folders=False):
                         result.append(fullname)
                 continue
             else:
-                print "Cannot match:", fullname
+#                print "Cannot match:", fullname
                 continue
         # recursively scan other folders, appending results
         if recurse:

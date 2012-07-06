@@ -290,7 +290,8 @@ class WinSetup(GladeSupport, WahCade):
         self.emu_list_types = [
             ['normal', 'Normal'],
             ['most_played', 'Most Played'],
-            ['longest_played', 'Longest Played']]
+            ['longest_played', 'Longest Played'],
+            ['xml_remote', 'XML Remote']]
         self.music_movie_mix = [
             ['mute_movies', 'Mute Movies'],
             ['merge', 'Mix with Music']]
