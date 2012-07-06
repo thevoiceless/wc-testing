@@ -430,8 +430,8 @@ class WinMain(WahCade, threading.Thread):
                               'popular' : self._popular_items,
                               'playerselect' : self._player_select_items}
  
-        # Initialize and show primary Fixd containers, and populate appropriately
-        self.fixd.show()
+        # Initialize primary Fixd containers, and populate appropriately
+#        self.fixd.show()
         self.winMain.add(self.fixd)
         # Add everything to the main Fixd object
         for w_set_name in self._layout_items:
@@ -614,7 +614,9 @@ class WinMain(WahCade, threading.Thread):
             'UP_1_PAGE', 'DOWN_1_PAGE',
             'UP_1_LETTER', 'DOWN_1_LETTER']
         self.scroll_count = 0
-       
+        
+        self.fixd.show()
+        
         #### Joystick setup
         self.joy = None
         if (self.joyint == 1) and pygame_imported:
@@ -1387,8 +1389,6 @@ class WinMain(WahCade, threading.Thread):
                     # Scroll down 1 name
                     elif mw_func in ['PS_DOWN_1_NAME']:
                         self.player_select.sclPlayers.scroll(int(self.scroll_count / 20) + 1)
-                        
-
             # Force games list update if using mouse scroll wheel
             if 'MOUSE_SCROLLUP' in mw_keys or 'MOUSE_SCROLLDOWN' in mw_keys:
                 if widget == self.winMain:
