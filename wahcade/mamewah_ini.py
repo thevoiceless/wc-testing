@@ -25,6 +25,7 @@
 #import os
 
 from constants import *
+import codecs
 
 
 class MameWahIni:
@@ -83,7 +84,7 @@ class MameWahIni:
         """read ini file"""
         self.lines = []
         if os.path.isfile(self.ini_filename):
-            self.lines = open(self.ini_filename, 'r').readlines()
+            self.lines = codecs.open(self.ini_filename, 'r', 'utf-8-sig').readlines()
             self.lines = [s.strip() for s in self.lines]
             self.lines = [s.replace('\t', ' ') for s in self.lines]
         #create lookup dictionary
@@ -114,7 +115,7 @@ class MameWahIni:
         #add correct line terminator
         lines = ['%s\n' % s for s in self.lines]
         #write file
-        open(self.ini_filename, 'w').writelines(lines)
+        codecs.open(self.ini_filename, 'w', 'utf-8-sig').writelines(lines)
 
     def has_option(self, option):
         """does the option exist"""

@@ -1518,7 +1518,7 @@ class WinMain(WahCade, threading.Thread):
     
     def portal_timer(self):
         sound_time = random.randint((5*60), (15*60))
-        print int(time.time() - self.portal_time_last_played), '>=', sound_time
+        #print int(time.time() - self.portal_time_last_played), '>=', sound_time
         if int(time.time() - self.portal_time_last_played) >= sound_time:
             pygame.mixer.init()
             pygame.mixer.music.load(self.sounds[random.randrange(0, len(self.sounds))])
@@ -1937,7 +1937,7 @@ class WinMain(WahCade, threading.Thread):
         fav_name = os.path.join(CONFIG_DIR, 'files', '%s.fav' % (self.current_emu))
         if not os.path.isfile(fav_name):
             # Create favorites list if it doesn't exist
-            f = open(fav_name, 'w')
+            f = codecs.open(fav_name, 'w', 'utf-8-sig')
             f.close()
         self.emu_favs_list = filters.read_fav_list(fav_name)
         # Play videos?
