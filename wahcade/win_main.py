@@ -321,6 +321,7 @@ class WinMain(WahCade, threading.Thread):
         # Timers
         self.scrsave_time = time.time()
         self.portal_time_last_played = time.time()
+        self.portal_time = None
        
         ### Create options window
         self.options = WinOptions(self)
@@ -578,6 +579,7 @@ class WinMain(WahCade, threading.Thread):
             self.log_msg("Found intro movie file, attempting to play " + self.intro_movie)
         else:
             self.start_timer('scrsave')
+            self.start_timer('portal')
             if gst_media_imported and self.music_enabled:
                 self.gstMusic.play()
 
@@ -991,6 +993,7 @@ class WinMain(WahCade, threading.Thread):
                 self.scrsaver.stop_scrsaver()
                 #print "on_winMain_key_press: callifile_listsng start timer"
                 self.start_timer('scrsave')
+                self.start_timer('portal')
             if event.type == gtk.gdk.MOTION_NOTIFY and self.pointer_grabbed:
                 # Mouse moved
                 x, y = event.get_coords()
@@ -1512,16 +1515,20 @@ class WinMain(WahCade, threading.Thread):
                 index += 1
                 
         return score_string
-            
-    def on_scrsave_timer(self):
-        """Timer event - check to see if we need to start video or screen saver"""
+    
+    def portal_timer(self):
         sound_time = random.randint((5*60), (15*60))
-        if int(time.time() - self.portal_time_last_played) >= sound_time and int(time.time() - self.scrsave_time) > self.scrsave_delay:
+        print int(time.time() - self.portal_time_last_played), '>=', sound_time
+        if int(time.time() - self.portal_time_last_played) >= sound_time:
             pygame.mixer.init()
             pygame.mixer.music.load(self.sounds[random.randrange(0, len(self.sounds))])
             pygame.mixer.music.play()
             self.portal_time_last_played = time.time()
             #pygame.mixer.quit If you want to re-initialize mixer with different args
+        return True
+            
+    def on_scrsave_timer(self):
+        """Timer event - check to see if we need to start video or screen saver"""
         # Use timer for screen saver to log a person out after period of inactivity
         if int(time.time() - self.scrsave_time) >= self.auto_logout_delay and self.current_players != []:
             self.log_out()
@@ -1805,6 +1812,7 @@ class WinMain(WahCade, threading.Thread):
         #self.wait_with_events(0.25)
         self.start_timer('scrsave')
         self.start_timer('video')
+        self.start_timer('portal')
         if self.joy is not None:
             self.joy.joy_count('start')
         self.start_timer('joystick')
@@ -2717,6 +2725,10 @@ class WinMain(WahCade, threading.Thread):
         elif timer_type == 'login':
             self.timeout = 5; # Number of seconds till recent_log times out
             self.login_timer = gobject.timeout_add(self.timeout * 1000, self.reset_recent_log)
+        elif timer_type == 'portal':
+            if self.portal_time:
+                gobject.source_remove(self.portal_time)
+            self.portal_time = gobject.timeout_add(2500, self.portal_timer)
 
     def display_splash(self):
         """Show splash screen"""
@@ -2897,6 +2909,7 @@ class WinMain(WahCade, threading.Thread):
             self.winMain.present()
             # Start timers again
             self.start_timer('scrsave')
+            self.start_timer('portal')
             self.start_timer('video')
         else:
             self.player_select.winPlayers.hide()
