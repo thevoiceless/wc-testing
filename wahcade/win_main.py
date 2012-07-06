@@ -1470,10 +1470,15 @@ class WinMain(WahCade, threading.Thread):
         # String returned from server containing high scores
         score_string = r.text
         index = 1
+        
         if score_string != '[]' and "Could not find" not in score_string:
             # Trim leading and trailing [] from string
             score_string = score_string[1:-1]
             score_list = score_string.split(",")
+            #Check for off chance data didn't download properly
+            for s in score_list:
+                if ':' not in s:
+                    return
             # Split the list into name's and scores
             score, name = zip(*(s.split(":") for s in score_list))
             score_list[:]=[]
