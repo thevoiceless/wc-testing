@@ -2569,6 +2569,27 @@ class WinMain(WahCade, threading.Thread):
                 self.lsGames = []
                 self.lsGames_len = 0
             self.lsGames.sort()
+        elif self.current_list_ini.get('list_type') == 'hi2text_supported':
+            # Use all games to gen list
+            list_filename = os.path.join(
+                CONFIG_DIR,
+                'files',
+                '%s-0.lst' % (self.current_emu))
+            if os.path.isfile(list_filename):
+                self.lsGames, self.lsGames_len = filters.read_filtered_list(list_filename)
+            else:
+                self.lsGames = []
+                self.lsGames_len = 0
+            # Create list of roms
+            flist_roms = [r[GL_ROM_NAME] for r in self.lsGames]
+            # Generates hi2text supported list
+            hi_2_text_list = []
+            for game in self.lsGames:
+                if game[GL_ROM_NAME] in self.supported_games:
+                    hi_2_text_list.append(game)
+            self.lsGames = hi_2_text_list
+            self.lsGames_len = len(self.lsGames)
+            self.lsGames.sort()
         elif self.current_list_ini.get('list_type') in ['most_played', 'longest_played']:
             # Favs type, so choose sort column
             if self.current_list_ini.get('list_type') == 'most_played':
