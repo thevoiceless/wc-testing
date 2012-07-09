@@ -39,6 +39,7 @@ from subprocess import Popen
 import yaml #@UnresolvedImport
 import serial
 import Queue
+import codecs
 
 ## GTK Modules
 # GTK
@@ -864,6 +865,7 @@ class WinMain(WahCade, threading.Thread):
              
     def log_in(self, player_rfid):
         """Logs a player in"""
+        print self.player_info
         if self.connected_to_arduino:
             player_name = ''
             # Prevents the reader from logging someone in and then out immediately
