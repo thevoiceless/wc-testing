@@ -132,6 +132,7 @@ class WinMain(WahCade, threading.Thread):
         self.showImgThresh = 6
         self.showHighScoreThresh = 10
         self.listIndex = 0
+        self.scroll_count = 0
         
         ### USER PROFILE
         self.userpath = os.path.expanduser(CONFIG_DIR)  # CONFIG_DIR comes from constants.py
@@ -625,6 +626,7 @@ class WinMain(WahCade, threading.Thread):
     
         self.on_sclGames_changed()
         
+        
         ### __INIT__ Complete
         self.init = False
         
@@ -751,6 +753,7 @@ class WinMain(WahCade, threading.Thread):
                     testString = valid_string
                     if self.connected_to_server:
                         self.parse_high_score_text(testString)
+        self.on_sclGames_changed()
 
     def on_winMain_focus_out(self, *args):
         """Window lost focus"""
@@ -1518,7 +1521,6 @@ class WinMain(WahCade, threading.Thread):
     
     def portal_timer(self):
         sound_time = random.randint((5*60), (15*60))
-        print int(time.time() - self.portal_time_last_played), '>=', sound_time
         if int(time.time() - self.portal_time_last_played) >= sound_time:
             pygame.mixer.init()
             pygame.mixer.music.load(self.sounds[random.randrange(0, len(self.sounds))])
