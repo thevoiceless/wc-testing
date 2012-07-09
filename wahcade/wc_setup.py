@@ -291,6 +291,7 @@ class WinSetup(GladeSupport, WahCade):
             ['normal', 'Normal'],
             ['most_played', 'Most Played'],
             ['longest_played', 'Longest Played'],
+            ['hi2text_supported', 'High Score Supported'],
             ['xml_remote', 'XML Remote']]
         self.music_movie_mix = [
             ['mute_movies', 'Mute Movies'],
