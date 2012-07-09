@@ -39,10 +39,12 @@ from subprocess import Popen
 import yaml #@UnresolvedImport
 import serial
 import Queue
+import codecs
 
 ## GTK Modules
 # GTK
 import pygtk                        # http://www.pygtk.org/
+from random import Random
 onWindows = True
 if not sys.platform.startswith('win'):
     pygtk.require('2.0')            # Require GTKv2 (standard, as GTKv3 is still new)
@@ -132,6 +134,7 @@ class WinMain(WahCade, threading.Thread):
         self.showImgThresh = 6
         self.showHighScoreThresh = 10
         self.listIndex = 0
+        self.scroll_count = 0
         
         ### USER PROFILE
         self.userpath = os.path.expanduser(CONFIG_DIR)  # CONFIG_DIR comes from constants.py
@@ -521,10 +524,10 @@ class WinMain(WahCade, threading.Thread):
             if self.connected_to_arduino:
                 self.log_in_queue = Queue.Queue()
                 # Get players from server
-                r = requests.get(self.player_url)
-                data = fromstring(r.text)
-                for player in data.getiterator('player'):
-                    self.player_info.append((player.find('name').text, player.find('playerID').text)) # parse player name and RFID from xml
+            r = requests.get(self.player_url)
+            data = fromstring(r.text)
+            for player in data.getiterator('player'):
+                self.player_info.append((player.find('name').text, player.find('playerID').text)) # parse player name and RFID from xml
 #                self.player_info = [['Terek Campbell', '52000032DCBC'],
 #                                    ['Zach McGaughey', '5100FFE36C21'],
 #                                    ['Riley Moses', '5200001A9BD3'],
@@ -626,6 +629,7 @@ class WinMain(WahCade, threading.Thread):
             self.start_timer('joystick')
     
         self.on_sclGames_changed()
+        
         
         ### __INIT__ Complete
         self.init = False
@@ -753,6 +757,7 @@ class WinMain(WahCade, threading.Thread):
                     testString = valid_string
                     if self.connected_to_server:
                         self.parse_high_score_text(testString)
+        self.on_sclGames_changed()
 
     def on_winMain_focus_out(self, *args):
         """Window lost focus"""
@@ -910,8 +915,7 @@ class WinMain(WahCade, threading.Thread):
             # NOTE: player_rfid is actually player_name in the lines below
             # If player doesn't exist and add them to DB and log them in
             if not player_rfid in players: # if player doesn't exist and add them to DB and log them in
-
-                self.register_new_player('0123456789ABC', player_rfid)
+                self.register_new_player(random.randint(100000, 10000000000), player_rfid)
                 self.current_players.append(player_rfid)
                 self.user.set_text(self.get_logged_in_user_string(self.current_players))
             # If player already logged in, log them out
@@ -936,15 +940,20 @@ class WinMain(WahCade, threading.Thread):
             
     def register_new_player(self, player_rfid, player_name = ''): # TODO: Ultimately we will remove player_name from this function call
         """Add a new player to the database"""
+        in_db = False
         if self.connected_to_arduino:
             # Bring up new player list
             self.show_window('identify')
             self.identify.setRFIDlbl(player_rfid)
             self.identify.sclIDs._update_display()
+            for person in self.player_info:
+                if person[1] == player_rfid:
+                    in_db=True
+                    break
             while self.current_window == 'identify':
                 self.wait_with_events(0.1)
             player_name = self.selected_player
-            if player_name != '':
+            if player_name != '' and not in_db:
                 self.player_info.append([player_name, player_rfid]) # parse player name and RFID from xml
                 post_data = {"name":player_name, "playerID":player_rfid}
                 r = requests.post(self.player_url, post_data)
@@ -957,8 +966,14 @@ class WinMain(WahCade, threading.Thread):
             if not self.connected_to_server:
                 print "Not connected to database"
                 return
-            post_data = {"name":player_name, "playerID":player_rfid}
-            requests.post(self.player_url, post_data)
+            for person in self.player_info:
+                if person[0] == player_rfid:
+                    in_db=True
+                    break
+            if not in_db:
+                post_data = {"name":player_name, "playerID":player_rfid}
+                r = requests.post(self.player_url, post_data)
+                
         
     def get_logged_in_user_string(self, current_users):
         """Get string containing names of loged in users"""
@@ -1519,7 +1534,6 @@ class WinMain(WahCade, threading.Thread):
     
     def portal_timer(self):
         sound_time = random.randint((5*60), (15*60))
-        #print int(time.time() - self.portal_time_last_played), '>=', sound_time
         if int(time.time() - self.portal_time_last_played) >= sound_time:
             pygame.mixer.init()
             pygame.mixer.music.load(self.sounds[random.randrange(0, len(self.sounds))])
