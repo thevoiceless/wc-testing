@@ -128,6 +128,8 @@ def open_file(filename, filemode='r'):
     if file_enc.lower() == 'ascii' or file_enc.lower() == 'eur-kr':
         file_enc = 'utf-8'
     #open file using correct encoding
+#    f = codecs.open(filename, mode=filemode, encoding=file_enc)
+#    f = codecs.open(filename, mode=filemode, encoding='utf-8-sig')
     f = codecs.open(filename, mode=filemode, encoding=file_enc)
     return f, file_enc
 
@@ -532,7 +534,7 @@ def read_filtered_list(list_filename):
         f, file_enc = open_file(list_filename, 'w')
         f.close()
     #open file
-    f = open(list_filename, 'r')
+    f = codecs.open(list_filename, 'r', 'utf-8-sig')
     lines = f.readlines()
     f.close()
     lines = [s.strip() for s in lines]

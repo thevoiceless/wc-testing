@@ -431,8 +431,8 @@ class WinMain(WahCade, threading.Thread):
                               'popular' : self._popular_items,
                               'playerselect' : self._player_select_items}
  
-        # Initialize and show primary Fixd containers, and populate appropriately
-        self.fixd.show()
+        # Initialize primary Fixd containers, and populate appropriately
+#        self.fixd.show()
         self.winMain.add(self.fixd)
         # Add everything to the main Fixd object
         for w_set_name in self._layout_items:
@@ -526,9 +526,9 @@ class WinMain(WahCade, threading.Thread):
                 data = fromstring(r.text)
                 for player in data.getiterator('player'):
                     self.player_info.append((player.find('name').text, player.find('playerID').text)) # parse player name and RFID from xml
-#                self.player_info = [['Terek Campbell', '52000032DCBC'], 
+#                self.player_info = [['Terek Campbell', '52000032DCBC'],
 #                                    ['Zach McGaughey', '5100FFE36C21'],
-#                                    ['Riley Moses', '5200001A9BD3'], 
+#                                    ['Riley Moses', '5200001A9BD3'],
 #                                    ['John Kelly', '52000003C697']
 #                                    ['Devin Wilson, '52000007EFBA']]
             self.user.set_text("Not Logged In")
@@ -615,7 +615,9 @@ class WinMain(WahCade, threading.Thread):
             'UP_1_PAGE', 'DOWN_1_PAGE',
             'UP_1_LETTER', 'DOWN_1_LETTER']
         self.scroll_count = 0
-       
+        
+        self.fixd.show()
+        
         #### Joystick setup
         self.joy = None
         if (self.joyint == 1) and pygame_imported:
@@ -893,6 +895,8 @@ class WinMain(WahCade, threading.Thread):
             else:
                 self.register_new_player(player_rfid)
                 if self.name_not_given:
+                    self.recent_log = True
+                    self.last_log = player_rfid
                     return
                 self.log_in(player_rfid)
         # If not connected to arduino
@@ -1267,7 +1271,6 @@ class WinMain(WahCade, threading.Thread):
                         self.play_clip('OP_MENU_SELECT')
                         self.options.menu_selected()
                     elif mw_func == 'OP_MENU_HIDE':
-                        self.play_clip('OP_MENU_HIDE')
                         self.hide_window('options')
                     elif mw_func == 'OP_MENU_BACK':
                         self.play_clip('OP_MENU_BACK')
@@ -1390,8 +1393,6 @@ class WinMain(WahCade, threading.Thread):
                     # Scroll down 1 name
                     elif mw_func in ['PS_DOWN_1_NAME']:
                         self.player_select.sclPlayers.scroll(int(self.scroll_count / 20) + 1)
-                        
-
             # Force games list update if using mouse scroll wheel
             if 'MOUSE_SCROLLUP' in mw_keys or 'MOUSE_SCROLLDOWN' in mw_keys:
                 if widget == self.winMain:
@@ -1939,7 +1940,7 @@ class WinMain(WahCade, threading.Thread):
         fav_name = os.path.join(CONFIG_DIR, 'files', '%s.fav' % (self.current_emu))
         if not os.path.isfile(fav_name):
             # Create favorites list if it doesn't exist
-            f = open(fav_name, 'w')
+            f = codecs.open(fav_name, 'w', 'utf-8-sig')
             f.close()
         self.emu_favs_list = filters.read_fav_list(fav_name)
         # Play videos?
@@ -2647,6 +2648,7 @@ class WinMain(WahCade, threading.Thread):
             self.hide_window('options')
             self.sclGames.set_selected(self.sclGames.get_selected() - 1)
             self.sclGames.update()
+            
 
     def check_music_settings(self):
         """If possible, set gstMusic and gstSound"""
@@ -2967,7 +2969,7 @@ class WinMain(WahCade, threading.Thread):
         
     def start_recording_video(self, rom):
         """Start recording with RecordMyDesktop"""
-        self.wait_with_events(1.00)
+        self.wait_with_events(2.00)
         window_name = 'MAME: %s [%s]' % (self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME], rom)
         os.system('recordmydesktop --full-shots --fps 16 --no-frame --windowid $(xwininfo -name ' + "\'" + str(window_name) + "\'" + ' | awk \'/Window id:/ {print $4}\') -o \'recorded games\'/' + rom + '_highscore &')
 
