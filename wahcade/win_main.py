@@ -157,7 +157,7 @@ class WinMain(WahCade, threading.Thread):
         ## Read in options wahcade.ini, 
         self.lck_time = self.wahcade_ini.getint('lock_time')        # getint comes from mamewah_ini.py
         self.keep_aspect = self.wahcade_ini.getint('keep_image_aspect')
-        self.scrsave_delay = 10 #self.wahcade_ini.getint('delay') # TODO: Fix screensaver time
+        self.scrsave_delay = self.wahcade_ini.getint('delay') # TODO: Fix screensaver time
         self.auto_logout_delay = self.wahcade_ini.getint('log_out')
         self.layout_orientation = self.wahcade_ini.getint('layout_orientation', 0)
         self.screentype = self.wahcade_ini.getint('fullscreen', 0)
