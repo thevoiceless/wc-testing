@@ -202,14 +202,14 @@ class WinOptions(WahCade):
         elif menu_level == 'game_list':
             # Show all game lists
             self.lblSettingValue.set_text(self.WinMain.current_list_ini.get('list_title'))
-            for list_name, idx, cycle_list in self.WinMain.game_lists:
+            for list_name, idx, cycle_list, type in self.WinMain.game_lists:
                 self.lsOptions.append([list_name, idx]) # The lines selectable, list names
                 self.sclOptions.set_selected(self.WinMain.current_list_idx) # Which option is currently highlighted when list is opened
         elif menu_level == 'add_to_list':
             # Show "normal" game lists
             self.lblSettingValue.set_text(self.WinMain.current_list_ini.get('list_title'))
-            for list_name, idx, cycle_list in self.WinMain.game_lists_normal:
-                if list_name != self.WinMain.current_list_ini.get('list_title'):
+            for list_name, idx, cycle_list, type in self.WinMain.game_lists_normal:
+                if list_name != self.WinMain.current_list_ini.get('list_title') and type != 'xml_remote':
                     self.lsOptions.append([list_name, idx])
             self.sclOptions.set_selected(0)
         elif menu_level == 'find':
