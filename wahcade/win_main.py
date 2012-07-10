@@ -776,36 +776,38 @@ class WinMain(WahCade, threading.Thread):
         # Go through each line of the the high score result
         for line in iter(text_string.splitlines()):
             line = line.split('|')
-            
-            if line[0] != '':
-                # If it is the first line treat it as the format
-                if index == 1:
-                    _format = line
-                    index += 1
-                    for column in line:
-                        high_score_table[column] = '' # Initialize dictionary values
-                else: #not the first (heading) line
-                    if len(self.current_players) == 1:
-                        for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
-                            high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
-                        if 'SCORE' in high_score_table: # If high score table has score
-                            if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB
-                                if 'NAME' in high_score_table:
-                                    post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.user.get_text()}                         
-                                else:
-                                    post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.current_players[0]}
-                                r = requests.post(self.score_url, post_data)
-                    else: #TODO: handle multiple players scores coming back
-                        for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
-                            high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
-                        if 'SCORE' in high_score_table: # If high score table has score
-                            if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB                                                                
-                                if 'NAME' in high_score_table:
-                                    post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":""}                         
-                                    multiple_score_list.append(post_data)
-                                else:
-                                    post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":""}
-                                    multiple_score_list.append(post_data)
+            if "RANK" in line or "SCORE" in line or "NAME" in line or "ROUND" in line or index != 1:
+                if line[0] != '':
+                    # If it is the first line treat it as the format
+                    if index == 1:
+                        _format = line
+                        index += 1
+                        for column in line:
+                            high_score_table[column] = '' # Initialize dictionary values
+                    else: #not the first (heading) line
+                        if len(self.current_players) == 1:
+                            for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
+                                high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
+                            if 'SCORE' in high_score_table: # If high score table has score
+                                if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB
+                                    if 'NAME' in high_score_table:
+                                        post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.user.get_text()}                         
+                                    else:
+                                        post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.current_players[0]}
+                                    r = requests.post(self.score_url, post_data)
+                        else: #TODO: handle multiple players scores coming back
+                            for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
+                                high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
+                            if 'SCORE' in high_score_table: # If high score table has score
+                                if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB                                                                
+                                    if 'NAME' in high_score_table:
+                                        post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":""}                         
+                                        multiple_score_list.append(post_data)
+                                    else:
+                                        post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":""}
+                                        multiple_score_list.append(post_data)
+            else:
+                continue
 
         if len(self.current_players) > 1 and len(multiple_score_list) > 0:
             self.upload_queue = []
