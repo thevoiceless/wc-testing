@@ -757,6 +757,8 @@ class WinMain(WahCade, threading.Thread):
                     testString = valid_string
                     if self.connected_to_server:
                         self.parse_high_score_text(testString)
+                else:
+                    print "Unable to read the high score using htt"
         self.on_sclGames_changed()
 
     def on_winMain_focus_out(self, *args):
