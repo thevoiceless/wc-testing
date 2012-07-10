@@ -859,7 +859,6 @@ class WinMain(WahCade, threading.Thread):
     def check_connection(self, status_code):
         if ((status_code - 200) < 100 and (status_code - 200) >= 0) or status_code == 500:
             self.connected_to_server = True
-            print "Successfully connected to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
         else:
             self.connected_to_server = False
             print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
@@ -956,7 +955,7 @@ class WinMain(WahCade, threading.Thread):
             if player_name != '' and not in_db:
                 self.player_info.append([player_name, player_rfid]) # parse player name and RFID from xml
                 post_data = {"name":player_name, "playerID":player_rfid}
-                r = requests.post(self.player_url, post_data)
+                requests.post(self.player_url, post_data)
                 self.identify.sclIDs.ls.remove(player_name)
                 self.name_not_given = False
             else:
@@ -972,7 +971,7 @@ class WinMain(WahCade, threading.Thread):
                     break
             if not in_db:
                 post_data = {"name":player_name, "playerID":player_rfid}
-                r = requests.post(self.player_url, post_data)
+                requests.post(self.player_url, post_data)
                 
         
     def get_logged_in_user_string(self, current_users):
