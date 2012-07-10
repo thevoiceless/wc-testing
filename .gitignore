@@ -17,3 +17,7 @@ john.txt
 terek.txt
 zach.txt
 devin.txt
+
+# Sound files          #
+########################
+*.wav
