@@ -541,10 +541,10 @@ class WinMain(WahCade, threading.Thread):
 
         pygame.init()
         
-        sound_files = os.listdir('sounds/')
+        sound_files = os.listdir('config.dist/sounds/')
         self.sounds = []
         for sound in sound_files:
-            self.sounds.append('sounds/' + sound)
+            self.sounds.append('config.dist/sounds/' + sound)
 
         self.check_music_settings()
         
