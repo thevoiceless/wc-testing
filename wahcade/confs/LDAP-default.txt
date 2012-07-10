@@ -1,0 +1,6 @@
+LDAP_SERVER | ldap://
+BIND_DN | your.name@domain
+BIND_PASS | pass
+USER_BASE | ou=,dc=,dc=
+USER_FILTER | (objectClass=*)
+PAGE_SIZE | 10

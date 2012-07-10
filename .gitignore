@@ -5,3 +5,7 @@
 # Eclipse preferences  #
 ########################
 *.prefs
+
+# LDAP Credentials     #
+########################
+LDAP.txt
