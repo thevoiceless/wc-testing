@@ -157,7 +157,7 @@ class WinMain(WahCade, threading.Thread):
         ## Read in options wahcade.ini, 
         self.lck_time = self.wahcade_ini.getint('lock_time')        # getint comes from mamewah_ini.py
         self.keep_aspect = self.wahcade_ini.getint('keep_image_aspect')
-        self.scrsave_delay = 10 #self.wahcade_ini.getint('delay') # TODO: Fix screensaver time
+        self.scrsave_delay = self.wahcade_ini.getint('delay') # TODO: Fix screensaver time
         self.auto_logout_delay = self.wahcade_ini.getint('log_out')
         self.layout_orientation = self.wahcade_ini.getint('layout_orientation', 0)
         self.screentype = self.wahcade_ini.getint('fullscreen', 0)
@@ -776,36 +776,38 @@ class WinMain(WahCade, threading.Thread):
         # Go through each line of the the high score result
         for line in iter(text_string.splitlines()):
             line = line.split('|')
-            
-            if line[0] != '':
-                # If it is the first line treat it as the format
-                if index == 1:
-                    _format = line
-                    index += 1
-                    for column in line:
-                        high_score_table[column] = '' # Initialize dictionary values
-                else: #not the first (heading) line
-                    if len(self.current_players) == 1:
-                        for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
-                            high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
-                        if 'SCORE' in high_score_table: # If high score table has score
-                            if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB
-                                if 'NAME' in high_score_table:
-                                    post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.user.get_text()}                         
-                                else:
-                                    post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.current_players[0]}
-                                r = requests.post(self.score_url, post_data)
-                    else: #TODO: handle multiple players scores coming back
-                        for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
-                            high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
-                        if 'SCORE' in high_score_table: # If high score table has score
-                            if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB                                                                
-                                if 'NAME' in high_score_table:
-                                    post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":""}                         
-                                    multiple_score_list.append(post_data)
-                                else:
-                                    post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":""}
-                                    multiple_score_list.append(post_data)
+            if "RANK" in line or "SCORE" in line or "NAME" in line or "ROUND" in line or index != 1:
+                if line[0] != '':
+                    # If it is the first line treat it as the format
+                    if index == 1:
+                        _format = line
+                        index += 1
+                        for column in line:
+                            high_score_table[column] = '' # Initialize dictionary values
+                    else: #not the first (heading) line
+                        if len(self.current_players) == 1:
+                            for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
+                                high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
+                            if 'SCORE' in high_score_table: # If high score table has score
+                                if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB
+                                    if 'NAME' in high_score_table:
+                                        post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.user.get_text()}                         
+                                    else:
+                                        post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.current_players[0]}
+                                    r = requests.post(self.score_url, post_data)
+                        else: #TODO: handle multiple players scores coming back
+                            for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
+                                high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
+                            if 'SCORE' in high_score_table: # If high score table has score
+                                if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB                                                                
+                                    if 'NAME' in high_score_table:
+                                        post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":""}                         
+                                        multiple_score_list.append(post_data)
+                                    else:
+                                        post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":""}
+                                        multiple_score_list.append(post_data)
+            else:
+                continue
 
         if len(self.current_players) > 1 and len(multiple_score_list) > 0:
             self.upload_queue = []
@@ -863,7 +865,6 @@ class WinMain(WahCade, threading.Thread):
     def check_connection(self, status_code):
         if ((status_code - 200) < 100 and (status_code - 200) >= 0) or status_code == 500:
             self.connected_to_server = True
-            print "Successfully connected to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
         else:
             self.connected_to_server = False
             print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
@@ -966,7 +967,7 @@ class WinMain(WahCade, threading.Thread):
             if player_name != '' and not in_db:
                 self.player_info.append([player_name, player_rfid]) # parse player name and RFID from xml
                 post_data = {"name":player_name, "playerID":player_rfid}
-                r = requests.post(self.player_url, post_data)
+                requests.post(self.player_url, post_data)
                 self.identify.sclIDs.ls.remove(player_name)
                 self.name_not_given = False
             else:
@@ -982,7 +983,7 @@ class WinMain(WahCade, threading.Thread):
                     break
             if not in_db:
                 post_data = {"name":player_name, "playerID":player_rfid}
-                r = requests.post(self.player_url, post_data)
+                requests.post(self.player_url, post_data)
                 
         
     def get_logged_in_user_string(self, current_users):
@@ -1137,7 +1138,7 @@ class WinMain(WahCade, threading.Thread):
                 if current_window == 'main':
                     # Display first n letters of selected game when scrolling quickly
                     if self.scroll_count > self.showOverlayThresh:
-                        overlayLetters = self.lsGames[ self.sclGames.get_selected() ][ 0 ][ 0 : self.gamesScrollOverlay.charShowCount ]
+                        overlayLetters = self.lsGames[ self.sclGames.get_selected() ][ GL_GAME_NAME ][ 0 : self.gamesScrollOverlay.charShowCount ]
                         self.gamesScrollOverlay.set_markup( _('%s%s%s') % (self.gamesOverlayMarkupHead, overlayLetters, self.gamesOverlayMarkupTail) )
                         self.gamesScrollOverlay.show()
                     # Main form
