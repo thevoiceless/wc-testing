@@ -24,6 +24,7 @@
 import os
 import ldap
 from ldap.controls import SimplePagedResultsControl
+from constants import *
 
 class LoadLDAP:
     """Connects to a given LDAP server"""
@@ -40,7 +41,7 @@ class LoadLDAP:
     def loadCreds(self):
         # Load LDAP credentials from local file
 #        self.LDAP_file = str(os.environ['HOME']) + "/Documents/LDAP.txt"
-        self.LDAP_file = "confs/LDAP.txt" if os.path.isfile("confs/LDAP.txt") else "confs/LDAP-default.txt"
+        self.LDAP_file = CONFIG_DIR + "/confs/LDAP.txt" if os.path.isfile(CONFIG_DIR + "/confs/LDAP.txt") else CONFIG_DIR + "/confs/LDAP-default.txt"
         try:
             with open(self.LDAP_file, "rt") as f:
                 self.creds = {}
