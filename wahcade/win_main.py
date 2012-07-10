@@ -156,7 +156,7 @@ class WinMain(WahCade, threading.Thread):
         ## Read in options wahcade.ini, 
         self.lck_time = self.wahcade_ini.getint('lock_time')        # getint comes from mamewah_ini.py
         self.keep_aspect = self.wahcade_ini.getint('keep_image_aspect')
-        self.scrsave_delay = self.wahcade_ini.getint('delay')
+        self.scrsave_delay = 10 #self.wahcade_ini.getint('delay') # TODO: Fix screensaver time
         self.auto_logout_delay = self.wahcade_ini.getint('log_out')
         self.layout_orientation = self.wahcade_ini.getint('layout_orientation', 0)
         self.screentype = self.wahcade_ini.getint('fullscreen', 0)
@@ -816,7 +816,7 @@ class WinMain(WahCade, threading.Thread):
             self.player_select.sclPlayers._update_display()
                 
 
-    def close_dialog(self, widget, data = None):
+    def close_player_select(self, widget, data = None):
         """When the player select screen closes, this method starts"""
         if len(self.score_processing_queue) > 0:
             if self.selected_player != '':
@@ -832,6 +832,7 @@ class WinMain(WahCade, threading.Thread):
                     self.score_processing_queue.pop()
                     self.player_select.lbl1.set_text(self.score_processing_queue[len(self.score_processing_queue)-1]['score'] + "   " + self.score_processing_queue[len(self.score_processing_queue)-1]['arcadeName'])               
                     self.show_window('playerselect')
+                    self.player_select.sclPlayers._update_display()
                     return
                 else:
                     self.score_processing_queue.pop()
@@ -867,6 +868,8 @@ class WinMain(WahCade, threading.Thread):
     def log_in(self, player_rfid):
         """Logs a player in"""
         if self.connected_to_arduino:
+            # resets self.selected_player for later use
+            self.selected_player = ''
             player_name = ''
             # Prevents the reader from logging someone in and then out immediately
             if self.recent_log and self.last_log == player_rfid:
@@ -899,6 +902,10 @@ class WinMain(WahCade, threading.Thread):
                 if self.name_not_given:
                     self.recent_log = True
                     self.last_log = player_rfid
+                    if not self.timer_existing:
+                        self.timer_existing = True
+                        self.start_timer('login')
+                    print "here"
                     return
                 self.log_in(player_rfid)
         # If not connected to arduino
@@ -1392,13 +1399,14 @@ class WinMain(WahCade, threading.Thread):
                             self.emu_ini.get('alt_commandline_format_2'))
                 elif current_window == 'playerselect':
                     if mw_func in ['PS_BACK']:
+                        self.selected_player = ''
                         self.hide_window('playerselect')
-                        self.close_dialog(self.player_select)
+                        self.close_player_select(self.player_select)
                     # Exit from identity window
                     elif mw_func in ['PS_SELECT']:
                         self.selected_player = self.player_select.sclPlayers.ls[self.player_select.sclPlayers.get_selected()]
                         self.hide_window('playerselect')
-                        self.close_dialog(self.player_select)
+                        self.close_player_select(self.player_select)
                     # Scroll up 1 name
                     elif mw_func in ['PS_UP_1_NAME']:
                         self.player_select.sclPlayers.scroll((int(self.scroll_count / 20) * -1) - 1)
@@ -1551,6 +1559,10 @@ class WinMain(WahCade, threading.Thread):
         if int(time.time() - self.scrsave_time) >= self.scrsave_delay:
             # Yes, stop any vids playing
             self.stop_video()
+            # Closes any open windows
+            if self.current_window != 'main':
+                self.selected_player = ''
+                self.hide_window('calledfromscreensaver')
             if self.emu_ini.get('saver_type') in ['blank_screen', 'slideshow', 'movie', 'launch_scr']:
                 # Start screen saver
                 self.scrsaver.start_scrsaver(self.emu_ini.get('saver_type'))
@@ -2939,17 +2951,15 @@ class WinMain(WahCade, threading.Thread):
         self.cpviewer.winCPViewer.hide()
         self.identify.winID.hide()
         self.popular.winPop.hide()
-        
+        self.player_select.winPlayers.hide()
         # "show" main
-        if window_name is not 'playerselect':
-            self.current_window = 'main'
-            self.winMain.present()
+        self.current_window = 'main'
+        self.winMain.present()
+        if window_name != 'calledfromscreensaver':
             # Start timers again
             self.start_timer('scrsave')
             self.start_timer('portal')
             self.start_timer('video')
-        else:
-            self.player_select.winPlayers.hide()
 
     def check_ext_on_game_launch(self, romext='*'):
         """Check that the correct extension is being used"""
