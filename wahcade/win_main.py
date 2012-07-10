@@ -90,6 +90,7 @@ from win_popular import WinPopular      # Popular games window   #@UnresolvedImp
 from win_popular import WinPopular      # Popular games window
 from win_playerSelect import WinPlayerSelect #Player selection window
 import threading
+import codecs
 import filters                          # filters.py, routines to read/write mamewah filters and lists
 from mamewah_ini import MameWahIni      # Reads mamewah-formatted ini file
 import joystick                         # joystick.py, joystick class, uses pygame package (SDL bindings for games in Python)
@@ -1957,8 +1958,8 @@ class WinMain(WahCade, threading.Thread):
             # Grab the List number from the current file
             i = self.return_listnum(f)
             # Append lists to both arrays
-            self.game_lists.append([ini.get('list_title'), i, ini.getint('cycle_list')]) 
-            self.game_lists_normal.append([ini.get('list_title'), i, ini.getint('cycle_list')])        
+            self.game_lists.append([ini.get('list_title'), i, ini.getint('cycle_list'), ini.get('list_type')]) 
+            self.game_lists_normal.append([ini.get('list_title'), i, ini.getint('cycle_list'), ini.get('list_type')])        
 
         # Load favorites list
         fav_name = os.path.join(CONFIG_DIR, 'files', '%s.fav' % (self.current_emu))
@@ -2648,13 +2649,25 @@ class WinMain(WahCade, threading.Thread):
             self.lsGames = flist_sorted
             self.lsGames_len = len(self.lsGames)
         elif self.current_list_ini.get('list_type') == 'xml_remote':
+            # XML remote-populated, so get the source URL
             source = self.current_list_ini.get('source')
             list_source = requests.get(source)
             data = fromstring(list_source.text)
             gList = []
+            # Use all games to gen list
+            list_filename = os.path.join(
+                CONFIG_DIR,
+                'files',
+                '%s-0.lst' % (self.current_emu))
+            if os.path.isfile(list_filename):
+                self.lsGames, self.lsGames_len = filters.read_filtered_list(list_filename)
+            else:
+                self.lsGames = []
+                self.lsGames_len = 0
+            # Extract data
             if data.text != "":
                 for game in data.getiterator('game'):
-                    gList.append((game.find('gameName').text,)+(game.find('romName').text,)+("",)*11)
+                    gList.append(next(gTuple for gTuple in self.lsGames if gTuple[1] == game.find("romName").text))
             self.lsGames = gList
             self.lsGames_len = len(gList)
         # Setup scroll list
