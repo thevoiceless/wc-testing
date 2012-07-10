@@ -39,7 +39,8 @@ class LoadLDAP:
     
     def loadCreds(self):
         # Load LDAP credentials from local file
-        self.LDAP_file = str(os.environ['HOME']) + "/Documents/LDAP.txt"
+#        self.LDAP_file = str(os.environ['HOME']) + "/Documents/LDAP.txt"
+        self.LDAP_file = "confs/LDAP.txt" if os.path.isfile("confs/LDAP.txt") else "confs/LDAP-default.txt"
         try:
             with open(self.LDAP_file, "rt") as f:
                 self.creds = {}
@@ -47,7 +48,7 @@ class LoadLDAP:
                     val = line.split('|')   # This file uses "|" instead of "="
                     self.creds[val[0].strip()] = val[1].strip()
         except:
-            print "Could not load LDAP configuration"
+            print "Could not load LDAP configuration."
             
         self.LDAP_SERVER = self.creds['LDAP_SERVER']
         self.BIND_DN = self.creds['BIND_DN']
