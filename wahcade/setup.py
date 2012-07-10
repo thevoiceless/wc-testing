@@ -38,7 +38,7 @@ setup(
     author_email = 'wahcade@anti-particle.com',
     maintainer = 'Andy Balcombe',
     maintainer_email = 'wahcade@anti-particle.com',
-    depends = 'python (>=2.4.0), python-gtk2 (>=2.12.0), python-glade2, python-chardet (>=1.0), python-gst0.10, python-pygame (>=1.6), python-imaging (>=1.1.5), python-ldap (>=2.3), python-mysqldb (>=1.2), python-requests (>=0.10), python-serial (>=2.3), python-yaml (>=3.09)',
+    depends = 'python (>=2.4.0), python-gtk2 (>=2.12.0), python-glade2, python-chardet (>=1.0), python-gst0.10, python-pygame (>=1.6), python-imaging (>=1.1.5), python-ldap (>=2.3), python-mysqldb (>=1.2), python-serial (>=2.3), python-yaml (>=3.09)',
     recommends = 'sdlmame',
     section = 'games',
     #suggests = 'python-pygame (>=1.6), python-imaging (>=1.1.5)',
