@@ -110,7 +110,7 @@ class WinMain(WahCade, threading.Thread):
         threading.Thread.__init__(self)        
         
         # Try connecting to a database, otherwise
-        self.db_file = "confs" + sep + config_opts.db_config_file + ".txt"
+        self.db_file = CONFIG_DIR + sep + "confs" + sep + config_opts.db_config_file + ".txt"
         try:
             with open(self.db_file, 'rt') as f: # Open the config file and extract the database connection information
                 self.props = {}  # Dictionary
@@ -758,6 +758,8 @@ class WinMain(WahCade, threading.Thread):
                     testString = valid_string
                     if self.connected_to_server:
                         self.parse_high_score_text(testString)
+                else:
+                    print "Unable to read the high score using htt"
         self.on_sclGames_changed()
 
     def on_winMain_focus_out(self, *args):
