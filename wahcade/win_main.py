@@ -1546,11 +1546,12 @@ class WinMain(WahCade, threading.Thread):
     def portal_timer(self):
         sound_time = random.randint((5*60), (15*60))
         if int(time.time() - self.portal_time_last_played) >= sound_time:
-            pygame.mixer.init()
-            pygame.mixer.music.load(self.sounds[random.randrange(0, len(self.sounds))])
-            pygame.mixer.music.play()
-            self.portal_time_last_played = time.time()
-            #pygame.mixer.quit If you want to re-initialize mixer with different args
+            if len(self.sounds) == 0:
+                pygame.mixer.init()
+                pygame.mixer.music.load(self.sounds[random.randrange(0, len(self.sounds))])
+                pygame.mixer.music.play()
+                self.portal_time_last_played = time.time()
+                #pygame.mixer.quit If you want to re-initialize mixer with different args
         return True
             
     def on_scrsave_timer(self):
