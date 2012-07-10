@@ -28,6 +28,7 @@ import sys
 import fnmatch
 import codecs
 import ConfigParser
+import codecs
 
 #thanks to Trent Mick (http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/475126)
 # http://code.activestate.com/recipes/475126/
@@ -129,8 +130,8 @@ def open_file(filename, filemode='r'):
         file_enc = 'utf-8'
     #open file using correct encoding
 #    f = codecs.open(filename, mode=filemode, encoding=file_enc)
-#    f = codecs.open(filename, mode=filemode, encoding='utf-8-sig')
-    f = codecs.open(filename, mode=filemode, encoding=file_enc)
+    f = codecs.open(filename, mode=filemode, encoding='utf-8-sig')
+#    f = codecs.open(filename, mode=filemode, encoding=file_enc)
     return f, file_enc
 
 
