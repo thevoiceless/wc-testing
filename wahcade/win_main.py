@@ -1126,7 +1126,7 @@ class WinMain(WahCade, threading.Thread):
                 if current_window == 'main':
                     # Display first n letters of selected game when scrolling quickly
                     if self.scroll_count > self.showOverlayThresh:
-                        overlayLetters = self.lsGames[ self.sclGames.get_selected() ][ 0 ][ 0 : self.gamesScrollOverlay.charShowCount ]
+                        overlayLetters = self.lsGames[ self.sclGames.get_selected() ][ GL_GAME_NAME ][ 0 : self.gamesScrollOverlay.charShowCount ]
                         self.gamesScrollOverlay.set_markup( _('%s%s%s') % (self.gamesOverlayMarkupHead, overlayLetters, self.gamesOverlayMarkupTail) )
                         self.gamesScrollOverlay.show()
                     # Main form
