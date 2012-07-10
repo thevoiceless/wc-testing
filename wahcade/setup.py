@@ -47,6 +47,9 @@ setup(
     scripts = ['wahcade', 'wahcade-setup', 'wahcade-layout-editor'],
     data_files = [
         ("share/games/wahcade", glob.glob("*.py")),
+        ("share/games/wahcade", glob.glob("*.exe"),
+        ("share/games/wahcade", glob.glob("*.xml")),
+        ("share/games/wahcade", glob.glob("*.lst")),
         ("share/games/wahcade/config.dist", glob.glob("config.dist/*.*")),
         ("share/games/wahcade/config.dist/ctrlr", glob.glob("config.dist/ctrlr/*.*")),
         ("share/games/wahcade/config.dist/files", glob.glob("config.dist/files/*.*")),
