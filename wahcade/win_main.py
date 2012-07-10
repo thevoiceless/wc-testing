@@ -39,10 +39,12 @@ from subprocess import Popen
 import yaml #@UnresolvedImport
 import serial
 import Queue
+import codecs
 
 ## GTK Modules
 # GTK
 import pygtk                        # http://www.pygtk.org/
+from random import Random
 onWindows = True
 if not sys.platform.startswith('win'):
     pygtk.require('2.0')            # Require GTKv2 (standard, as GTKv3 is still new)
@@ -133,6 +135,7 @@ class WinMain(WahCade, threading.Thread):
         self.showImgThresh = 6
         self.showHighScoreThresh = 10
         self.listIndex = 0
+        self.scroll_count = 0
         
         ### USER PROFILE
         self.userpath = os.path.expanduser(CONFIG_DIR)  # CONFIG_DIR comes from constants.py
@@ -154,7 +157,7 @@ class WinMain(WahCade, threading.Thread):
         ## Read in options wahcade.ini, 
         self.lck_time = self.wahcade_ini.getint('lock_time')        # getint comes from mamewah_ini.py
         self.keep_aspect = self.wahcade_ini.getint('keep_image_aspect')
-        self.scrsave_delay = self.wahcade_ini.getint('delay')
+        self.scrsave_delay = 10 #self.wahcade_ini.getint('delay') # TODO: Fix screensaver time
         self.auto_logout_delay = self.wahcade_ini.getint('log_out')
         self.layout_orientation = self.wahcade_ini.getint('layout_orientation', 0)
         self.screentype = self.wahcade_ini.getint('fullscreen', 0)
@@ -431,8 +434,8 @@ class WinMain(WahCade, threading.Thread):
                               'popular' : self._popular_items,
                               'playerselect' : self._player_select_items}
  
-        # Initialize and show primary Fixd containers, and populate appropriately
-        self.fixd.show()
+        # Initialize primary Fixd containers, and populate appropriately
+#        self.fixd.show()
         self.winMain.add(self.fixd)
         # Add everything to the main Fixd object
         for w_set_name in self._layout_items:
@@ -522,13 +525,13 @@ class WinMain(WahCade, threading.Thread):
             if self.connected_to_arduino:
                 self.log_in_queue = Queue.Queue()
                 # Get players from server
-                r = requests.get(self.player_url)
-                data = fromstring(r.text)
-                for player in data.getiterator('player'):
-                    self.player_info.append((player.find('name').text, player.find('playerID').text)) # parse player name and RFID from xml
-#                self.player_info = [['Terek Campbell', '52000032DCBC'], 
+            r = requests.get(self.player_url)
+            data = fromstring(r.text)
+            for player in data.getiterator('player'):
+                self.player_info.append((player.find('name').text, player.find('playerID').text)) # parse player name and RFID from xml
+#                self.player_info = [['Terek Campbell', '52000032DCBC'],
 #                                    ['Zach McGaughey', '5100FFE36C21'],
-#                                    ['Riley Moses', '5200001A9BD3'], 
+#                                    ['Riley Moses', '5200001A9BD3'],
 #                                    ['John Kelly', '52000003C697']
 #                                    ['Devin Wilson, '52000007EFBA']]
             self.user.set_text("Not Logged In")
@@ -615,7 +618,9 @@ class WinMain(WahCade, threading.Thread):
             'UP_1_PAGE', 'DOWN_1_PAGE',
             'UP_1_LETTER', 'DOWN_1_LETTER']
         self.scroll_count = 0
-       
+        
+        self.fixd.show()
+        
         #### Joystick setup
         self.joy = None
         if (self.joyint == 1) and pygame_imported:
@@ -625,6 +630,7 @@ class WinMain(WahCade, threading.Thread):
             self.start_timer('joystick')
     
         self.on_sclGames_changed()
+        
         
         ### __INIT__ Complete
         self.init = False
@@ -752,6 +758,7 @@ class WinMain(WahCade, threading.Thread):
                     testString = valid_string
                     if self.connected_to_server:
                         self.parse_high_score_text(testString)
+        self.on_sclGames_changed()
 
     def on_winMain_focus_out(self, *args):
         """Window lost focus"""
@@ -810,7 +817,7 @@ class WinMain(WahCade, threading.Thread):
             self.player_select.sclPlayers._update_display()
                 
 
-    def close_dialog(self, widget, data = None):
+    def close_player_select(self, widget, data = None):
         """When the player select screen closes, this method starts"""
         if len(self.score_processing_queue) > 0:
             if self.selected_player != '':
@@ -826,6 +833,7 @@ class WinMain(WahCade, threading.Thread):
                     self.score_processing_queue.pop()
                     self.player_select.lbl1.set_text(self.score_processing_queue[len(self.score_processing_queue)-1]['score'] + "   " + self.score_processing_queue[len(self.score_processing_queue)-1]['arcadeName'])               
                     self.show_window('playerselect')
+                    self.player_select.sclPlayers._update_display()
                     return
                 else:
                     self.score_processing_queue.pop()
@@ -861,6 +869,8 @@ class WinMain(WahCade, threading.Thread):
     def log_in(self, player_rfid):
         """Logs a player in"""
         if self.connected_to_arduino:
+            # resets self.selected_player for later use
+            self.selected_player = ''
             player_name = ''
             # Prevents the reader from logging someone in and then out immediately
             if self.recent_log and self.last_log == player_rfid:
@@ -891,6 +901,12 @@ class WinMain(WahCade, threading.Thread):
             else:
                 self.register_new_player(player_rfid)
                 if self.name_not_given:
+                    self.recent_log = True
+                    self.last_log = player_rfid
+                    if not self.timer_existing:
+                        self.timer_existing = True
+                        self.start_timer('login')
+                    print "here"
                     return
                 self.log_in(player_rfid)
         # If not connected to arduino
@@ -907,8 +923,7 @@ class WinMain(WahCade, threading.Thread):
             # NOTE: player_rfid is actually player_name in the lines below
             # If player doesn't exist and add them to DB and log them in
             if not player_rfid in players: # if player doesn't exist and add them to DB and log them in
-
-                self.register_new_player('0123456789ABC', player_rfid)
+                self.register_new_player(random.randint(100000, 10000000000), player_rfid)
                 self.current_players.append(player_rfid)
                 self.user.set_text(self.get_logged_in_user_string(self.current_players))
             # If player already logged in, log them out
@@ -933,15 +948,20 @@ class WinMain(WahCade, threading.Thread):
             
     def register_new_player(self, player_rfid, player_name = ''): # TODO: Ultimately we will remove player_name from this function call
         """Add a new player to the database"""
+        in_db = False
         if self.connected_to_arduino:
             # Bring up new player list
             self.show_window('identify')
             self.identify.setRFIDlbl(player_rfid)
             self.identify.sclIDs._update_display()
+            for person in self.player_info:
+                if person[1] == player_rfid:
+                    in_db=True
+                    break
             while self.current_window == 'identify':
                 self.wait_with_events(0.1)
             player_name = self.selected_player
-            if player_name != '':
+            if player_name != '' and not in_db:
                 self.player_info.append([player_name, player_rfid]) # parse player name and RFID from xml
                 post_data = {"name":player_name, "playerID":player_rfid}
                 r = requests.post(self.player_url, post_data)
@@ -954,8 +974,14 @@ class WinMain(WahCade, threading.Thread):
             if not self.connected_to_server:
                 print "Not connected to database"
                 return
-            post_data = {"name":player_name, "playerID":player_rfid}
-            requests.post(self.player_url, post_data)
+            for person in self.player_info:
+                if person[0] == player_rfid:
+                    in_db=True
+                    break
+            if not in_db:
+                post_data = {"name":player_name, "playerID":player_rfid}
+                r = requests.post(self.player_url, post_data)
+                
         
     def get_logged_in_user_string(self, current_users):
         """Get string containing names of loged in users"""
@@ -1265,7 +1291,6 @@ class WinMain(WahCade, threading.Thread):
                         self.play_clip('OP_MENU_SELECT')
                         self.options.menu_selected()
                     elif mw_func == 'OP_MENU_HIDE':
-                        self.play_clip('OP_MENU_HIDE')
                         self.hide_window('options')
                     elif mw_func == 'OP_MENU_BACK':
                         self.play_clip('OP_MENU_BACK')
@@ -1375,21 +1400,20 @@ class WinMain(WahCade, threading.Thread):
                             self.emu_ini.get('alt_commandline_format_2'))
                 elif current_window == 'playerselect':
                     if mw_func in ['PS_BACK']:
+                        self.selected_player = ''
                         self.hide_window('playerselect')
-                        self.close_dialog(self.player_select)
+                        self.close_player_select(self.player_select)
                     # Exit from identity window
                     elif mw_func in ['PS_SELECT']:
                         self.selected_player = self.player_select.sclPlayers.ls[self.player_select.sclPlayers.get_selected()]
                         self.hide_window('playerselect')
-                        self.close_dialog(self.player_select)
+                        self.close_player_select(self.player_select)
                     # Scroll up 1 name
                     elif mw_func in ['PS_UP_1_NAME']:
                         self.player_select.sclPlayers.scroll((int(self.scroll_count / 20) * -1) - 1)
                     # Scroll down 1 name
                     elif mw_func in ['PS_DOWN_1_NAME']:
                         self.player_select.sclPlayers.scroll(int(self.scroll_count / 20) + 1)
-                        
-
             # Force games list update if using mouse scroll wheel
             if 'MOUSE_SCROLLUP' in mw_keys or 'MOUSE_SCROLLDOWN' in mw_keys:
                 if widget == self.winMain:
@@ -1519,7 +1543,6 @@ class WinMain(WahCade, threading.Thread):
     
     def portal_timer(self):
         sound_time = random.randint((5*60), (15*60))
-        #print int(time.time() - self.portal_time_last_played), '>=', sound_time
         if int(time.time() - self.portal_time_last_played) >= sound_time:
             pygame.mixer.init()
             pygame.mixer.music.load(self.sounds[random.randrange(0, len(self.sounds))])
@@ -1537,6 +1560,10 @@ class WinMain(WahCade, threading.Thread):
         if int(time.time() - self.scrsave_time) >= self.scrsave_delay:
             # Yes, stop any vids playing
             self.stop_video()
+            # Closes any open windows
+            if self.current_window != 'main':
+                self.selected_player = ''
+                self.hide_window('calledfromscreensaver')
             if self.emu_ini.get('saver_type') in ['blank_screen', 'slideshow', 'movie', 'launch_scr']:
                 # Start screen saver
                 self.scrsaver.start_scrsaver(self.emu_ini.get('saver_type'))
@@ -2569,6 +2596,27 @@ class WinMain(WahCade, threading.Thread):
                 self.lsGames = []
                 self.lsGames_len = 0
             self.lsGames.sort()
+        elif self.current_list_ini.get('list_type') == 'hi2text_supported':
+            # Use all games to gen list
+            list_filename = os.path.join(
+                CONFIG_DIR,
+                'files',
+                '%s-0.lst' % (self.current_emu))
+            if os.path.isfile(list_filename):
+                self.lsGames, self.lsGames_len = filters.read_filtered_list(list_filename)
+            else:
+                self.lsGames = []
+                self.lsGames_len = 0
+            # Create list of roms
+            flist_roms = [r[GL_ROM_NAME] for r in self.lsGames]
+            # Generates hi2text supported list
+            hi_2_text_list = []
+            for game in self.lsGames:
+                if game[GL_ROM_NAME] in self.supported_games:
+                    hi_2_text_list.append(game)
+            self.lsGames = hi_2_text_list
+            self.lsGames_len = len(self.lsGames)
+            self.lsGames.sort()
         elif self.current_list_ini.get('list_type') in ['most_played', 'longest_played']:
             # Favs type, so choose sort column
             if self.current_list_ini.get('list_type') == 'most_played':
@@ -2658,6 +2706,7 @@ class WinMain(WahCade, threading.Thread):
             self.hide_window('options')
             self.sclGames.set_selected(self.sclGames.get_selected() - 1)
             self.sclGames.update()
+            
 
     def check_music_settings(self):
         """If possible, set gstMusic and gstSound"""
@@ -2915,17 +2964,15 @@ class WinMain(WahCade, threading.Thread):
         self.cpviewer.winCPViewer.hide()
         self.identify.winID.hide()
         self.popular.winPop.hide()
-        
+        self.player_select.winPlayers.hide()
         # "show" main
-        if window_name is not 'playerselect':
-            self.current_window = 'main'
-            self.winMain.present()
+        self.current_window = 'main'
+        self.winMain.present()
+        if window_name != 'calledfromscreensaver':
             # Start timers again
             self.start_timer('scrsave')
             self.start_timer('portal')
             self.start_timer('video')
-        else:
-            self.player_select.winPlayers.hide()
 
     def check_ext_on_game_launch(self, romext='*'):
         """Check that the correct extension is being used"""
@@ -2978,7 +3025,7 @@ class WinMain(WahCade, threading.Thread):
         
     def start_recording_video(self, rom):
         """Start recording with RecordMyDesktop"""
-        self.wait_with_events(1.00)
+        self.wait_with_events(2.00)
         window_name = 'MAME: %s [%s]' % (self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME], rom)
         os.system('recordmydesktop --full-shots --fps 16 --no-frame --windowid $(xwininfo -name ' + "\'" + str(window_name) + "\'" + ' | awk \'/Window id:/ {print $4}\') -o \'recorded games\'/' + rom + '_highscore &')
 
