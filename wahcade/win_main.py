@@ -86,8 +86,6 @@ from win_scrsaver import WinScrSaver    # Screen saver window
 from win_history import WinHistory      # History viewer
 from win_cpviewer import WinCPViewer    # Control panel viewer window
 from win_identify import WinIdentify    # Identify window
-from win_popular import WinPopular      # Popular games window   #@UnresolvedImport
-from win_popular import WinPopular      # Popular games window
 from win_playerSelect import WinPlayerSelect #Player selection window
 import threading
 import codecs
@@ -345,9 +343,6 @@ class WinMain(WahCade, threading.Thread):
         ### Create identify window
         self.identify = WinIdentify(self)
         self.identify.winID.hide()
-        ### Create popular games window
-        self.popular = WinPopular(self)
-        self.popular.winPop.hide()
         ### Create player select window
         self.player_select = WinPlayerSelect(self)
         self.player_select.winPlayers.hide()
@@ -419,9 +414,6 @@ class WinMain(WahCade, threading.Thread):
             (-1, self.identify.lblRFID, "RFID"),
             (-1, self.identify.sclIDs, "IDsList"),
             (-1, self.IDsScrollOverlay, "ScrollOverlay")]
-        self._popular_items = [
-            (-1, self.popular.lblHeading, "Header"),
-            (-1, self.popular.sclPop, "PopList"),]
         self._player_select_items = [
             (-1, self.player_select.lblScore, "lblScore"),
             (-1, self.player_select.lbl1, "lbl1"),
@@ -431,7 +423,6 @@ class WinMain(WahCade, threading.Thread):
                               'message': self._message_items,
                               'screensaver': self._screensaver_items,
                               'identify' : self._identify_items,
-                              'popular' : self._popular_items,
                               'playerselect' : self._player_select_items}
  
         # Initialize primary Fixd containers, and populate appropriately
@@ -1268,11 +1259,6 @@ class WinMain(WahCade, threading.Thread):
                         self.play_clip('EXIT_WITH_CHOICE')
                         self.options.set_menu('exit')
                         self.show_window('options')
-                    elif mw_func == 'POPULAR_SHOW' and self.connected_to_server:
-                        self.popular.set_games_list(self.get_server_popular_games())
-                        self.popular.sclPop._update_display()
-                        self.show_window('popular')
-                        return
                 elif current_window == 'options':
                     # Options form
                     if mw_func == 'OP_UP_1_OPTION':
@@ -1377,27 +1363,6 @@ class WinMain(WahCade, threading.Thread):
                     elif mw_func == 'ID_DOWN_1_LETTER':
                         self.play_clip('DOWN_1_LETTER')
                         self.identify.sclIDs.jumpToLetter(mw_func)
-                elif current_window == 'popular':
-                    if mw_func in ['POPULAR_SHOW']:
-                        self.hide_window('popular')
-                    elif mw_func in ['POP_UP_1_GAME']:
-                        self.popular.sclPop.scroll(-1)
-                    elif mw_func in ['POP_DOWN_1_GAME']:
-                        self.popular.sclPop.scroll(1)
-                    elif mw_func == 'LAUNCH_GAME':
-                        self.play_clip('LAUNCH_GAME')
-                        #self.sclGames.set_selected_item(self.popular.sclPop.get_selected_item())
-                        self.launch_auto_apps_then_game(self.popular.get_selected_romname())
-                    elif mw_func == 'LAUNCH_GAME_WITH_OPTIONS1':
-                        self.play_clip('LAUNCH_GAME_WITH_OPTIONS1')
-                        #self.sclGames.set_selected_item(self.popular.sclPop.get_selected_item())
-                        self.launch_auto_apps_then_game(self.popular.get_selected_romname(), 
-                            self.emu_ini.get('alt_commandline_format_1'))
-                    elif mw_func == 'LAUNCH_GAME_WITH_OPTIONS2':
-                        self.play_clip('LAUNCH_GAME_WITH_OPTIONS2')
-                        #self.sclGames.set_selected_item(self.popular.sclPop.get_selected_item())
-                        self.launch_auto_apps_then_game(self.popular.get_selected_romname(), 
-                            self.emu_ini.get('alt_commandline_format_2'))
                 elif current_window == 'playerselect':
                     if mw_func in ['PS_BACK']:
                         self.selected_player = ''
@@ -1635,7 +1600,9 @@ class WinMain(WahCade, threading.Thread):
 
     def launch_auto_apps_then_game(self, romName, game_cmdline_args=''):
         """Call any automatically launched external applications, then run currently selected game"""
-       
+        # If we did not get a valid romName, return immediately
+        if not romName:
+           return
         self.external_app_queue = self.emu_ini.get('auto_launch_apps').split(',')
         # Get it into correct order
         self.external_app_queue.reverse()
@@ -2150,25 +2117,6 @@ class WinMain(WahCade, threading.Thread):
         if not os.path.dirname(idtfy_img):
             idtfy_img = os.path.join(self.layout_path, idtfy_img)
         idtfy.imgBackground.set_from_file(idtfy_img)
-        
-        # Set up Popular Games window
-        # Match sizes of main window
-        pop = self.popular
-        pop_lay = layout_info['popular']['fixdPop']
-        self.fixd.move(pop.winPop, 0, 0)
-        pop.winPop.set_size_request(pop_lay['width'], pop_lay['height'])
-        pop.winPop.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(pop_lay['background-col']))
-        pop.winPop.move(pop.imgBackground, 0, 0)
-        pop.imgBackground.set_size_request(pop_lay['width'], pop_lay['height'])
-        pop_img = pop_lay['use-image']
-        self.fixd.move(pop.winPop,
-                       (( main_lay['width'] - pop_lay['width'] ) / 2),
-                       (( main_lay['height'] - pop_lay['height'] ) / 2))
-        if not os.path.dirname(pop_img):
-            pop_img = os.path.join(self.layout_path, pop_img)
-        pop.imgBackground.set_from_file(pop_img)
-        # Other stuff
-        pop.lblHeading.set_text(_('Popular Games'))
             
         # Set up Player Select window
         plyr = self.player_select
@@ -2280,16 +2228,12 @@ class WinMain(WahCade, threading.Thread):
                         self.identify.winID.move(widget, w_lay['x'], w_lay['y'])
                     else:
                         widget.move_in_fixd(self.identify.winID, w_lay['x'], w_lay['y'])
-                elif w_set_name == "popular":
-                    # Move widgets to the correct places; move_in_fixd is for the scroll overlay
-                    if isinstance(widget, gtk.Widget):
-                        self.popular.winPop.move(widget, w_lay['x'], w_lay['y'])
                 elif w_set_name == "playerselect":
                     # Move widgets to the correct places; move_in_fixd is for the scroll overlay
                     if isinstance(widget, gtk.Widget):
                         self.player_select.winPlayers.move(widget, w_lay['x'], w_lay['y'])
                 else:
-                    print "Orphaned widget detected. Did not belong to one of [main/options/message/screensaver/identify/popular]"
+                    print "Orphaned widget detected. Did not belong to one of [main/options/message/screensaver/identify]"
         
         # Load histview and cpviewer layouts
         # Still in use?
@@ -2668,6 +2612,11 @@ class WinMain(WahCade, threading.Thread):
             if data.text != "":
                 for game in data.getiterator('game'):
                     gList.append(next(gTuple for gTuple in self.lsGames if gTuple[1] == game.find("romName").text))
+            if not gList:
+                errorItem = ()
+                for i, entry in enumerate(self.lsGames[0]):
+                    errorItem += ("No Games Found",) if i==0 else ("",)
+                gList.append(errorItem)
             self.lsGames = gList
             self.lsGames_len = len(gList)
         # Setup scroll list
@@ -2936,8 +2885,6 @@ class WinMain(WahCade, threading.Thread):
                 child_win = self.cpviewer.winCPViewer
         elif window_name == 'identify':
             child_win = self.identify.winID
-        elif window_name == 'popular':
-            child_win = self.popular.winPop
         elif window_name == 'playerselect':
             self.player_select.populate_list()
             self.player_select.sclPlayers._update_display()
@@ -2963,7 +2910,6 @@ class WinMain(WahCade, threading.Thread):
         self.histview.winHistory.hide()
         self.cpviewer.winCPViewer.hide()
         self.identify.winID.hide()
-        self.popular.winPop.hide()
         self.player_select.winPlayers.hide()
         # "show" main
         self.current_window = 'main'
@@ -3068,13 +3014,3 @@ class WinMain(WahCade, threading.Thread):
                 return False
         except:
             return False
-
-    def get_server_popular_games(self):
-        """Query the server for popular games"""
-        data = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/game/popular?count=10&renderXML=true")
-        gList = []
-        if data.text != "":
-            data = fromstring(data.text)
-            for game in data.getiterator('game'):
-                gList.append((game.find('gameName').text,game.find('romName').text))
-        return gList
