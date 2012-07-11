@@ -279,13 +279,12 @@ class WinMain(WahCade, threading.Thread):
         self.fixd.add(self.imgBackground)
         self.imgBackground.show()
         
-        # Mark mame directory
-        self.mame_dir = self.emu_ini.get('emulator_executable')[:self.emu_ini.get('emulator_executable').rfind(sep) + 1]
-        
+        # Mark mame directory for HiToText calls
+        self.mame_dir = os.path.expanduser('~/.mame/')
         # Set initial HiToText "read" command
-        self.htt_read = "HiToText.exe -r " + self.mame_dir
+        self.htt_read = CONFIG_DIR + "/HiToText.exe -r " + self.mame_dir
         # Set initial HiToText "erase" command
-        self.htt_erase = "HiToText.exe -e " + self.mame_dir
+        self.htt_erase = CONFIG_DIR + "/HiToText.exe -e " + self.mame_dir
         
         self.launched_game = False
         self.current_rom = ''
@@ -750,7 +749,7 @@ class WinMain(WahCade, threading.Thread):
                     if self.connected_to_server:
                         self.parse_high_score_text(testString)
                 else:
-                    print "Unable to read the high score using htt"
+                    print "Unable to read the high score using HiToText"
         self.on_sclGames_changed()
 
     def on_winMain_focus_out(self, *args):
@@ -856,6 +855,7 @@ class WinMain(WahCade, threading.Thread):
     def check_connection(self, status_code):
         if ((status_code - 200) < 100 and (status_code - 200) >= 0) or status_code == 500:
             self.connected_to_server = True
+            print "Successfully connected to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
         else:
             self.connected_to_server = False
             print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
