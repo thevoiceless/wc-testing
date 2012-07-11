@@ -1022,6 +1022,8 @@ class WinSetup(GladeSupport, WahCade):
         if self.emu_game_lists.index(self.current_emu_list) >= 1:
             list_type = self.emu_list_types[self.cboEmuListType.get_active()][0]
             emu_list_ini.set('list_type', list_type)
+            if list_type == "xml_remote":
+                emu_list_ini.set('params', "")
         emu_list_ini.set('cycle_list', int(self.chkEmuListCycle.get_active()))
         emu_list_ini.set('commandline_format', self.txeELCmdLine.get_text())
         emu_list_ini.set('alt_commandline_format_1', self.txeELAltCmdLine1.get_text())

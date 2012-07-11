@@ -2598,8 +2598,8 @@ class WinMain(WahCade, threading.Thread):
             self.lsGames_len = len(self.lsGames)
         elif self.current_list_ini.get('list_type') == 'xml_remote':
             # XML remote-populated, so get the source URL
-            source = self.current_list_ini.get('source')
-            list_source = requests.get(source)
+            sourceURL = self.props['host']+":"+self.props['port']+"/"+self.props['db']+self.current_list_ini.get('params')
+            list_source = requests.get(sourceURL)
             data = fromstring(list_source.text)
             gList = []
             # Use all games to gen list
