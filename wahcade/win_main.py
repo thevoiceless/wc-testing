@@ -108,7 +108,8 @@ class WinMain(WahCade, threading.Thread):
         threading.Thread.__init__(self)        
         
         # Try connecting to a database, otherwise
-        self.db_file = CONFIG_DIR + sep + "confs" + sep + config_opts.db_config_file + ".txt"
+        self.db_file = CONFIG_DIR + "/confs/DB-" + config_opts.db_config_file + ".txt"
+        print CONFIG_DIR + "/confs/DB-" + config_opts.db_config_file + ".txt"
         try:
             with open(self.db_file, 'rt') as f: # Open the config file and extract the database connection information
                 self.props = {}  # Dictionary
