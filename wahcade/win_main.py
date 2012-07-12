@@ -734,7 +734,6 @@ class WinMain(WahCade, threading.Thread):
                 #testString = commands.getoutput("wine HiToText.exe -r " + self.mame_dir + "hi" + sep + self.current_rom + ".hi 2>/dev/null")
                 #testString = commands.getoutput("mono HiToText.exe -r " + self.mame_dir + "hi" + sep + self.current_rom + ".hi")
                 testString = commands.getoutput(htt_command + "hi" + sep + self.current_rom + ".hi")
-                print htt_command + "hi" + sep + self.current_rom + ".hi"
                 if 'Error' in testString:
                     #testString = commands.getoutput("wine HiToText.exe -r " + self.mame_dir + "nvram" + sep + self.current_rom + ".nv 2>/dev/null")
                     #testString = commands.getoutput("mono HiToText.exe -r " + self.mame_dir + "nvram" + sep + self.current_rom + ".nv")
@@ -1672,8 +1671,7 @@ class WinMain(WahCade, threading.Thread):
         self.message.display_message(
             _('Starting...'),
             '%s: %s' % (rom, title))
-            
-
+        
         # Erase scores from hi score file of current game
         # Executable must be in same directory
         if rom in self.supported_games:
@@ -1684,7 +1682,6 @@ class WinMain(WahCade, threading.Thread):
                 #os.system('wine HiToText.exe -e ' + self.mame_dir + 'hi' + sep + rom + '.hi 2>/dev/null')
                 #os.system('mono HiToText.exe -e ' + self.mame_dir + 'hi' + sep + rom + '.hi')
                 os.system(htt_command + 'hi' + sep + rom + '.hi')
-                print htt_command + 'hi' + sep + rom + '.hi'
             elif os.path.exists(self.mame_dir + 'nvram' + sep + rom + '.nv'):
                 #os.system('wine HiToText.exe -e ' + self.mame_dir + 'nvram' + sep + rom + '.nv 2>/dev/null')
                 #os.system('mono HiToText.exe -e ' + self.mame_dir + 'nvram' + sep + rom + '.nv')
