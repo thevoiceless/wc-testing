@@ -1,13 +1,13 @@
-Package: wahcade
-Version: 20111127mahcade
+Package: rcade
+Version: beta
 Architecture: all
 Maintainer: Andy Balcombe <wahcade@anti-particle.com>
-Depends: python (>=2.4.0), python-gtk2 (>=2.12.0), python-glade2, python-chardet (>=1.0), python-gst0.10, python-pygame (>=1.6), python-imaging (>=1.1.5)
+Depends: python (>=2.4.0), python-gtk2 (>=2.12.0), python-glade2, python-chardet (>=1.0), python-gst0.10, python-pygame (>=1.6), python-imaging (>=1.1.5), python-ldap (>=2.3), python-mysqldb (>=1.2), python-serial (>=2.3), python-yaml (>=3.09), python-requests (>=0.10.1), mono-complete (>=2.6.7)
 Recommends: sdlmame
 Suggests: None
 Section: games
 Priority: optional
-Installed-Size: 2479
-Description: Wah!Cade - A nice, keyboard controlled frontend for arcade emulators.
- It's a front end for the M.A.M.E. arcade game emulator, and has been designed with arcade cabinet controls & projects in mind.
+Installed-Size: 24018
+Description: Rcade - A frontend for arcade emulators, built off of Wah!Cade.
+ A frontend for the M.A.M.E. arcade game emulator, designed with arcade cabinet controls & projects in mind.
 

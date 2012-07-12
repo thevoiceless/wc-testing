@@ -8,6 +8,6 @@ tar -xzvpf ../../control.tar.gz
 cp ../../debian-binary ./
 # Make some tweak to preinst/postinst/etc...
 cd ../../
-dpkg-deb -b tmp wahcade_20111127mahcade_all.deb
+dpkg-deb -b tmp rcade_beta_all.deb
 # new.deb should not cause the same complaints
 #rm -rf tmp
