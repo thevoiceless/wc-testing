@@ -109,7 +109,6 @@ class WinMain(WahCade, threading.Thread):
         
         # Try connecting to a database, otherwise
         self.db_file = CONFIG_DIR + "/confs/DB-" + config_opts.db_config_file + ".txt"
-        print CONFIG_DIR + "/confs/DB-" + config_opts.db_config_file + ".txt"
         try:
             with open(self.db_file, 'rt') as f: # Open the config file and extract the database connection information
                 self.props = {}  # Dictionary
@@ -283,9 +282,9 @@ class WinMain(WahCade, threading.Thread):
         # Mark mame directory for HiToText calls
         self.mame_dir = os.path.expanduser('~/.mame/')
         # Set initial HiToText "read" command
-        self.htt_read = CONFIG_DIR + "/HiToText.exe -r " + self.mame_dir
+        self.htt_read = "/usr/local/bin/HiToText.exe -r " + self.mame_dir
         # Set initial HiToText "erase" command
-        self.htt_erase = CONFIG_DIR + "/HiToText.exe -e " + self.mame_dir
+        self.htt_erase = "/usr/local/bin/HiToText.exe -e " + self.mame_dir
         
         self.launched_game = False
         self.current_rom = ''
@@ -735,6 +734,7 @@ class WinMain(WahCade, threading.Thread):
                 #testString = commands.getoutput("wine HiToText.exe -r " + self.mame_dir + "hi" + sep + self.current_rom + ".hi 2>/dev/null")
                 #testString = commands.getoutput("mono HiToText.exe -r " + self.mame_dir + "hi" + sep + self.current_rom + ".hi")
                 testString = commands.getoutput(htt_command + "hi" + sep + self.current_rom + ".hi")
+                print htt_command + "hi" + sep + self.current_rom + ".hi"
                 if 'Error' in testString:
                     #testString = commands.getoutput("wine HiToText.exe -r " + self.mame_dir + "nvram" + sep + self.current_rom + ".nv 2>/dev/null")
                     #testString = commands.getoutput("mono HiToText.exe -r " + self.mame_dir + "nvram" + sep + self.current_rom + ".nv")
@@ -1607,7 +1607,7 @@ class WinMain(WahCade, threading.Thread):
         """Call any automatically launched external applications, then run currently selected game"""
         # If we did not get a valid romName, return immediately
         if not romName:
-           return
+            return
         self.external_app_queue = self.emu_ini.get('auto_launch_apps').split(',')
         # Get it into correct order
         self.external_app_queue.reverse()
@@ -1684,6 +1684,7 @@ class WinMain(WahCade, threading.Thread):
                 #os.system('wine HiToText.exe -e ' + self.mame_dir + 'hi' + sep + rom + '.hi 2>/dev/null')
                 #os.system('mono HiToText.exe -e ' + self.mame_dir + 'hi' + sep + rom + '.hi')
                 os.system(htt_command + 'hi' + sep + rom + '.hi')
+                print htt_command + 'hi' + sep + rom + '.hi'
             elif os.path.exists(self.mame_dir + 'nvram' + sep + rom + '.nv'):
                 #os.system('wine HiToText.exe -e ' + self.mame_dir + 'nvram' + sep + rom + '.nv 2>/dev/null')
                 #os.system('mono HiToText.exe -e ' + self.mame_dir + 'nvram' + sep + rom + '.nv')
