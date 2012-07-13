@@ -282,9 +282,9 @@ class WinMain(WahCade, threading.Thread):
         # Mark mame directory for HiToText calls
         self.mame_dir = os.path.expanduser('~/.mame/')
         # Set initial HiToText "read" command
-        self.htt_read = CONFIG_DIR + "/HiToText.exe -r " + self.mame_dir
+        self.htt_read = "/usr/local/bin/HiToText.exe -r " + self.mame_dir
         # Set initial HiToText "erase" command
-        self.htt_erase = CONFIG_DIR + "/HiToText.exe -e " + self.mame_dir
+        self.htt_erase = "/usr/local/bin/HiToText.exe -e " + self.mame_dir
         
         self.launched_game = False
         self.current_rom = ''
@@ -1607,7 +1607,7 @@ class WinMain(WahCade, threading.Thread):
         """Call any automatically launched external applications, then run currently selected game"""
         # If we did not get a valid romName, return immediately
         if not romName:
-           return
+            return
         self.external_app_queue = self.emu_ini.get('auto_launch_apps').split(',')
         # Get it into correct order
         self.external_app_queue.reverse()
@@ -1672,8 +1672,7 @@ class WinMain(WahCade, threading.Thread):
         self.message.display_message(
             _('Starting...'),
             '%s: %s' % (rom, title))
-            
-
+        
         # Erase scores from hi score file of current game
         # Executable must be in same directory
         if rom in self.supported_games:

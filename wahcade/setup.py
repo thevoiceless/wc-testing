@@ -82,7 +82,7 @@ setup(
         ("share/games/wahcade/pixmaps", glob.glob("pixmaps/*.png")),
         ("share/games/wahcade/pixmaps", glob.glob("pixmaps/*.ico")),
         ("share/games/wahcade/templates", glob.glob("templates/*.ini")),
-        ("share/applications", glob.glob("*.desktop")),
+        ("share/applications", glob.glob("rcade.desktop")),
         ("share/pixmaps", ["pixmaps/rcade.png", "pixmaps/wahcade-setup.png", "pixmaps/wahcade-layout-editor.png"]),
         ("share/locale/de/LC_MESSAGES", glob.glob("locale/de/LC_MESSAGES/*.mo")),
         ("share/locale/en/LC_MESSAGES", glob.glob("locale/en/LC_MESSAGES/*.mo")),
