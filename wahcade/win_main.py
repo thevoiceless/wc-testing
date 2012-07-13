@@ -88,12 +88,12 @@ from win_cpviewer import WinCPViewer    # Control panel viewer window
 from win_identify import WinIdentify    # Identify window
 from win_playerSelect import WinPlayerSelect #Player selection window
 import threading
-import codecs
 import filters                          # filters.py, routines to read/write mamewah filters and lists
 from mamewah_ini import MameWahIni      # Reads mamewah-formatted ini file
 import joystick                         # joystick.py, joystick class, uses pygame package (SDL bindings for games in Python)
 import requests
 import pygame
+from video_chat import video_chat       #import the video chat element
 from xml.etree.ElementTree import fromstring
 # Set gettext function
 _ = gettext.gettext
@@ -105,7 +105,7 @@ class WinMain(WahCade, threading.Thread):
         """Initialize main Rcade window"""   # Docstring for this method
         
         # Begin the thread for reading from arduino
-        threading.Thread.__init__(self)        
+        threading.Thread.__init__(self)
         
         # Try connecting to a database, otherwise
         self.db_file = CONFIG_DIR + "/confs/DB-" + config_opts.db_config_file + ".txt"
@@ -119,6 +119,8 @@ class WinMain(WahCade, threading.Thread):
                 self.check_connection(r.status_code)
         except: # Any exception would mean some sort of failed server connection
             self.connected_to_server = False
+        #TODO: temporary
+        self.videoCount = 0
         
         ### Set Global Variables
         global gst_media_imported, pygame_imported, old_keyb_events, debug_mode, log_filename
@@ -214,7 +216,7 @@ class WinMain(WahCade, threading.Thread):
         self.lblEmulatorName = gtk.Label()
         self.lblGameSelected = gtk.Label()
         if self.use_splash == 1:
-            self.display_splash()
+            self.display_splash() 
         if gst_media_imported:
             self.drwVideo = gst_media.VideoWidget()
         else:
@@ -443,6 +445,7 @@ class WinMain(WahCade, threading.Thread):
         self.layout_file = ''
         self.load_emulator()
         
+        self.setup_video_chat()
 
         # Get a list of games already on the server
         self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
@@ -539,8 +542,9 @@ class WinMain(WahCade, threading.Thread):
         self.check_music_settings()
         
         self.winMain.show()
-
-        self.drwVideo.set_property('visible', False)
+        
+        #TODO: reenable this
+        #self.drwVideo.set_property('visible', False)
 
         if not self.showcursor:
             self.hide_mouse_cursor(self.winMain)
@@ -624,7 +628,7 @@ class WinMain(WahCade, threading.Thread):
         
         ### __INIT__ Complete
         self.init = False
-        
+    
     def on_winMain_destroy(self, *args):
         """Done, quit the application"""
         # Stop video playing if necessary
@@ -756,7 +760,29 @@ class WinMain(WahCade, threading.Thread):
         """Window lost focus"""
         self.pointer_grabbed = False
         gtk.gdk.pointer_ungrab()
+    
+    def setup_video_chat(self):
+        self.video_chat = video_chat()
+        #self.video_chat.setup_streaming_video()
+        self.sink = self.video_chat.receivepipe.get_by_name("sink")
         
+        #print self.sink
+        self.vid_container = gtk.DrawingArea()
+        self.fixd.put(self.vid_container, 300, 80)
+        self.vid_container.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
+        #print self.vid_container.window.xid
+        
+        self.sink.set_xwindow_id(self.vid_container.window.xid)
+        
+        
+    def start_video_chat(self):
+        self.vid_container.set_size_request(640,480)
+        self.sink.set_xwindow_id(self.vid_container.window.xid)
+        self.video_chat.start_streaming_video()
+        
+    def stop_video_chat(self):
+        self.video_chat.stop_streaming_video()
+       
     def parse_high_score_text(self, text_string):
         """Parse the text file for high scores. 0 scores are not sent"""
         if len(self.current_players) > 1:
@@ -1262,6 +1288,19 @@ class WinMain(WahCade, threading.Thread):
                         self.play_clip('EXIT_WITH_CHOICE')
                         self.options.set_menu('exit')
                         self.show_window('options')
+                    elif mw_func == 'TOGGLE_VIDEO':
+                        #TODO: video do this for real
+                        self.videoCount += 1
+                        
+                        if(self.videoCount%2 == 1):
+                            print "Start streaming keypress"
+                            self.start_video_chat()
+                            self.vid_container.show()
+                        else:
+                            print "Stop streaming keypress"
+                            #self.stop_video_chat()
+                            self.vid_container.hide()
+                            
                 elif current_window == 'options':
                     # Options form
                     if mw_func == 'OP_UP_1_OPTION':
