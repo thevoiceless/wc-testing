@@ -1172,8 +1172,9 @@ class WinMain(WahCade, threading.Thread):
                         self.play_clip('REMOVE_GAME_FROM_LIST')
                         self.remove_current_game()
                     elif mw_func == 'LAUNCH_GAME':
-                        self.play_clip('LAUNCH_GAME')
-                        self.launch_auto_apps_then_game(self.lsGames[self.sclGames.get_selected()][1])
+                        if len(self.lsGames) != 0:
+                            self.play_clip('LAUNCH_GAME')
+                            self.launch_auto_apps_then_game(self.lsGames[self.sclGames.get_selected()][1])
                     elif mw_func == 'LAUNCH_GAME_WITH_OPTIONS1':
                         self.play_clip('LAUNCH_GAME_WITH_OPTIONS1')
                         self.launch_auto_apps_then_game([g[1] for g in self.lsGames if g[0]==self.sclGames.get_selected_item()][0], 

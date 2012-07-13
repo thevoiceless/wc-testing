@@ -157,6 +157,7 @@ class WinScrSaver(WahCade):
             try:
                 self.drwVideo = gst_media.VideoWidget()
                 self.video_player = gst_media.GstVideo(self.drwVideo)
+                self.movievol = self.WinMain.movievol
                 self.video_player.set_volume(self.movievol)
                 self.video_enabled = True
             except:
