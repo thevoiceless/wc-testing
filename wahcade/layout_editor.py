@@ -118,7 +118,6 @@ class WinLayout(GladeSupport, WahCade):
         self._hist_widgets = [
             'Heading', 'Game History']
         self._identify_widgets = ['Prompt', 'RFID Value', 'Prompt Text', 'IDs List', 'Overlay']
-        self._popular_widgets = ['Header', 'Popular Games List']
         #labels
         main_widgets = {}
         opt_widgets = {}
@@ -127,7 +126,6 @@ class WinLayout(GladeSupport, WahCade):
         cpv_widgets = {}
         hist_widgets = {}
         id_widgets = {}
-        pop_widgets = {}
         for i, widget_name in enumerate(self._main_widgets):
             evb = self._make_label(widget_name)
             main_widgets[widget_name] = evb
@@ -156,13 +154,9 @@ class WinLayout(GladeSupport, WahCade):
             evb = self._make_label(widget_name)
             id_widgets[widget_name] = evb
             self.fixdID.put(evb, 100, 10 + (i * 30))
-        for i, widget_name in enumerate(self._popular_widgets):
-            evb = self._make_label(widget_name)
-            pop_widgets[widget_name] = evb
-            self.fixdPop.put(evb, 100, 10 + (i * 30))
         #fixed pos widgets
         self._fixed_widgets = [self.fixdMain, self.fixdOpt, self.fixdMsg,
-                self.fixdScr, self.fixdCpv, self.fixdHist, self.fixdID, self.fixdPop]
+                self.fixdScr, self.fixdCpv, self.fixdHist, self.fixdID]
         for fixd in self._fixed_widgets:
             fixd.connect('expose-event', self.on_fixd_expose_event)
             fixd.connect('drag-data-received', self.on_fixd_drag_data_received)
@@ -202,8 +196,7 @@ class WinLayout(GladeSupport, WahCade):
             (294, self.fixdOpt, "fixdOpt"),
             (353, self.fixdMsg, "fixdMsg"),
             (-1, self.fixdScr, "fixdScr"),
-            (-1, self.fixdID, "fixdID"),
-            (-1, self.fixdPop, "fixdPop")]
+            (-1, self.fixdID, "fixdID")]
         self._layout_items = [
             (8, main_widgets['Main Logo'], "MainLogo"),
             (21, main_widgets['Game List Indicator'], "GameListIndicator"),
@@ -254,9 +247,7 @@ class WinLayout(GladeSupport, WahCade):
             (-1, id_widgets['RFID Value'], 'RFID'),
             (-1, id_widgets['Prompt Text'], 'PromptText'),
             (-1, id_widgets['IDs List'], 'IDsList'),
-            (-1, id_widgets['Overlay'], 'ScrollOverlay'),
-            (-1, pop_widgets['Header'], 'Header'),
-            (-1, pop_widgets['Popular Games List'], 'PopList')]
+            (-1, id_widgets['Overlay'], 'ScrollOverlay')]
         self._histview_items = [
             (8, hist_widgets['Heading'], "Heading"),
             (21, hist_widgets['Game History'], "GameHistory")]
@@ -267,12 +258,11 @@ class WinLayout(GladeSupport, WahCade):
         self.cpv_widgets = cpv_widgets
         self.hist_widgets = hist_widgets
         self.id_widgets = id_widgets
-        self.pop_widgets = pop_widgets
         #setup view menu / toolbar
         self.view_updating = True
-        self.view_menu = [self.mnuVMain, self.mnuVOpt, self.mnuVPop, self.mnuVMsg, self.mnuVID, self.mnuVScr,
+        self.view_menu = [self.mnuVMain, self.mnuVOpt, self.mnuVMsg, self.mnuVID, self.mnuVScr,
             self.mnuVCpv, self.mnuVHist]
-        self.view_trb = [self.trbMain, self.trbOpt, self.trbPop, self.trbMsg, self.trbID, self.trbScr,
+        self.view_trb = [self.trbMain, self.trbOpt, self.trbMsg, self.trbID, self.trbScr,
             self.trbCpv, self.trbHist]
         for mnu in self.view_menu[1:]:
             mnu.set_active(False)
@@ -536,12 +526,6 @@ class WinLayout(GladeSupport, WahCade):
                 self.trbOpt.set_active(True)
                 self.fixd = self.fixdOpt
                 self.dlg_props.populate_names(self._opt_widgets)
-            elif widget in [self.trbPop, self.mnuVPop]:
-                #popoular games
-                self.mnuVPop.set_active(True)
-                self.trbPop.set_active(True)
-                self.fixd = self.fixdPop
-                self.dlg_props.populate_names(self._popular_widgets)
             elif widget in [self.trbMsg, self.mnuVMsg]:
                 #message
                 self.mnuVMsg.set_active(True)
@@ -897,19 +881,6 @@ class WinLayout(GladeSupport, WahCade):
             img_file = os.path.join(layout_path, img_file)
         self.dLayout[self.fixdOpt]['image-available'] = os.path.isfile(img_file)
         
-        # Initialize popular games window stuff
-        pop_lay = lay_info['popular']
-        fixdp_lay = pop_lay['fixdPop']
-        self.dLayout[self.fixdPop] = fixdp_lay
-        self.dLayout[self.fixdPop]['name'] = 'Message'
-        self.dLayout[self.fixdPop]['background-col'] = fixdp_lay['background-col']
-        msg_bg_col = gtk.gdk.color_parse(fixdp_lay['background-col'])
-        self.dLayout[self.fixdPop]['use-image'] = fixdp_lay['use-image']
-        img_file = self.get_path(fixdp_lay['use-image'])
-        if not os.path.dirname(img_file):
-            img_file = os.path.join(layout_path, img_file)
-        self.dLayout[self.fixdPop]['image-available'] = os.path.isfile(img_file)
-        
         # Initialize message window stuff
         msg_lay = lay_info['message']
         fixdg_lay = msg_lay['fixdMsg']
@@ -956,8 +927,6 @@ class WinLayout(GladeSupport, WahCade):
                 hName = "main"
             elif widget in self.opt_widgets.values():
                 hName = "options"
-            elif widget in self.pop_widgets.values():
-                hName = "popular"
             elif widget in self.msg_widgets.values():
                 hName = "message"
             elif widget in self.id_widgets.values():
@@ -1015,11 +984,6 @@ class WinLayout(GladeSupport, WahCade):
                 if w_lay['transparent']:
                     widget.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse("#303030"))
                 self.fixdOpt.move(widget, w_lay['x'], w_lay['y'])
-            elif hName is "popular":
-                #popular games window
-                if w_lay['transparent']:
-                    widget.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse("#303030"))
-                self.fixdPop.move(widget, w_lay['x'], w_lay['y'])
             elif hName is "message":
                 #message window
                 if w_lay['transparent']:
@@ -1182,7 +1146,6 @@ class WinLayout(GladeSupport, WahCade):
         ylines = self.ylines
         main = ylines['main']
         options = ylines['options']
-        popular = ylines['popular']
         message = ylines['message']
         identify = ylines['identify']
         screensaver = ylines['screensaver']
@@ -1207,8 +1170,6 @@ class WinLayout(GladeSupport, WahCade):
                 fixdLayy = main[name]
             elif name is "fixdOpt":
                 fixdLayy = options[name]
-            elif name is "fixdPop":
-                fixdLayy = popular[name]
             elif name is "fixdMsg":
                 fixdLayy = message[name]
             elif name is "fixdID":
@@ -1229,8 +1190,6 @@ class WinLayout(GladeSupport, WahCade):
                 hName = "main"
             elif widget in self.opt_widgets.values():
                 hName = "options"
-            elif widget in self.pop_widgets.values():
-                hName = "popular"
             elif widget in self.msg_widgets.values():
                 hName = "message"
             elif widget in self.id_widgets.values():
@@ -1268,8 +1227,6 @@ class WinLayout(GladeSupport, WahCade):
                 fixdLayy = main[name]
             elif hName is "options":
                 fixdLayy = options[name]
-            elif hName is "popular":
-                fixdLayy = popular[name]
             elif hName is "message":
                 fixdLayy = message[name]
             elif hName is "identify":

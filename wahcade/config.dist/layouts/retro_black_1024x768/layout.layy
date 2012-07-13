@@ -31,6 +31,21 @@ main:
     width: 383
     x: 571
     y: 627
+  UserName:
+    background-col: '#000000'
+    font: SF Atarian System Extended
+    font-bold: true
+    font-italic: false
+    font-size: 12.0
+    height: 25
+    text-align: 0.5
+    text-col: '#4ea63f'
+    text-rotation: 0
+    transparent: false
+    visible: false
+    width: 1024
+    x: 0
+    y: 5  
   DriverStatus:
     background-col: '#000000'
     font: SF Atarian System Extended
@@ -372,22 +387,6 @@ main:
     width: 70
     x: 85
     y: 100
-  UserName:
-    background-col: '#000000'
-    font: SF Atarian System Extended
-    font-bold: true
-    font-italic: false
-    font-name: SF Atarian System Extended Bold 10.0
-    font-size: 12.0
-    height: 25
-    text-align: 0.5
-    text-col: '#4EA63F'
-    text-rotation: 0
-    transparent: false
-    visible: false
-    width: 1024
-    x: 0
-    y: 5
   YearManufacturer:
     background-col: '#000000'
     font: SF Atarian System Extended

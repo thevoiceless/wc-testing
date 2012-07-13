@@ -5,3 +5,23 @@
 # Eclipse preferences  #
 ########################
 *.prefs
+
+# LDAP Credentials     #
+########################
+LDAP.txt
+
+# Database Info		   #
+########################
+riley.txt
+john.txt
+terek.txt
+zach.txt
+devin.txt
+
+# Sound files          #
+########################
+*.wav
+
+# dist directory       #
+########################
+wahcade/dist*

@@ -86,10 +86,9 @@ from win_scrsaver import WinScrSaver    # Screen saver window
 from win_history import WinHistory      # History viewer
 from win_cpviewer import WinCPViewer    # Control panel viewer window
 from win_identify import WinIdentify    # Identify window
-from win_popular import WinPopular      # Popular games window   #@UnresolvedImport
-from win_popular import WinPopular      # Popular games window
 from win_playerSelect import WinPlayerSelect #Player selection window
 import threading
+import codecs
 import filters                          # filters.py, routines to read/write mamewah filters and lists
 from mamewah_ini import MameWahIni      # Reads mamewah-formatted ini file
 import joystick                         # joystick.py, joystick class, uses pygame package (SDL bindings for games in Python)
@@ -109,7 +108,7 @@ class WinMain(WahCade, threading.Thread):
         threading.Thread.__init__(self)        
         
         # Try connecting to a database, otherwise
-        self.db_file = "confs" + sep + config_opts.db_config_file + ".txt"
+        self.db_file = CONFIG_DIR + "/confs/DB-" + config_opts.db_config_file + ".txt"
         try:
             with open(self.db_file, 'rt') as f: # Open the config file and extract the database connection information
                 self.props = {}  # Dictionary
@@ -280,13 +279,12 @@ class WinMain(WahCade, threading.Thread):
         self.fixd.add(self.imgBackground)
         self.imgBackground.show()
         
-        # Mark mame directory
-        self.mame_dir = self.emu_ini.get('emulator_executable')[:self.emu_ini.get('emulator_executable').rfind(sep) + 1]
-        
+        # Mark mame directory for HiToText calls
+        self.mame_dir = os.path.expanduser('~/.mame/')
         # Set initial HiToText "read" command
-        self.htt_read = "HiToText.exe -r " + self.mame_dir
+        self.htt_read = "/usr/local/bin/HiToText.exe -r " + self.mame_dir
         # Set initial HiToText "erase" command
-        self.htt_erase = "HiToText.exe -e " + self.mame_dir
+        self.htt_erase = "/usr/local/bin/HiToText.exe -e " + self.mame_dir
         
         self.launched_game = False
         self.current_rom = ''
@@ -344,9 +342,6 @@ class WinMain(WahCade, threading.Thread):
         ### Create identify window
         self.identify = WinIdentify(self)
         self.identify.winID.hide()
-        ### Create popular games window
-        self.popular = WinPopular(self)
-        self.popular.winPop.hide()
         ### Create player select window
         self.player_select = WinPlayerSelect(self)
         self.player_select.winPlayers.hide()
@@ -418,9 +413,6 @@ class WinMain(WahCade, threading.Thread):
             (-1, self.identify.lblRFID, "RFID"),
             (-1, self.identify.sclIDs, "IDsList"),
             (-1, self.IDsScrollOverlay, "ScrollOverlay")]
-        self._popular_items = [
-            (-1, self.popular.lblHeading, "Header"),
-            (-1, self.popular.sclPop, "PopList"),]
         self._player_select_items = [
             (-1, self.player_select.lblScore, "lblScore"),
             (-1, self.player_select.lbl1, "lbl1"),
@@ -430,7 +422,6 @@ class WinMain(WahCade, threading.Thread):
                               'message': self._message_items,
                               'screensaver': self._screensaver_items,
                               'identify' : self._identify_items,
-                              'popular' : self._popular_items,
                               'playerselect' : self._player_select_items}
  
         # Initialize primary Fixd containers, and populate appropriately
@@ -535,10 +526,10 @@ class WinMain(WahCade, threading.Thread):
 
         pygame.init()
         
-        sound_files = os.listdir('sounds/')
+        sound_files = os.listdir('config.dist/sounds/')
         self.sounds = []
         for sound in sound_files:
-            self.sounds.append('sounds/' + sound)
+            self.sounds.append('config.dist/sounds/' + sound)
 
         self.check_music_settings()
         
@@ -752,6 +743,8 @@ class WinMain(WahCade, threading.Thread):
                     testString = valid_string
                     if self.connected_to_server:
                         self.parse_high_score_text(testString)
+                else:
+                    print "Unable to read the high score using HiToText"
         self.on_sclGames_changed()
 
     def on_winMain_focus_out(self, *args):
@@ -768,36 +761,38 @@ class WinMain(WahCade, threading.Thread):
         # Go through each line of the the high score result
         for line in iter(text_string.splitlines()):
             line = line.split('|')
-            
-            if line[0] != '':
-                # If it is the first line treat it as the format
-                if index == 1:
-                    _format = line
-                    index += 1
-                    for column in line:
-                        high_score_table[column] = '' # Initialize dictionary values
-                else: #not the first (heading) line
-                    if len(self.current_players) == 1:
-                        for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
-                            high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
-                        if 'SCORE' in high_score_table: # If high score table has score
-                            if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB
-                                if 'NAME' in high_score_table:
-                                    post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.user.get_text()}                         
-                                else:
-                                    post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.current_players[0]}
-                                r = requests.post(self.score_url, post_data)
-                    else: #TODO: handle multiple players scores coming back
-                        for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
-                            high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
-                        if 'SCORE' in high_score_table: # If high score table has score
-                            if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB                                                                
-                                if 'NAME' in high_score_table:
-                                    post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":""}                         
-                                    multiple_score_list.append(post_data)
-                                else:
-                                    post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":""}
-                                    multiple_score_list.append(post_data)
+            if "RANK" in line or "SCORE" in line or "NAME" in line or "ROUND" in line or index != 1:
+                if line[0] != '':
+                    # If it is the first line treat it as the format
+                    if index == 1:
+                        _format = line
+                        index += 1
+                        for column in line:
+                            high_score_table[column] = '' # Initialize dictionary values
+                    else: #not the first (heading) line
+                        if len(self.current_players) == 1:
+                            for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
+                                high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
+                            if 'SCORE' in high_score_table: # If high score table has score
+                                if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB
+                                    if 'NAME' in high_score_table:
+                                        post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.user.get_text()}                         
+                                    else:
+                                        post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.current_players[0]}
+                                    r = requests.post(self.score_url, post_data)
+                        else: #TODO: handle multiple players scores coming back
+                            for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
+                                high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
+                            if 'SCORE' in high_score_table: # If high score table has score
+                                if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB                                                                
+                                    if 'NAME' in high_score_table:
+                                        post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":""}                         
+                                        multiple_score_list.append(post_data)
+                                    else:
+                                        post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":""}
+                                        multiple_score_list.append(post_data)
+            else:
+                continue
 
         if len(self.current_players) > 1 and len(multiple_score_list) > 0:
             self.upload_queue = []
@@ -958,7 +953,7 @@ class WinMain(WahCade, threading.Thread):
             if player_name != '' and not in_db:
                 self.player_info.append([player_name, player_rfid]) # parse player name and RFID from xml
                 post_data = {"name":player_name, "playerID":player_rfid}
-                r = requests.post(self.player_url, post_data)
+                requests.post(self.player_url, post_data)
                 self.identify.sclIDs.ls.remove(player_name)
                 self.name_not_given = False
             else:
@@ -974,7 +969,7 @@ class WinMain(WahCade, threading.Thread):
                     break
             if not in_db:
                 post_data = {"name":player_name, "playerID":player_rfid}
-                r = requests.post(self.player_url, post_data)
+                requests.post(self.player_url, post_data)
                 
         
     def get_logged_in_user_string(self, current_users):
@@ -1129,7 +1124,7 @@ class WinMain(WahCade, threading.Thread):
                 if current_window == 'main':
                     # Display first n letters of selected game when scrolling quickly
                     if self.scroll_count > self.showOverlayThresh:
-                        overlayLetters = self.lsGames[ self.sclGames.get_selected() ][ 0 ][ 0 : self.gamesScrollOverlay.charShowCount ]
+                        overlayLetters = self.lsGames[ self.sclGames.get_selected() ][ GL_GAME_NAME ][ 0 : self.gamesScrollOverlay.charShowCount ]
                         self.gamesScrollOverlay.set_markup( _('%s%s%s') % (self.gamesOverlayMarkupHead, overlayLetters, self.gamesOverlayMarkupTail) )
                         self.gamesScrollOverlay.show()
                     # Main form
@@ -1172,8 +1167,9 @@ class WinMain(WahCade, threading.Thread):
                         self.play_clip('REMOVE_GAME_FROM_LIST')
                         self.remove_current_game()
                     elif mw_func == 'LAUNCH_GAME':
-                        self.play_clip('LAUNCH_GAME')
-                        self.launch_auto_apps_then_game(self.lsGames[self.sclGames.get_selected()][1])
+                        if len(self.lsGames) != 0:
+                            self.play_clip('LAUNCH_GAME')
+                            self.launch_auto_apps_then_game(self.lsGames[self.sclGames.get_selected()][1])
                     elif mw_func == 'LAUNCH_GAME_WITH_OPTIONS1':
                         self.play_clip('LAUNCH_GAME_WITH_OPTIONS1')
                         self.launch_auto_apps_then_game([g[1] for g in self.lsGames if g[0]==self.sclGames.get_selected_item()][0], 
@@ -1262,11 +1258,6 @@ class WinMain(WahCade, threading.Thread):
                         self.play_clip('EXIT_WITH_CHOICE')
                         self.options.set_menu('exit')
                         self.show_window('options')
-                    elif mw_func == 'POPULAR_SHOW' and self.connected_to_server:
-                        self.popular.set_games_list(self.get_server_popular_games())
-                        self.popular.sclPop._update_display()
-                        self.show_window('popular')
-                        return
                 elif current_window == 'options':
                     # Options form
                     if mw_func == 'OP_UP_1_OPTION':
@@ -1371,27 +1362,6 @@ class WinMain(WahCade, threading.Thread):
                     elif mw_func == 'ID_DOWN_1_LETTER':
                         self.play_clip('DOWN_1_LETTER')
                         self.identify.sclIDs.jumpToLetter(mw_func)
-                elif current_window == 'popular':
-                    if mw_func in ['POPULAR_SHOW']:
-                        self.hide_window('popular')
-                    elif mw_func in ['POP_UP_1_GAME']:
-                        self.popular.sclPop.scroll(-1)
-                    elif mw_func in ['POP_DOWN_1_GAME']:
-                        self.popular.sclPop.scroll(1)
-                    elif mw_func == 'LAUNCH_GAME':
-                        self.play_clip('LAUNCH_GAME')
-                        #self.sclGames.set_selected_item(self.popular.sclPop.get_selected_item())
-                        self.launch_auto_apps_then_game(self.popular.get_selected_romname())
-                    elif mw_func == 'LAUNCH_GAME_WITH_OPTIONS1':
-                        self.play_clip('LAUNCH_GAME_WITH_OPTIONS1')
-                        #self.sclGames.set_selected_item(self.popular.sclPop.get_selected_item())
-                        self.launch_auto_apps_then_game(self.popular.get_selected_romname(), 
-                            self.emu_ini.get('alt_commandline_format_1'))
-                    elif mw_func == 'LAUNCH_GAME_WITH_OPTIONS2':
-                        self.play_clip('LAUNCH_GAME_WITH_OPTIONS2')
-                        #self.sclGames.set_selected_item(self.popular.sclPop.get_selected_item())
-                        self.launch_auto_apps_then_game(self.popular.get_selected_romname(), 
-                            self.emu_ini.get('alt_commandline_format_2'))
                 elif current_window == 'playerselect':
                     if mw_func in ['PS_BACK']:
                         self.selected_player = ''
@@ -1538,11 +1508,12 @@ class WinMain(WahCade, threading.Thread):
     def portal_timer(self):
         sound_time = random.randint((5*60), (15*60))
         if int(time.time() - self.portal_time_last_played) >= sound_time:
-            pygame.mixer.init()
-            pygame.mixer.music.load(self.sounds[random.randrange(0, len(self.sounds))])
-            pygame.mixer.music.play()
-            self.portal_time_last_played = time.time()
-            #pygame.mixer.quit If you want to re-initialize mixer with different args
+            if len(self.sounds) == 0:
+                pygame.mixer.init()
+                pygame.mixer.music.load(self.sounds[random.randrange(0, len(self.sounds))])
+                pygame.mixer.music.play()
+                self.portal_time_last_played = time.time()
+                #pygame.mixer.quit If you want to re-initialize mixer with different args
         return True
             
     def on_scrsave_timer(self):
@@ -1629,7 +1600,9 @@ class WinMain(WahCade, threading.Thread):
 
     def launch_auto_apps_then_game(self, romName, game_cmdline_args=''):
         """Call any automatically launched external applications, then run currently selected game"""
-       
+        # If we did not get a valid romName, return immediately
+        if not romName:
+            return
         self.external_app_queue = self.emu_ini.get('auto_launch_apps').split(',')
         # Get it into correct order
         self.external_app_queue.reverse()
@@ -1694,8 +1667,7 @@ class WinMain(WahCade, threading.Thread):
         self.message.display_message(
             _('Starting...'),
             '%s: %s' % (rom, title))
-            
-
+        
         # Erase scores from hi score file of current game
         # Executable must be in same directory
         if rom in self.supported_games:
@@ -1952,8 +1924,8 @@ class WinMain(WahCade, threading.Thread):
             # Grab the List number from the current file
             i = self.return_listnum(f)
             # Append lists to both arrays
-            self.game_lists.append([ini.get('list_title'), i, ini.getint('cycle_list')]) 
-            self.game_lists_normal.append([ini.get('list_title'), i, ini.getint('cycle_list')])        
+            self.game_lists.append([ini.get('list_title'), i, ini.getint('cycle_list'), ini.get('list_type')]) 
+            self.game_lists_normal.append([ini.get('list_title'), i, ini.getint('cycle_list'), ini.get('list_type')])        
 
         # Load favorites list
         fav_name = os.path.join(CONFIG_DIR, 'files', '%s.fav' % (self.current_emu))
@@ -2144,25 +2116,6 @@ class WinMain(WahCade, threading.Thread):
         if not os.path.dirname(idtfy_img):
             idtfy_img = os.path.join(self.layout_path, idtfy_img)
         idtfy.imgBackground.set_from_file(idtfy_img)
-        
-        # Set up Popular Games window
-        # Match sizes of main window
-        pop = self.popular
-        pop_lay = layout_info['popular']['fixdPop']
-        self.fixd.move(pop.winPop, 0, 0)
-        pop.winPop.set_size_request(pop_lay['width'], pop_lay['height'])
-        pop.winPop.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(pop_lay['background-col']))
-        pop.winPop.move(pop.imgBackground, 0, 0)
-        pop.imgBackground.set_size_request(pop_lay['width'], pop_lay['height'])
-        pop_img = pop_lay['use-image']
-        self.fixd.move(pop.winPop,
-                       (( main_lay['width'] - pop_lay['width'] ) / 2),
-                       (( main_lay['height'] - pop_lay['height'] ) / 2))
-        if not os.path.dirname(pop_img):
-            pop_img = os.path.join(self.layout_path, pop_img)
-        pop.imgBackground.set_from_file(pop_img)
-        # Other stuff
-        pop.lblHeading.set_text(_('Popular Games'))
             
         # Set up Player Select window
         plyr = self.player_select
@@ -2274,16 +2227,12 @@ class WinMain(WahCade, threading.Thread):
                         self.identify.winID.move(widget, w_lay['x'], w_lay['y'])
                     else:
                         widget.move_in_fixd(self.identify.winID, w_lay['x'], w_lay['y'])
-                elif w_set_name == "popular":
-                    # Move widgets to the correct places; move_in_fixd is for the scroll overlay
-                    if isinstance(widget, gtk.Widget):
-                        self.popular.winPop.move(widget, w_lay['x'], w_lay['y'])
                 elif w_set_name == "playerselect":
                     # Move widgets to the correct places; move_in_fixd is for the scroll overlay
                     if isinstance(widget, gtk.Widget):
                         self.player_select.winPlayers.move(widget, w_lay['x'], w_lay['y'])
                 else:
-                    print "Orphaned widget detected. Did not belong to one of [main/options/message/screensaver/identify/popular]"
+                    print "Orphaned widget detected. Did not belong to one of [main/options/message/screensaver/identify]"
         
         # Load histview and cpviewer layouts
         # Still in use?
@@ -2643,13 +2592,30 @@ class WinMain(WahCade, threading.Thread):
             self.lsGames = flist_sorted
             self.lsGames_len = len(self.lsGames)
         elif self.current_list_ini.get('list_type') == 'xml_remote':
-            source = self.current_list_ini.get('source')
-            list_source = requests.get(source)
+            # XML remote-populated, so get the source URL
+            sourceURL = self.props['host']+":"+self.props['port']+"/"+self.props['db']+self.current_list_ini.get('params')
+            list_source = requests.get(sourceURL)
             data = fromstring(list_source.text)
             gList = []
+            # Use all games to gen list
+            list_filename = os.path.join(
+                CONFIG_DIR,
+                'files',
+                '%s-0.lst' % (self.current_emu))
+            if os.path.isfile(list_filename):
+                self.lsGames, self.lsGames_len = filters.read_filtered_list(list_filename)
+            else:
+                self.lsGames = []
+                self.lsGames_len = 0
+            # Extract data
             if data.text != "":
                 for game in data.getiterator('game'):
-                    gList.append((game.find('gameName').text,)+(game.find('romName').text,)+("",)*11)
+                    gList.append(next(gTuple for gTuple in self.lsGames if gTuple[1] == game.find("romName").text))
+            if not gList:
+                errorItem = ()
+                for i, entry in enumerate(self.lsGames[0]):
+                    errorItem += ("No Games Found",) if i==0 else ("",)
+                gList.append(errorItem)
             self.lsGames = gList
             self.lsGames_len = len(gList)
         # Setup scroll list
@@ -2918,8 +2884,6 @@ class WinMain(WahCade, threading.Thread):
                 child_win = self.cpviewer.winCPViewer
         elif window_name == 'identify':
             child_win = self.identify.winID
-        elif window_name == 'popular':
-            child_win = self.popular.winPop
         elif window_name == 'playerselect':
             self.player_select.populate_list()
             self.player_select.sclPlayers._update_display()
@@ -2945,7 +2909,6 @@ class WinMain(WahCade, threading.Thread):
         self.histview.winHistory.hide()
         self.cpviewer.winCPViewer.hide()
         self.identify.winID.hide()
-        self.popular.winPop.hide()
         self.player_select.winPlayers.hide()
         # "show" main
         self.current_window = 'main'
@@ -3056,13 +3019,3 @@ class WinMain(WahCade, threading.Thread):
                 return False
         except:
             return False
-
-    def get_server_popular_games(self):
-        """Query the server for popular games"""
-        data = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/game/popular?count=10&renderXML=true")
-        gList = []
-        if data.text != "":
-            data = fromstring(data.text)
-            for game in data.getiterator('game'):
-                gList.append((game.find('gameName').text,game.find('romName').text))
-        return gList
