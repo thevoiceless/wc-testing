@@ -156,7 +156,7 @@ class WinMain(WahCade, threading.Thread):
         ## Read in options wahcade.ini, 
         self.lck_time = self.wahcade_ini.getint('lock_time')        # getint comes from mamewah_ini.py
         self.keep_aspect = self.wahcade_ini.getint('keep_image_aspect')
-        self.scrsave_delay = 10 #self.wahcade_ini.getint('delay') # TODO: Fix screensaver time
+        self.scrsave_delay = self.wahcade_ini.getint('delay')
         self.auto_logout_delay = self.wahcade_ini.getint('log_out')
         self.layout_orientation = self.wahcade_ini.getint('layout_orientation', 0)
         self.screentype = self.wahcade_ini.getint('fullscreen', 0)
@@ -528,11 +528,6 @@ class WinMain(WahCade, threading.Thread):
             data = fromstring(r.text)
             for player in data.getiterator('player'):
                 self.player_info.append((player.find('name').text, player.find('playerID').text)) # parse player name and RFID from xml
-#                self.player_info = [['Terek Campbell', '52000032DCBC'],
-#                                    ['Zach McGaughey', '5100FFE36C21'],
-#                                    ['Riley Moses', '5200001A9BD3'],
-#                                    ['John Kelly', '52000003C697']
-#                                    ['Devin Wilson, '52000007EFBA']]
             self.user.set_text("Not Logged In")
             self.user.show()
         # Generate unregistered user list
@@ -1804,6 +1799,7 @@ class WinMain(WahCade, threading.Thread):
         except:
             pass
         
+        print cmd
         # Run emulator & wait for it to finish
         if not wshell:
             self.p = Popen(cmd, shell=False)
@@ -3014,11 +3010,17 @@ class WinMain(WahCade, threading.Thread):
         """Start recording with RecordMyDesktop"""
         self.wait_with_events(2.00)
         window_name = 'MAME: %s [%s]' % (self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME], rom)
-        os.system('recordmydesktop --full-shots --fps 16 --no-frame --windowid $(xwininfo -name ' + "\'" + str(window_name) + "\'" + ' | awk \'/Window id:/ {print $4}\') -o \'recorded games\'/' + rom + '_highscore &')
+        try:
+            os.system('recordmydesktop --full-shots --fps 16 --no-frame --windowid $(xwininfo -name ' + "\'" + str(window_name) + "\'" + ' | awk \'/Window id:/ {print $4}\') -o \'recorded games\'/' + rom + '_highscore &')
+        except:
+            print "User does not have recordmydesktop installed"
 
     def stop_recording_video(self):
         """Stop recording by killing RecordMyDesktop"""
-        return os.system('kill `ps -e | awk \'/recordmydesktop/{a=$1}END{print a}\'`')
+        try:
+            return os.system('kill `ps -e | awk \'/recordmydesktop/{a=$1}END{print a}\'`')
+        except:
+            pass
 
     def run(self):
         """Catches any RFID swipes and sends them to log_in"""

@@ -340,7 +340,7 @@ def create_initial_filter(info_filename, filter_filename, list_filename, emu_ini
         #just rom folder, so create a basic lst fileD
         #roms = glob.glob(os.path.join(rom_path, '*%s' % (rom_ext)))
         roms = walk_dir(rom_path, False, rom_ext, False)
-        if roms is None:
+        if roms is []:
             print "Error, no files found during walk_dir"
             return
         roms.sort() 
@@ -700,9 +700,10 @@ def walk_dir(root, recurse=False, pattern='*', return_folders=False):
 #                pat = '*'
 #            else:
 #                pat = '*.%s' % (pat)
-#            print fullname
-            if fnmatch.fnmatch(fullname, pat):
-                #if os.path.isfile(fullname) or (return_folders and os.path.isdir(fullname)):
+            file, ext = os.path.splitext(name)
+            ext = ext.lstrip('.')
+            if fnmatch.fnmatch(ext, pat):
+#                if os.path.isfile(fullname) or (return_folders and os.path.isdir(fullname)):
                 if return_folders:
                     if os.path.isdir(fullname):
                         result.append(fullname)
