@@ -1799,7 +1799,6 @@ class WinMain(WahCade, threading.Thread):
         except:
             pass
         
-        print cmd
         # Run emulator & wait for it to finish
         if not wshell:
             self.p = Popen(cmd, shell=False)
