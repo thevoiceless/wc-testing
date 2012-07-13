@@ -2,4 +2,6 @@
 # Build rcade .deb package
 
 python setup.py bdist_debian
-echo "Package created in dist directory"
+echo "Package created in /dist\nCleaning up..."
+rm -r dist/tmp
+echo "Done."
