@@ -50,7 +50,7 @@ class LoadLDAP:
                     val = line.split('|')   # This file uses "|" instead of "="
                     self.creds[val[0].strip()] = val[1].strip()
         except:
-            print "Could not load LDAP configuration."
+            print "Could not load LDAP configuration file."
             
         self.LDAP_SERVER = self.creds['LDAP_SERVER']
         self.BIND_DN = self.creds['BIND_DN']
@@ -67,7 +67,7 @@ class LoadLDAP:
             print "Successfully connected to", str(self.creds['LDAP_SERVER'])
             self.LDAP_connected = True
         except ldap.LDAPError, e:
-            print "Error connecting to server: " + str(e)
+            print "Failed to connect to LDAP server: " + str(e)
             self.LDAP_connected = False
         
         self.accounts = []
