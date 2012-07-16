@@ -119,8 +119,6 @@ class WinMain(WahCade, threading.Thread):
                 self.check_connection(r.status_code)
         except: # Any exception would mean some sort of failed server connection
             self.connected_to_server = False
-        #TODO: temporary
-        self.videoCount = 0
         
         ### Set Global Variables
         global gst_media_imported, pygame_imported, old_keyb_events, debug_mode, log_filename
@@ -445,7 +443,10 @@ class WinMain(WahCade, threading.Thread):
         self.layout_file = ''
         self.load_emulator()
         
-        self.setup_video_chat()
+        #Initialize video chat if enabled
+        self.video_chat_enabled = True
+        if self.video_chat_enabled:
+            self.setup_video_chat()
 
         # Get a list of games already on the server
         self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
@@ -543,8 +544,7 @@ class WinMain(WahCade, threading.Thread):
         
         self.winMain.show()
         
-        #TODO: reenable this
-        #self.drwVideo.set_property('visible', False)
+        self.drwVideo.set_property('visible', False)
 
         if not self.showcursor:
             self.hide_mouse_cursor(self.winMain)
@@ -633,6 +633,8 @@ class WinMain(WahCade, threading.Thread):
         """Done, quit the application"""
         # Stop video playing if necessary
         self.stop_video()
+        #stop video streaming
+        self.stop_video_chat()
         # Tells the arduino thread to terminate properly
         self.running = False
         # Save ini files
@@ -763,11 +765,11 @@ class WinMain(WahCade, threading.Thread):
     
     def setup_video_chat(self):
         self.video_chat = video_chat()
-        #self.video_chat.setup_streaming_video()
-        self.sink = self.video_chat.receivepipe.get_by_name("sink")
+        self.sink = self.video_chat.sink
         
-        #print self.sink
+        #link the sync to a DrawingArea
         self.vid_container = gtk.DrawingArea()
+        self.vid_container.modify_bg(gtk.STATE_NORMAL, self.vid_container.style.black)
         self.fixd.put(self.vid_container, 300, 80)
         self.vid_container.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
         #print self.vid_container.window.xid
@@ -776,10 +778,13 @@ class WinMain(WahCade, threading.Thread):
         
         
     def start_video_chat(self):
-        self.vid_container.set_size_request(640,480)
+        self.vid_container.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
         self.sink.set_xwindow_id(self.vid_container.window.xid)
         self.video_chat.start_streaming_video()
-        
+    
+    def pause_video_chat(self):
+        self.video_chat.pause_streaming_video()
+     
     def stop_video_chat(self):
         self.video_chat.stop_streaming_video()
        
@@ -1290,17 +1295,15 @@ class WinMain(WahCade, threading.Thread):
                         self.options.set_menu('exit')
                         self.show_window('options')
                     elif mw_func == 'TOGGLE_VIDEO':
-                        #TODO: video do this for real
-                        self.videoCount += 1
-                        
-                        if(self.videoCount%2 == 1):
-                            print "Start streaming keypress"
-                            self.start_video_chat()
-                            self.vid_container.show()
-                        else:
-                            print "Stop streaming keypress"
-                            #self.stop_video_chat()
-                            self.vid_container.hide()
+                        if self.video_chat_enabled:
+                            if self.vid_container.get_property("visible") == False:
+                                #print "Show video chat"
+                                #self.start_video_chat()
+                                self.vid_container.show()
+                            else:
+                                #print "Hide video chat"
+                                #self.pause_video_chat()
+                                self.vid_container.hide()
                             
                 elif current_window == 'options':
                     # Options form
