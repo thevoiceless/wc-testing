@@ -109,6 +109,7 @@ class WinMain(WahCade, threading.Thread):
         
         # Try connecting to a database, otherwise
         self.db_file = CONFIG_DIR + "/confs/DB-" + config_opts.db_config_file + ".txt"
+        print self.db_file
         try:
             with open(self.db_file, 'rt') as f: # Open the config file and extract the database connection information
                 self.props = {}  # Dictionary
@@ -1513,7 +1514,7 @@ class WinMain(WahCade, threading.Thread):
     def portal_timer(self):
         sound_time = random.randint((5*60), (15*60))
         if int(time.time() - self.portal_time_last_played) >= sound_time:
-            if len(self.sounds) == 0:
+            if len(self.sounds) != 0:
                 pygame.mixer.init()
                 pygame.mixer.music.load(self.sounds[random.randrange(0, len(self.sounds))])
                 pygame.mixer.music.play()
