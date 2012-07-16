@@ -2655,7 +2655,10 @@ class WinMain(WahCade, threading.Thread):
             # Extract data
             if data.text != "":
                 for game in data.getiterator('game'):
-                    gList.append(next(gTuple for gTuple in self.lsGames if gTuple[1] == game.find("romName").text))
+                    try:
+                        gList.append(next(gTuple for gTuple in self.lsGames if gTuple[1] == game.find("romName").text))
+                    except:
+                        pass
             if not gList:
                 errorItem = ()
                 for i, entry in enumerate(self.lsGames[0]):
