@@ -1213,6 +1213,7 @@ class WinMain(WahCade, threading.Thread):
                         self.play_clip('MENU_SHOW')
                         self.options.set_menu('main')
                         self.show_window('options')
+                        self.options.sclOptions._update_display()
                     elif mw_func == 'SELECT_EMULATOR':
                         self.play_clip('SELECT_EMULATOR')
                         self.options.set_menu('emu_list')
@@ -2654,7 +2655,10 @@ class WinMain(WahCade, threading.Thread):
             # Extract data
             if data.text != "":
                 for game in data.getiterator('game'):
-                    gList.append(next(gTuple for gTuple in self.lsGames if gTuple[1] == game.find("romName").text))
+                    try:
+                        gList.append(next(gTuple for gTuple in self.lsGames if gTuple[1] == game.find("romName").text))
+                    except:
+                        pass
             if not gList:
                 errorItem = ()
                 for i, entry in enumerate(self.lsGames[0]):

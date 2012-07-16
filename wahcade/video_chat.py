@@ -17,8 +17,8 @@ class video_chat:
     def __init__(self):
         self.video_width, self.video_height = 640, 480
 
-        self.localip, self.localport = "192.168.50.183", "3000"
-        self.remoteip, self.remoteport = "192.168.50.183", "3000"
+        self.localip, self.localport = "127.0.0.1", "3000"
+        self.remoteip, self.remoteport = "127.0.0.1", "3000"
         
         #Set up the streaming pipelines
         self.start_video_receiver()
