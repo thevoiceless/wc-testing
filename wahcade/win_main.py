@@ -117,9 +117,8 @@ class WinMain(WahCade, threading.Thread):
                     self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
                 r = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']) # Attempt to make connection to server
                 self.check_connection(r.status_code)
-        except requests.exceptions.ConnectionError, e: # Any exception would mean some sort of failed server connection
+        except: # Any exception would mean some sort of failed server connection
             self.connected_to_server = False
-            print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + ":", str(e)
         #TODO: temporary
         self.videoCount = 0
         
@@ -509,9 +508,9 @@ class WinMain(WahCade, threading.Thread):
                 self.connected_to_arduino = True
                 print "Successfully connected to Arduino mounted at", arduino_mount
                 self.start()
-            except RuntimeError, e:
+            except:
                 self.connected_to_arduino = False
-                print "Failed to connect to Arduino:", str(e)
+                print "Failed to connect to Arduino"
         if self.connected_to_server:
             self.user.set_text("Not Logged In")
             self.user.show()
@@ -885,7 +884,7 @@ class WinMain(WahCade, threading.Thread):
             print "Successfully connected to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
         else:
             self.connected_to_server = False
-            print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + ", Status Code:", status_code
+            print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
              
     def log_in(self, player_rfid):
         """Logs a player in"""
