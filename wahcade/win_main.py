@@ -119,12 +119,7 @@ class WinMain(WahCade, threading.Thread):
                 self.check_connection(r.status_code)
         except requests.exceptions.ConnectionError, e: # Any exception would mean some sort of failed server connection
             self.connected_to_server = False
-<<<<<<< HEAD
-=======
             print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + ":", str(e)
-        #TODO: temporary
-        self.videoCount = 0
->>>>>>> f481e65d8be729e4d786a6377dc9db6c89a23f6e
         
         ### Set Global Variables
         global gst_media_imported, pygame_imported, old_keyb_events, debug_mode, log_filename
