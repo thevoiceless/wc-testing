@@ -100,20 +100,7 @@ class WinOptions(WahCade):
             'list_options':
                 [[_('Add Game to List'), 'add_to_list'],
                 [_('Remove Game from List'), 'remove_from_list'],
-                [_('Generate Filtered List...'), 'generate_ftr'],
                 [_('Generate List...'), 'generate_list']],
-            'generate_ftr':
-                [[_('Display Clones'), 'ftr:filter_type'],
-                [_('Year Filters'), 'ftr:year'],
-                [_('Manufacturer Filters'), 'ftr:manufacturer'],
-                [_('BIOS Filters'), 'ftr:driver'],
-                [_('Screen Type Filters'), 'ftr:display_type'],
-                [_('Screen Orientation Filters'), 'ftr:screen_type'],
-                [_('Input Type Filters'), 'ftr:controller_type'],
-                [_('General Status Filters'), 'ftr:driver_status'],
-                [_('Colour Status Filters'), 'ftr:colour_status'],
-                [_('Sound Status Filters'), 'ftr:sound_status'],
-                [_('Category Filters'), 'ftr:category']],
             'music':
                 [[_('Play / Pause'), 'music_play'],
                 [_('Next Track'), 'next_track'],
@@ -143,12 +130,12 @@ class WinOptions(WahCade):
             if self.sclOptions.get_selected() == 0:
                 self.lblSettingValue.set_text(self._display_clones[self._display_clone_idx][0])
             else:
-                self.lblSettingValue.set_text('')
+                self.lblSettingValue.set_text('Test')
         elif self.current_menu.startswith('ftr:'):
             # Filter menu - show yes / no option, etc
             if self.sclOptions.get_selected() < 2:
                 # Show all / none
-                self.lblSettingValue.set_text('')
+                self.lblSettingValue.set_text('') #With in the setting
             else:
                 # Display yes / no
                 ftr_section= self.WinMain.current_filter[self.current_menu[4:]]
@@ -169,6 +156,7 @@ class WinOptions(WahCade):
                 for ml in v:
                     if ml[1] == menu_level:
                         heading = ml[0]
+                        break
         # Default heading
         if heading == '':
             heading = _('Options')
@@ -225,7 +213,7 @@ class WinOptions(WahCade):
                 self.lsOptions.append(self._menus[menu_level][3])
             else:
                 # All other lists
-                [self.lsOptions.append(menu_item) for menu_item in self._menus[menu_level][:3]]
+                [self.lsOptions.append(menu_item) for menu_item in self._menus[menu_level][:2]]
         elif menu_level == 'record_video':
             [self.lsOptions.append(menu_item) for menu_item in self._menus[menu_level][:2]] # Generates list choices
             self.sclOptions.set_selected(0) # Sets which option is selected when opened
@@ -258,6 +246,7 @@ class WinOptions(WahCade):
             self._display_clone_idx = int(self.WinMain.current_filter['filter_type'])
             self.sclOptions.set_selected(0)
             [self.lsOptions.append(menu_item) for menu_item in self._menus[menu_level]]
+            """
         elif menu_level.startswith('ftr:'):
             # Display a specific filter menu...
             self.sclOptions.set_selected(0)
@@ -273,6 +262,7 @@ class WinOptions(WahCade):
             self.lsOptions.sort()
             self.lsOptions.insert(0, [_('Show ALL'), 'all'])
             self.lsOptions.insert(1, [_('Show NONE'), 'none'])
+            """
         elif menu_level == 'generate_new_list':
             # Generate new filtered games list
             self.lblHeading.set_text(_('Please Wait...'))
