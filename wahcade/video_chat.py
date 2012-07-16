@@ -75,8 +75,16 @@ class video_chat:
     def setup_streaming_video(self):
         #webm video pipeline, optimized for video conferencing
         device = self.get_camera_name()
-        self.streampipe = gst.parse_launch("v4l2src device=" + device + " ! video/x-raw-rgb, width=640, height=480 ! ffmpegcolorspace ! vp8enc speed=2 max-latency=2 quality=10.0 max-keyframe-distance=3 threads=5 ! queue2 ! mux. alsasrc device=plughw:1,0 ! audioconvert ! vorbisenc ! queue2 ! mux. webmmux name=mux streamable=true ! tcpclientsink host=" + self.remoteip + " port=" + self.remoteport)
-        self.streampipe.set_state(gst.STATE_PLAYING)
+        command = "v4l2src device=" + device + " ! video/x-raw-rgb, width=640, height=480 "
+        command += "! ffmpegcolorspace ! vp8enc speed=2 max-latency=2 quality=10.0 max-keyframe-distance=3 threads=5 " 
+        command += "! queue2 ! mux. alsasrc device=plughw:1,0 ! audioconvert ! vorbisenc " 
+        command += "! queue2 ! mux. webmmux name=mux streamable=true "
+        command += "! tcpclientsink host=" + self.remoteip + " port=" + self.remoteport
+        
+        self.streampipe = gst.parse_launch(command)
+        bus = self.streampipe.get_bus()
+        bus.add_signal_watch()
+        bus.connect("message", self.on_stream_message)
     
     def start_streaming_video(self):
         #self.receivepipe.set_state(gst.STATE_PLAYING)
@@ -108,17 +116,16 @@ class video_chat:
             #print new
             if new == gst.STATE_NULL:
                 print 'stopped'
-        
-    '''def on_sync_message(self, bus, message):
-        if message.structure is None:
-            return False
-        name = message.structure.get_name()
-        if name == "prepare-xwindow-id":
-            print self.video_container.window
-            gtk.gdk.threads_enter()
-            gtk.gdk.display_get_default().sync()
-            
-            videooutput = message.src
-            videooutput.set_property("force-aspect-ratio", True)
-            videooutput.set_xwindow_id(self.video_container.window.xid)
-            gtk.gdk.threads_leave()'''
+    
+    def on_stream_message(self, bus, message):
+        t = message.type
+        if t == gst.MESSAGE_ERROR:
+            err, debug = message.parse_error()
+            print "Stream Error: %s" % err, debug
+            self.stop_streaming_video()
+        elif t == gst.MESSAGE_STATE_CHANGED:
+            #print 'Message: ' + str(message)
+            old, new, pending = message.parse_state_changed()
+            #print new
+            if new == gst.STATE_NULL:
+                print 'stopped'

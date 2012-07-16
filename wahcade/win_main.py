@@ -779,9 +779,9 @@ class WinMain(WahCade, threading.Thread):
         
         
     def start_video_chat(self):
+        self.video_chat.start_streaming_video()
         self.vid_container.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
         self.sink.set_xwindow_id(self.vid_container.window.xid)
-        self.video_chat.start_streaming_video()
     
     def pause_video_chat(self):
         self.video_chat.pause_streaming_video()
@@ -1298,9 +1298,11 @@ class WinMain(WahCade, threading.Thread):
                         self.show_window('options')
                     elif mw_func == 'TOGGLE_VIDEO':
                         if self.video_chat_enabled:
+                            #TODO: find a way to pause and play the stream without the video becoming choppy
+                            #right now it just hides the gtk DrawingArea container
                             if self.vid_container.get_property("visible") == False:
                                 #print "Show video chat"
-                                #self.start_video_chat()
+                                self.start_video_chat()
                                 self.vid_container.show()
                             else:
                                 #print "Hide video chat"
