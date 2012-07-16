@@ -35,7 +35,7 @@ class video_chat:
         #receivepipe2.set_state(gst.STATE_PLAYING)
         
         self.receivepipe.set_state(gst.STATE_PLAYING)
-        print "Receiver started"
+        print "Video receiver started."
         
     def get_camera_name(self, index = 0):
         #Get the first camera's device number
@@ -45,10 +45,10 @@ class video_chat:
         if camCount == 0:
             print "No cameras were detected.  You can't stream video, but you can receive it."
         else:
-            if camCount == 1: 
-                print "There is " + str(camCount) + " cameras (" + listOfCameras + ")"
+            if int(camCount) == 1: 
+                print "There is", camCount, "camera: " + ", ".join(listOfCameras)
             else:
-                print "There are " + str(camCount) + " camera(s)"
+                print "There are", camCount, "cameras: " + ", ".join(listOfCameras)
             device = "/dev/" + listOfCameras[index]
         
         return device

@@ -43,7 +43,6 @@ class LoadLDAP:
         # Load LDAP credentials from local file
 #        self.LDAP_file = str(os.environ['HOME']) + "/Documents/LDAP.txt"
         self.LDAP_file = CONFIG_DIR + "/confs/LDAP.txt" if os.path.isfile(CONFIG_DIR + "/confs/LDAP.txt") else CONFIG_DIR + "/confs/LDAP-default.txt"
-        print self.LDAP_file
         try:
             with open(self.LDAP_file, "rt") as f:
                 self.creds = {}
@@ -51,7 +50,7 @@ class LoadLDAP:
                     val = line.split('|')   # This file uses "|" instead of "="
                     self.creds[val[0].strip()] = val[1].strip()
         except:
-            print "Could not load LDAP configuration."
+            print "Could not load LDAP configuration file."
             
         self.LDAP_SERVER = self.creds['LDAP_SERVER']
         self.BIND_DN = self.creds['BIND_DN']
@@ -68,7 +67,7 @@ class LoadLDAP:
             print "Successfully connected to", str(self.creds['LDAP_SERVER'])
             self.LDAP_connected = True
         except ldap.LDAPError, e:
-            print "Error connecting to server: " + str(e)
+            print "Failed to connect to LDAP server: " + str(e)
             self.LDAP_connected = False
         
         self.accounts = []
