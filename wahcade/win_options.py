@@ -210,7 +210,7 @@ class WinOptions(WahCade):
                 # List 0, so display "generate list" instead of "generate filtered list"
                 self.lsOptions.append(self._menus[menu_level][0])
                 self.lsOptions.append(self._menus[menu_level][1])
-                self.lsOptions.append(self._menus[menu_level][3])
+                self.lsOptions.append(self._menus[menu_level][2])
             else:
                 # All other lists
                 [self.lsOptions.append(menu_item) for menu_item in self._menus[menu_level][:2]]
