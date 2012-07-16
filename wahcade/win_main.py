@@ -121,6 +121,9 @@ class WinMain(WahCade, threading.Thread):
             self.connected_to_server = False
             print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + ":", str(e)
         
+        #TODO: temporary
+        self.videoCount = 0
+        
         ### Set Global Variables
         global gst_media_imported, pygame_imported, old_keyb_events, debug_mode, log_filename
         self.init = True

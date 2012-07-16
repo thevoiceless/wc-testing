@@ -16,7 +16,7 @@ from constants import *
 class video_chat:
     
     def __init__(self):
-        self.vc_file = CONFIG_DIR + "/confs/VC.txt"
+        self.vc_file = CONFIG_DIR + "/confs/VC-default.txt"
         try:
             with open(self.vc_file, 'rt') as f: # Open the config file and extract the video config info
                 self.props = {}  # Dictionary
@@ -49,6 +49,7 @@ class video_chat:
         bus.connect("message", self.on_message)
 #        bus.connect("sync-message::element", self.on_sync_message)
         
+#        self.receivepipe.set_state(gst.STATE_PLAYING)
         print "Video Chat Receiver started"
         
     def get_camera_name(self, index = 0):
