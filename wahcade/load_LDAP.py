@@ -31,6 +31,7 @@ class LoadLDAP:
     
     def __init__(self):
         self.OUTPUT_TO_FILE = False
+        self.LDAP_connected = False
         self.updateLDAP()
         
     def updateLDAP(self):
@@ -42,6 +43,7 @@ class LoadLDAP:
         # Load LDAP credentials from local file
 #        self.LDAP_file = str(os.environ['HOME']) + "/Documents/LDAP.txt"
         self.LDAP_file = CONFIG_DIR + "/confs/LDAP.txt" if os.path.isfile(CONFIG_DIR + "/confs/LDAP.txt") else CONFIG_DIR + "/confs/LDAP-default.txt"
+        print self.LDAP_file
         try:
             with open(self.LDAP_file, "rt") as f:
                 self.creds = {}
@@ -64,52 +66,55 @@ class LoadLDAP:
             self.ldap_connection = ldap.initialize(self.LDAP_SERVER)
             self.ldap_connection.simple_bind_s(self.BIND_DN, self.BIND_PASS)
             print "Successfully connected to", str(self.creds['LDAP_SERVER'])
+            self.LDAP_connected = True
         except ldap.LDAPError, e:
             print "Error connecting to server: " + str(e)
-
-        # Look up usernames via paged search
-        self.paged_results_control = SimplePagedResultsControl(ldap.LDAP_CONTROL_PAGE_OID, True, (self.PAGE_SIZE, ''))
+            self.LDAP_connected = False
+        
         self.accounts = []
         self.pages = 0
-        while True:
-            self.serverctrls = [self.paged_results_control]
-            try:
-                self.msgid = self.ldap_connection.search_ext(self.USER_BASE,
-                                                   ldap.SCOPE_SUBTREE,
-                                                   self.USER_FILTER,
-                                                   attrlist = ['cn', 'sAMAccountName'],
-                                                   serverctrls = self.serverctrls)
-            except ldap.LDAPError, e:
-                print "Error performing paged search: " + str(e)
+        if self.LDAP_connected:
+            # Look up usernames via paged search
+            self.paged_results_control = SimplePagedResultsControl(ldap.LDAP_CONTROL_PAGE_OID, True, (self.PAGE_SIZE, ''))
+            while True:
+                self.serverctrls = [self.paged_results_control]
+                try:
+                    self.msgid = self.ldap_connection.search_ext(self.USER_BASE,
+                                                       ldap.SCOPE_SUBTREE,
+                                                       self.USER_FILTER,
+                                                       attrlist = ['cn', 'sAMAccountName'],
+                                                       serverctrls = self.serverctrls)
+                except ldap.LDAPError, e:
+                    print "Error performing paged search: " + str(e)
+                    
+                #print "msgid:", msgid
                 
-            #print "msgid:", msgid
-            
-            try:
-                unused_code, self.results, unused_msgid, self.serverctrls = self.ldap_connection.result3(self.msgid)
-            except ldap.LDAPError, e:
-                print "Error getting user paged search results: " + str(e)
+                try:
+                    unused_code, self.results, unused_msgid, self.serverctrls = self.ldap_connection.result3(self.msgid)
+                except ldap.LDAPError, e:
+                    print "Error getting user paged search results: " + str(e)
+                    
+                #print "unused_code:", unused_code
+                #print "results:", results
+                #print results
+                #print "unused_msgid:", unused_msgid
                 
-            #print "unused_code:", unused_code
-            #print "results:", results
-            #print results
-            #print "unused_msgid:", unused_msgid
-            
-            for result in self.results:
-                self.pages += 1
-                self.accounts.append(result)
-            
-            self.cookie = None
-            for serverctrl in self.serverctrls:
-                if serverctrl.controlType == ldap.LDAP_CONTROL_PAGE_OID:
-                    unused_est, self.cookie = serverctrl.controlValue
-                    if self.cookie:
-                        self.paged_results_control.controlValue = (self.PAGE_SIZE, self.cookie)
+                for result in self.results:
+                    self.pages += 1
+                    self.accounts.append(result)
+                
+                self.cookie = None
+                for serverctrl in self.serverctrls:
+                    if serverctrl.controlType == ldap.LDAP_CONTROL_PAGE_OID:
+                        unused_est, self.cookie = serverctrl.controlValue
+                        if self.cookie:
+                            self.paged_results_control.controlValue = (self.PAGE_SIZE, self.cookie)
+                        break
+                if not self.cookie:
                     break
-            if not self.cookie:
-                break
-        
-        # Unbind
-        self.ldap_connection.unbind_s()
+            
+            # Unbind
+            self.ldap_connection.unbind_s()
     
     def generateLists(self):
         # Dictionary with user data

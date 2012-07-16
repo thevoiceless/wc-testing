@@ -109,7 +109,6 @@ class WinMain(WahCade, threading.Thread):
         
         # Try connecting to a database, otherwise
         self.db_file = CONFIG_DIR + "/confs/DB-" + config_opts.db_config_file + ".txt"
-        print self.db_file
         try:
             with open(self.db_file, 'rt') as f: # Open the config file and extract the database connection information
                 self.props = {}  # Dictionary
@@ -1145,7 +1144,7 @@ class WinMain(WahCade, threading.Thread):
                     break
             for mw_func in mw_functions:
                 # Which function?
-                if mw_func == 'ID_SHOW' and current_window != 'identify' and current_window != 'playerselect' and self.connected_to_server:  # Show identify window any time
+                if mw_func == 'ID_SHOW' and current_window != 'identify' and current_window != 'playerselect' and self.identify.ldap.LDAP_connected and self.connected_to_server:  # Show identify window any time
                     if self.connected_to_arduino:
                         self.register_new_player("New player")
                     else:
