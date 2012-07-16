@@ -43,7 +43,6 @@ class LoadLDAP:
         # Load LDAP credentials from local file
 #        self.LDAP_file = str(os.environ['HOME']) + "/Documents/LDAP.txt"
         self.LDAP_file = CONFIG_DIR + "/confs/LDAP.txt" if os.path.isfile(CONFIG_DIR + "/confs/LDAP.txt") else CONFIG_DIR + "/confs/LDAP-default.txt"
-        print self.LDAP_file
         try:
             with open(self.LDAP_file, "rt") as f:
                 self.creds = {}
