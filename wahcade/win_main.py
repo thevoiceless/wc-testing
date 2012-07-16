@@ -448,7 +448,7 @@ class WinMain(WahCade, threading.Thread):
         self.load_emulator()
         
         #Initialize video chat if enabled
-        self.video_chat_enabled = True
+        self.video_chat_enabled = False
         if self.video_chat_enabled:
             self.setup_video_chat()
 
@@ -633,7 +633,8 @@ class WinMain(WahCade, threading.Thread):
         # Stop video playing if necessary
         self.stop_video()
         #stop video streaming
-        self.stop_video_chat()
+        if self.video_chat_enabled:
+            self.stop_video_chat()
         # Tells the arduino thread to terminate properly
         self.running = False
         # Save ini files
@@ -2970,7 +2971,7 @@ class WinMain(WahCade, threading.Thread):
 
     def check_ext_on_game_launch(self, romext='*'):
         """Check that the correct extension is being used"""
-        if romext == '' or romext == '*':
+        if romext == '' or '*':
             # Lookup Rom Extension for Launch
             roms = glob.glob(os.path.join(self.emu_ini.get('rom_path'), '*'))
             for romname in roms:
