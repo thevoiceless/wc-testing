@@ -446,7 +446,7 @@ class WahCade:
             self.do_events()
             if (time_start + num_seconds) < time.time():
                 break
-            time.sleep(0.01)
+#            time.sleep(0.01)
 
     # return_listnum
     # returns digits included in string after a dash
