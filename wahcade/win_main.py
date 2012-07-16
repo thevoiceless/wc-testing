@@ -443,7 +443,6 @@ class WinMain(WahCade, threading.Thread):
         self.layout_file = ''
         self.load_emulator()
         
-
         # Get a list of games already on the server
         self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
         self.player_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/"
@@ -1694,7 +1693,7 @@ class WinMain(WahCade, threading.Thread):
         # Wait a bit - to let message window display
         self.show_window('message')
         self.wait_with_events(0.25)
-        # Get command line options
+        # Get command line optio
         if cmdline_args:
             opts = cmdline_args
         else:
@@ -1770,7 +1769,6 @@ class WinMain(WahCade, threading.Thread):
             os.chdir(os.path.dirname(emulator_executable))
         except:
             pass
-        
         # Run emulator & wait for it to finish
         if not wshell:
             self.p = Popen(cmd, shell=False)
@@ -2921,7 +2919,7 @@ class WinMain(WahCade, threading.Thread):
 
     def check_ext_on_game_launch(self, romext='*'):
         """Check that the correct extension is being used"""
-        if romext == '' or '*':
+        if romext == '' or romext == '*':
             # Lookup Rom Extension for Launch
             roms = glob.glob(os.path.join(self.emu_ini.get('rom_path'), '*'))
             for romname in roms:

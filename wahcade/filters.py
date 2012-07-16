@@ -534,6 +534,7 @@ def read_filtered_list(list_filename):
     if not os.path.isfile(list_filename):
         f, file_enc = open_file(list_filename, 'w')
         f.close()
+
     #open file
     f = codecs.open(list_filename, 'r', 'utf-8-sig')
     lines = f.readlines()
