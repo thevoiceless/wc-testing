@@ -508,8 +508,10 @@ def create_filtered_list(original_list_filename, filter_spec, list_filename):
             except ValueError:
                 #print _("Warning: can't find parent rom: [%s] for clone: [%s]") % (gd['clone_of'], gd['rom_name'])
                 matched = True
-            if 'good' not in orig_rom['driver_status'].lower():
-                matched = True
+                orig_rom = {}
+            if 'driver_status' in orig_rom:
+                if 'good' not in orig_rom['driver_status'].lower():
+                    matched = True
         #check the other sections
         if matched:
             #for each section

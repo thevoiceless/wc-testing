@@ -1,12 +1,13 @@
+
 [Desktop Entry]
 Version=0.26
 Encoding=UTF-8
-Name=Wah!Cade Layout Editor
-Comment=Edit Wah!Cade Layouts
+Name=Rcade Layout Editor
+Comment=Edit Rcade Layouts
 Exec=wahcade-layout-editor
 Terminal=false
 Type=Application
 Icon=wahcade-layout-editor.png
 Categories=Game;ArcadeGame;
 StartupNotify=False
-GenericName[en_GB]=
+Name[en_US]=Rcade Layout Editor

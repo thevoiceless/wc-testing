@@ -1,8 +1,11 @@
 #!/bin/sh
 #install wah!cade
 NAME=wahcade
+R_NAME=rcade
 LAYOUT_NAME=wahcade-layout-editor
+R_LAYOUT_NAME=rcade-layout-editor
 SETUP_NAME=wahcade-setup
+R_SETUP_NAME=rcade-setup
 PREFIX=/usr/local
 BINDIR=$PREFIX/bin
 DESTDIR=$PREFIX/share/$NAME
@@ -12,11 +15,21 @@ echo "#!/bin/bash" > $BINDIR/$NAME
 echo "cd ${DESTDIR}" >> $BINDIR/$NAME
 echo "python ${NAME}.py \$*" >> $BINDIR/$NAME
 chmod 755 $BINDIR/$NAME
+# Rcade start script (calls wahcade start script)
+echo "#!/bin/bash" > $BINDIR/$R_NAME
+echo "cd ${DESTDIR}" >> $BINDIR/$R_NAME
+echo "python ${NAME}.py \$*" >> $BINDIR/$R_NAME
+chmod 755 $BINDIR/$R_NAME
 
 #wahcade layout editor start script
 echo "#!/bin/bash" > $BINDIR/$LAYOUT_NAME
 echo "cd ${DESTDIR}" >> $BINDIR/$LAYOUT_NAME
 echo "python ${LAYOUT_NAME}.py \$*" >> $BINDIR/$LAYOUT_NAME
+chmod 755 $BINDIR/$LAYOUT_NAME
+# Rcade layout editor start script (calls wahcade layout editor start script)
+echo "#!/bin/bash" > $BINDIR/$R_LAYOUT_NAME
+echo "cd ${DESTDIR}" >> $BINDIR/$R_LAYOUT_NAME
+echo "python ${LAYOUT_NAME}.py \$*" >> $BINDIR/$R_LAYOUT_NAME
 chmod 755 $BINDIR/$LAYOUT_NAME
 
 #wahcade setup start script
@@ -24,6 +37,11 @@ echo "#!/bin/bash" > $BINDIR/$SETUP_NAME
 echo "cd ${DESTDIR}" >> $BINDIR/$SETUP_NAME
 echo "python ${SETUP_NAME}.py \$*" >> $BINDIR/$SETUP_NAME
 chmod 755 $BINDIR/$SETUP_NAME
+# Rcade setup start script (calls wahcade setup start script)
+echo "#!/bin/bash" > $BINDIR/$R_SETUP_NAME
+echo "cd ${DESTDIR}" >> $BINDIR/$R_SETUP_NAME
+echo "python ${SETUP_NAME}.py \$*" >> $BINDIR/$R_SETUP_NAME
+chmod 755 $BINDIR/$R_SETUP_NAME
 
 #install files
 install -D --mode=755 $NAME.desktop $PREFIX/share/applications/$NAME.desktop

@@ -88,12 +88,12 @@ from win_cpviewer import WinCPViewer    # Control panel viewer window
 from win_identify import WinIdentify    # Identify window
 from win_playerSelect import WinPlayerSelect #Player selection window
 import threading
-import codecs
 import filters                          # filters.py, routines to read/write mamewah filters and lists
 from mamewah_ini import MameWahIni      # Reads mamewah-formatted ini file
 import joystick                         # joystick.py, joystick class, uses pygame package (SDL bindings for games in Python)
 import requests
 import pygame
+from video_chat import video_chat       #import the video chat element
 from xml.etree.ElementTree import fromstring
 # Set gettext function
 _ = gettext.gettext
@@ -105,7 +105,7 @@ class WinMain(WahCade, threading.Thread):
         """Initialize main Rcade window"""   # Docstring for this method
         
         # Begin the thread for reading from arduino
-        threading.Thread.__init__(self)        
+        threading.Thread.__init__(self)
         
         # Try connecting to a database, otherwise
         self.db_file = CONFIG_DIR + "/confs/DB-" + config_opts.db_config_file + ".txt"
@@ -117,8 +117,12 @@ class WinMain(WahCade, threading.Thread):
                     self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
                 r = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']) # Attempt to make connection to server
                 self.check_connection(r.status_code)
-        except: # Any exception would mean some sort of failed server connection
+        except requests.exceptions.ConnectionError, e: # Any exception would mean some sort of failed server connection
             self.connected_to_server = False
+            print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + ":", str(e)
+        
+        #TODO: temporary
+        self.videoCount = 0
         
         ### Set Global Variables
         global gst_media_imported, pygame_imported, old_keyb_events, debug_mode, log_filename
@@ -214,7 +218,7 @@ class WinMain(WahCade, threading.Thread):
         self.lblEmulatorName = gtk.Label()
         self.lblGameSelected = gtk.Label()
         if self.use_splash == 1:
-            self.display_splash()
+            self.display_splash() 
         if gst_media_imported:
             self.drwVideo = gst_media.VideoWidget()
         else:
@@ -443,6 +447,11 @@ class WinMain(WahCade, threading.Thread):
         self.layout_file = ''
         self.load_emulator()
         
+        #Initialize video chat if enabled
+        self.video_chat_enabled = True
+        if self.video_chat_enabled:
+            self.setup_video_chat()
+
         # Get a list of games already on the server
         self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
         self.player_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/"
@@ -504,9 +513,9 @@ class WinMain(WahCade, threading.Thread):
                 self.connected_to_arduino = True
                 print "Successfully connected to Arduino mounted at", arduino_mount
                 self.start()
-            except:
+            except RuntimeError, e:
                 self.connected_to_arduino = False
-                print "Failed to connect to Arduino"
+                print "Failed to connect to Arduino:", str(e)
         if self.connected_to_server:
             self.user.set_text("Not Logged In")
             self.user.show()
@@ -533,7 +542,7 @@ class WinMain(WahCade, threading.Thread):
         self.check_music_settings()
         
         self.winMain.show()
-
+        
         self.drwVideo.set_property('visible', False)
 
         if not self.showcursor:
@@ -618,11 +627,13 @@ class WinMain(WahCade, threading.Thread):
         
         ### __INIT__ Complete
         self.init = False
-        
+    
     def on_winMain_destroy(self, *args):
         """Done, quit the application"""
         # Stop video playing if necessary
         self.stop_video()
+        #stop video streaming
+        self.stop_video_chat()
         # Tells the arduino thread to terminate properly
         self.running = False
         # Save ini files
@@ -750,7 +761,32 @@ class WinMain(WahCade, threading.Thread):
         """Window lost focus"""
         self.pointer_grabbed = False
         gtk.gdk.pointer_ungrab()
+    
+    def setup_video_chat(self):
+        self.video_chat = video_chat()
+        self.sink = self.video_chat.sink
         
+        #link the sync to a DrawingArea
+        self.vid_container = gtk.DrawingArea()
+        self.vid_container.modify_bg(gtk.STATE_NORMAL, self.vid_container.style.black)
+        self.fixd.put(self.vid_container, 300, 80)
+        self.vid_container.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
+        #print self.vid_container.window.xid
+        
+        self.sink.set_xwindow_id(self.vid_container.window.xid)
+        
+        
+    def start_video_chat(self):
+        self.vid_container.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
+        self.sink.set_xwindow_id(self.vid_container.window.xid)
+        self.video_chat.start_streaming_video()
+    
+    def pause_video_chat(self):
+        self.video_chat.pause_streaming_video()
+     
+    def stop_video_chat(self):
+        self.video_chat.stop_streaming_video()
+       
     def parse_high_score_text(self, text_string):
         """Parse the text file for high scores. 0 scores are not sent"""
         if len(self.current_players) > 1:
@@ -852,7 +888,7 @@ class WinMain(WahCade, threading.Thread):
             print "Successfully connected to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
         else:
             self.connected_to_server = False
-            print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
+            print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + ", Status Code:", status_code
              
     def log_in(self, player_rfid):
         """Logs a player in"""
@@ -1112,7 +1148,7 @@ class WinMain(WahCade, threading.Thread):
                     break
             for mw_func in mw_functions:
                 # Which function?
-                if mw_func == 'ID_SHOW' and current_window != 'identify' and current_window != 'playerselect' and self.connected_to_server:  # Show identify window any time
+                if mw_func == 'ID_SHOW' and current_window != 'identify' and current_window != 'playerselect' and self.identify.ldap.LDAP_connected and self.connected_to_server:  # Show identify window any time
                     if self.connected_to_arduino:
                         self.register_new_player("New player")
                     else:
@@ -1181,6 +1217,7 @@ class WinMain(WahCade, threading.Thread):
                         self.play_clip('MENU_SHOW')
                         self.options.set_menu('main')
                         self.show_window('options')
+                        self.options.sclOptions._update_display()
                     elif mw_func == 'SELECT_EMULATOR':
                         self.play_clip('SELECT_EMULATOR')
                         self.options.set_menu('emu_list')
@@ -1257,6 +1294,17 @@ class WinMain(WahCade, threading.Thread):
                         self.play_clip('EXIT_WITH_CHOICE')
                         self.options.set_menu('exit')
                         self.show_window('options')
+                    elif mw_func == 'TOGGLE_VIDEO':
+                        if self.video_chat_enabled:
+                            if self.vid_container.get_property("visible") == False:
+                                #print "Show video chat"
+                                self.start_video_chat()
+                                self.vid_container.show()
+                            else:
+                                #print "Hide video chat"
+                                #self.pause_video_chat()
+                                self.vid_container.hide()
+                            
                 elif current_window == 'options':
                     # Options form
                     if mw_func == 'OP_UP_1_OPTION':
@@ -1507,7 +1555,7 @@ class WinMain(WahCade, threading.Thread):
     def portal_timer(self):
         sound_time = random.randint((5*60), (15*60))
         if int(time.time() - self.portal_time_last_played) >= sound_time:
-            if len(self.sounds) == 0:
+            if len(self.sounds) != 0:
                 pygame.mixer.init()
                 pygame.mixer.music.load(self.sounds[random.randrange(0, len(self.sounds))])
                 pygame.mixer.music.play()
@@ -2608,7 +2656,10 @@ class WinMain(WahCade, threading.Thread):
             # Extract data
             if data.text != "":
                 for game in data.getiterator('game'):
-                    gList.append(next(gTuple for gTuple in self.lsGames if gTuple[1] == game.find("romName").text))
+                    try:
+                        gList.append(next(gTuple for gTuple in self.lsGames if gTuple[1] == game.find("romName").text))
+                    except:
+                        pass
             if not gList:
                 errorItem = ()
                 for i, entry in enumerate(self.lsGames[0]):
