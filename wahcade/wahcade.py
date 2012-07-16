@@ -96,4 +96,5 @@ if __name__ == "__main__":          # http://stackoverflow.com/questions/419163/
     from win_main import WinMain, gtk   # Imports WinMain and gtk from win_main.py
     app = WinMain(options)              # class WinMain(WahCade)
     #and... go...
+    gtk.gdk.threads_init()
     gtk.main()

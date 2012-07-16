@@ -252,6 +252,7 @@ class WinOptions(WahCade):
                 self.WinMain.emu_ini)
             self.WinMain.load_list()
             self.WinMain.hide_window('options')
+            self.WinMain.sclGames._update_display()
         elif menu_level == 'generate_ftr':
             # Display filter categories menu
             self._display_clone_idx = int(self.WinMain.current_filter['filter_type'])

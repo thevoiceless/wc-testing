@@ -88,12 +88,12 @@ from win_cpviewer import WinCPViewer    # Control panel viewer window
 from win_identify import WinIdentify    # Identify window
 from win_playerSelect import WinPlayerSelect #Player selection window
 import threading
-import codecs
 import filters                          # filters.py, routines to read/write mamewah filters and lists
 from mamewah_ini import MameWahIni      # Reads mamewah-formatted ini file
 import joystick                         # joystick.py, joystick class, uses pygame package (SDL bindings for games in Python)
 import requests
 import pygame
+from video_chat import video_chat       #import the video chat element
 from xml.etree.ElementTree import fromstring
 # Set gettext function
 _ = gettext.gettext
@@ -105,10 +105,11 @@ class WinMain(WahCade, threading.Thread):
         """Initialize main Rcade window"""   # Docstring for this method
         
         # Begin the thread for reading from arduino
-        threading.Thread.__init__(self)        
+        threading.Thread.__init__(self)
         
         # Try connecting to a database, otherwise
-        self.db_file = CONFIG_DIR + sep + "confs" + sep + config_opts.db_config_file + ".txt"
+        self.db_file = CONFIG_DIR + "/confs/DB-" + config_opts.db_config_file + ".txt"
+        print self.db_file
         try:
             with open(self.db_file, 'rt') as f: # Open the config file and extract the database connection information
                 self.props = {}  # Dictionary
@@ -119,6 +120,8 @@ class WinMain(WahCade, threading.Thread):
                 self.check_connection(r.status_code)
         except: # Any exception would mean some sort of failed server connection
             self.connected_to_server = False
+        #TODO: temporary
+        self.videoCount = 0
         
         ### Set Global Variables
         global gst_media_imported, pygame_imported, old_keyb_events, debug_mode, log_filename
@@ -214,7 +217,7 @@ class WinMain(WahCade, threading.Thread):
         self.lblEmulatorName = gtk.Label()
         self.lblGameSelected = gtk.Label()
         if self.use_splash == 1:
-            self.display_splash()
+            self.display_splash() 
         if gst_media_imported:
             self.drwVideo = gst_media.VideoWidget()
         else:
@@ -279,13 +282,12 @@ class WinMain(WahCade, threading.Thread):
         self.fixd.add(self.imgBackground)
         self.imgBackground.show()
         
-        # Mark mame directory
-        self.mame_dir = self.emu_ini.get('emulator_executable')[:self.emu_ini.get('emulator_executable').rfind(sep) + 1]
-        
+        # Mark mame directory for HiToText calls
+        self.mame_dir = os.path.expanduser('~/.mame/')
         # Set initial HiToText "read" command
-        self.htt_read = "HiToText.exe -r " + self.mame_dir
+        self.htt_read = "/usr/local/bin/HiToText.exe -r " + self.mame_dir
         # Set initial HiToText "erase" command
-        self.htt_erase = "HiToText.exe -e " + self.mame_dir
+        self.htt_erase = "/usr/local/bin/HiToText.exe -e " + self.mame_dir
         
         self.launched_game = False
         self.current_rom = ''
@@ -444,6 +446,7 @@ class WinMain(WahCade, threading.Thread):
         self.layout_file = ''
         self.load_emulator()
         
+        self.setup_video_chat()
 
         # Get a list of games already on the server
         self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
@@ -540,8 +543,9 @@ class WinMain(WahCade, threading.Thread):
         self.check_music_settings()
         
         self.winMain.show()
-
-        self.drwVideo.set_property('visible', False)
+        
+        #TODO: reenable this
+        #self.drwVideo.set_property('visible', False)
 
         if not self.showcursor:
             self.hide_mouse_cursor(self.winMain)
@@ -625,7 +629,7 @@ class WinMain(WahCade, threading.Thread):
         
         ### __INIT__ Complete
         self.init = False
-        
+    
     def on_winMain_destroy(self, *args):
         """Done, quit the application"""
         # Stop video playing if necessary
@@ -750,14 +754,36 @@ class WinMain(WahCade, threading.Thread):
                     if self.connected_to_server:
                         self.parse_high_score_text(testString)
                 else:
-                    print "Unable to read the high score using htt"
+                    print "Unable to read the high score using HiToText"
         self.on_sclGames_changed()
 
     def on_winMain_focus_out(self, *args):
         """Window lost focus"""
         self.pointer_grabbed = False
         gtk.gdk.pointer_ungrab()
+    
+    def setup_video_chat(self):
+        self.video_chat = video_chat()
+        #self.video_chat.setup_streaming_video()
+        self.sink = self.video_chat.receivepipe.get_by_name("sink")
         
+        #print self.sink
+        self.vid_container = gtk.DrawingArea()
+        self.fixd.put(self.vid_container, 300, 80)
+        self.vid_container.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
+        #print self.vid_container.window.xid
+        
+        self.sink.set_xwindow_id(self.vid_container.window.xid)
+        
+        
+    def start_video_chat(self):
+        self.vid_container.set_size_request(640,480)
+        self.sink.set_xwindow_id(self.vid_container.window.xid)
+        self.video_chat.start_streaming_video()
+        
+    def stop_video_chat(self):
+        self.video_chat.stop_streaming_video()
+       
     def parse_high_score_text(self, text_string):
         """Parse the text file for high scores. 0 scores are not sent"""
         if len(self.current_players) > 1:
@@ -856,6 +882,7 @@ class WinMain(WahCade, threading.Thread):
     def check_connection(self, status_code):
         if ((status_code - 200) < 100 and (status_code - 200) >= 0) or status_code == 500:
             self.connected_to_server = True
+            print "Successfully connected to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
         else:
             self.connected_to_server = False
             print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
@@ -1172,8 +1199,9 @@ class WinMain(WahCade, threading.Thread):
                         self.play_clip('REMOVE_GAME_FROM_LIST')
                         self.remove_current_game()
                     elif mw_func == 'LAUNCH_GAME':
-                        self.play_clip('LAUNCH_GAME')
-                        self.launch_auto_apps_then_game(self.lsGames[self.sclGames.get_selected()][1])
+                        if len(self.lsGames) != 0:
+                            self.play_clip('LAUNCH_GAME')
+                            self.launch_auto_apps_then_game(self.lsGames[self.sclGames.get_selected()][1])
                     elif mw_func == 'LAUNCH_GAME_WITH_OPTIONS1':
                         self.play_clip('LAUNCH_GAME_WITH_OPTIONS1')
                         self.launch_auto_apps_then_game([g[1] for g in self.lsGames if g[0]==self.sclGames.get_selected_item()][0], 
@@ -1262,6 +1290,19 @@ class WinMain(WahCade, threading.Thread):
                         self.play_clip('EXIT_WITH_CHOICE')
                         self.options.set_menu('exit')
                         self.show_window('options')
+                    elif mw_func == 'TOGGLE_VIDEO':
+                        #TODO: video do this for real
+                        self.videoCount += 1
+                        
+                        if(self.videoCount%2 == 1):
+                            print "Start streaming keypress"
+                            self.start_video_chat()
+                            self.vid_container.show()
+                        else:
+                            print "Stop streaming keypress"
+                            #self.stop_video_chat()
+                            self.vid_container.hide()
+                            
                 elif current_window == 'options':
                     # Options form
                     if mw_func == 'OP_UP_1_OPTION':
@@ -1512,7 +1553,7 @@ class WinMain(WahCade, threading.Thread):
     def portal_timer(self):
         sound_time = random.randint((5*60), (15*60))
         if int(time.time() - self.portal_time_last_played) >= sound_time:
-            if len(self.sounds) == 0:
+            if len(self.sounds) != 0:
                 pygame.mixer.init()
                 pygame.mixer.music.load(self.sounds[random.randrange(0, len(self.sounds))])
                 pygame.mixer.music.play()
@@ -1606,7 +1647,7 @@ class WinMain(WahCade, threading.Thread):
         """Call any automatically launched external applications, then run currently selected game"""
         # If we did not get a valid romName, return immediately
         if not romName:
-           return
+            return
         self.external_app_queue = self.emu_ini.get('auto_launch_apps').split(',')
         # Get it into correct order
         self.external_app_queue.reverse()
@@ -1671,8 +1712,7 @@ class WinMain(WahCade, threading.Thread):
         self.message.display_message(
             _('Starting...'),
             '%s: %s' % (rom, title))
-            
-
+        
         # Erase scores from hi score file of current game
         # Executable must be in same directory
         if rom in self.supported_games:
