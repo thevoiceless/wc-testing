@@ -44,7 +44,7 @@ setup(
     #suggests = 'python-pygame (>=1.6), python-imaging (>=1.1.5)',
     priority = 'optional',
     url = 'http://www.anti-particle.com/wahcade',
-    scripts = ['wahcade', 'wahcade-setup', 'wahcade-layout-editor'],
+    scripts = ['wahcade', 'wahcade-setup', 'wahcade-layout-editor', 'rcade', 'rcade-setup', 'rcade-layout-editor'],
     data_files = [
         ("share/games/wahcade", glob.glob("*.py")),
         ("share/games/wahcade", glob.glob("*.exe")),
