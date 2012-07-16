@@ -130,7 +130,7 @@ class WinOptions(WahCade):
             if self.sclOptions.get_selected() == 0:
                 self.lblSettingValue.set_text(self._display_clones[self._display_clone_idx][0])
             else:
-                self.lblSettingValue.set_text('Test')
+                self.lblSettingValue.set_text('')
         elif self.current_menu.startswith('ftr:'):
             # Filter menu - show yes / no option, etc
             if self.sclOptions.get_selected() < 2:
@@ -246,7 +246,6 @@ class WinOptions(WahCade):
             self._display_clone_idx = int(self.WinMain.current_filter['filter_type'])
             self.sclOptions.set_selected(0)
             [self.lsOptions.append(menu_item) for menu_item in self._menus[menu_level]]
-            """
         elif menu_level.startswith('ftr:'):
             # Display a specific filter menu...
             self.sclOptions.set_selected(0)
@@ -262,7 +261,6 @@ class WinOptions(WahCade):
             self.lsOptions.sort()
             self.lsOptions.insert(0, [_('Show ALL'), 'all'])
             self.lsOptions.insert(1, [_('Show NONE'), 'none'])
-            """
         elif menu_level == 'generate_new_list':
             # Generate new filtered games list
             self.lblHeading.set_text(_('Please Wait...'))

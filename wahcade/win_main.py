@@ -1214,6 +1214,7 @@ class WinMain(WahCade, threading.Thread):
                         self.play_clip('MENU_SHOW')
                         self.options.set_menu('main')
                         self.show_window('options')
+                        self.options.sclOptions._update_display()
                     elif mw_func == 'SELECT_EMULATOR':
                         self.play_clip('SELECT_EMULATOR')
                         self.options.set_menu('emu_list')
