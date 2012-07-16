@@ -117,8 +117,14 @@ class WinMain(WahCade, threading.Thread):
                     self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
                 r = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']) # Attempt to make connection to server
                 self.check_connection(r.status_code)
-        except: # Any exception would mean some sort of failed server connection
+        except requests.exceptions.ConnectionError, e: # Any exception would mean some sort of failed server connection
             self.connected_to_server = False
+<<<<<<< HEAD
+=======
+            print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + ":", str(e)
+        #TODO: temporary
+        self.videoCount = 0
+>>>>>>> f481e65d8be729e4d786a6377dc9db6c89a23f6e
         
         ### Set Global Variables
         global gst_media_imported, pygame_imported, old_keyb_events, debug_mode, log_filename
@@ -509,9 +515,9 @@ class WinMain(WahCade, threading.Thread):
                 self.connected_to_arduino = True
                 print "Successfully connected to Arduino mounted at", arduino_mount
                 self.start()
-            except:
+            except RuntimeError, e:
                 self.connected_to_arduino = False
-                print "Failed to connect to Arduino"
+                print "Failed to connect to Arduino:", str(e)
         if self.connected_to_server:
             self.user.set_text("Not Logged In")
             self.user.show()
@@ -889,7 +895,7 @@ class WinMain(WahCade, threading.Thread):
             print "Successfully connected to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
         else:
             self.connected_to_server = False
-            print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
+            print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + ", Status Code:", status_code
              
     def log_in(self, player_rfid):
         """Logs a player in"""
@@ -1149,7 +1155,7 @@ class WinMain(WahCade, threading.Thread):
                     break
             for mw_func in mw_functions:
                 # Which function?
-                if mw_func == 'ID_SHOW' and current_window != 'identify' and current_window != 'playerselect' and self.connected_to_server:  # Show identify window any time
+                if mw_func == 'ID_SHOW' and current_window != 'identify' and current_window != 'playerselect' and self.identify.ldap.LDAP_connected and self.connected_to_server:  # Show identify window any time
                     if self.connected_to_arduino:
                         self.register_new_player("New player")
                     else:
@@ -1218,6 +1224,7 @@ class WinMain(WahCade, threading.Thread):
                         self.play_clip('MENU_SHOW')
                         self.options.set_menu('main')
                         self.show_window('options')
+                        self.options.sclOptions._update_display()
                     elif mw_func == 'SELECT_EMULATOR':
                         self.play_clip('SELECT_EMULATOR')
                         self.options.set_menu('emu_list')
@@ -1555,7 +1562,7 @@ class WinMain(WahCade, threading.Thread):
     def portal_timer(self):
         sound_time = random.randint((5*60), (15*60))
         if int(time.time() - self.portal_time_last_played) >= sound_time:
-            if len(self.sounds) == 0:
+            if len(self.sounds) != 0:
                 pygame.mixer.init()
                 pygame.mixer.music.load(self.sounds[random.randrange(0, len(self.sounds))])
                 pygame.mixer.music.play()
@@ -2657,7 +2664,10 @@ class WinMain(WahCade, threading.Thread):
             # Extract data
             if data.text != "":
                 for game in data.getiterator('game'):
-                    gList.append(next(gTuple for gTuple in self.lsGames if gTuple[1] == game.find("romName").text))
+                    try:
+                        gList.append(next(gTuple for gTuple in self.lsGames if gTuple[1] == game.find("romName").text))
+                    except:
+                        pass
             if not gList:
                 errorItem = ()
                 for i, entry in enumerate(self.lsGames[0]):

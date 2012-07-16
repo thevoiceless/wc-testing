@@ -30,8 +30,7 @@ class video_chat:
         except: 
             print "Couldn't load video chat configuration."
             return
-        
-        
+
         
         #Set up the streaming pipelines
         self.start_video_receiver()
@@ -50,7 +49,7 @@ class video_chat:
         bus.connect("message", self.on_message)
 #        bus.connect("sync-message::element", self.on_sync_message)
         
-        print "Receiver started"
+        print "Video Chat Receiver started"
         
     def get_camera_name(self, index = 0):
         #Get the first camera's device number
@@ -60,10 +59,10 @@ class video_chat:
         if camCount == 0:
             print "No cameras were detected.  You can't stream video, but you can receive it."
         else:
-            if camCount == 1: 
-                print "There is " + str(camCount) + " cameras (" + listOfCameras + ")"
+            if int(camCount) == 1: 
+                print "There is", camCount, "camera: " + ", ".join(listOfCameras)
             else:
-                print "There are " + str(camCount) + " camera(s)"
+                print "There are", camCount, "cameras: " + ", ".join(listOfCameras)
             device = "/dev/" + listOfCameras[index]
         
         return device
