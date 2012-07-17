@@ -16,8 +16,7 @@ import requests
 
 class video_chat():
     
-    def __init__(self, WinMain):
-        self.WinMain = WinMain
+    def __init__(self):
         self.enabled = True
         self.vc_file = CONFIG_DIR + "/confs/VC-default.txt"
         try:
@@ -28,13 +27,13 @@ class video_chat():
                         val = line.split('=')
                         self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
                     
-                    self.video_width, self.video_height = int(self.props["width"]), int(self.props["height"])
-                    self.localip, self.localport = self.WinMain.local_IP, self.props['localport']
-                    self.remoteip, self.remoteport = self.WinMain.local_IP, self.props["remoteport"]
+                    self.video_width, self.video_height = 320, 240
+                    self.localip, self.localport = self.props["localip"], self.props['localport']
+                    self.remoteip, self.remoteport = self.props["remoteip"], self.props["remoteport"]
                     
-                    if self.localip != "" or self.localip != None:
+                    '''if self.localip != "" or self.localip != None:
                         post_data = {"ipAddress":self.localip, "port":self.localport}
-                        r = requests.post(self.WinMain.connection_url, post_data)
+                        r = requests.post(self.WinMain.connection_url, post_data)'''
             else:
                 print "The video chat configuration file was not found at: " + self.vc_file
                 self.enabled = False
@@ -95,7 +94,7 @@ class video_chat():
         device = self.get_camera_name()
         command = "v4l2src device=" + device + " ! video/x-raw-rgb, width=" + str(self.video_width) + ", height=" + str(self.video_height) + " "
         command += "! ffmpegcolorspace ! vp8enc speed=2 max-latency=2 quality=10.0 max-keyframe-distance=3 threads=5 " 
-        command += "! queue2 ! mux. alsasrc device=plughw:1,0 ! audioconvert ! vorbisenc " 
+        command += "! queue2 ! mux. autoaudiosrc ! audioconvert ! vorbisenc " 
         command += "! queue2 ! mux. webmmux name=mux streamable=true "
         command += "! tcpserversink host=" + self.remoteip + " port=" + self.remoteport
         
@@ -115,7 +114,9 @@ class video_chat():
     
     
     def stop_receiver(self):
-        self.receivepipe.set_state(gst.STATE_PAUSED)
+        pass
+        #self.receivepipe.set_state(gst.STATE_PAUSED)
+        #self.receivepipe.set_state(gst.STATE_NULL)
         
     def start_receiver(self):
         self.receivepipe.set_state(gst.STATE_PLAYING)
@@ -144,7 +145,7 @@ class video_chat():
         if t == gst.MESSAGE_ERROR:
             err, debug = message.parse_error()
             print "Stream Error: %s" % err, debug
-            self.stop_streaming_video()
+            self.kill_pipelines()
         elif t == gst.MESSAGE_STATE_CHANGED:
             #print 'Stream Message: ' + str(message)
             old, new, pending = message.parse_state_changed()

@@ -779,12 +779,12 @@ class WinMain(WahCade, threading.Thread):
         gtk.gdk.pointer_ungrab()
     
     def setup_video_chat(self):
-        self.video_chat = video_chat(self)
+        self.video_chat = video_chat()
         
         #link the sync to a DrawingArea
         self.vid_container = gtk.DrawingArea()
         self.vid_container.modify_bg(gtk.STATE_NORMAL, self.vid_container.style.black)
-        self.fixd.put(self.vid_container, 645, 80)
+        self.fixd.put(self.vid_container, 625, 80)
         self.vid_container.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
         #print self.vid_container.window.xid
         if self.video_chat.enabled:
@@ -1326,7 +1326,7 @@ class WinMain(WahCade, threading.Thread):
                                 self.vid_container.show()
                             else:
                                 #print "Hide video chat"
-                                #self.stop_video_chat()
+                                self.stop_video_chat()
                                 self.vid_container.hide()
                         else:
                             print "Video Chat is disabled."  
