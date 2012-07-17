@@ -787,8 +787,8 @@ class WinMain(WahCade, threading.Thread):
         self.fixd.put(self.vid_container, 645, 80)
         self.vid_container.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
         #print self.vid_container.window.xid
-        
-        self.video_chat.sink.set_xwindow_id(self.vid_container.window.xid)
+        if self.video_chat.enabled:
+            self.video_chat.sink.set_xwindow_id(self.vid_container.window.xid)
         
         
     def start_video_chat(self):

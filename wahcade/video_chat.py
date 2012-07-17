@@ -37,12 +37,12 @@ class video_chat():
                         r = requests.post(self.WinMain.connection_url, post_data)
             else:
                 print "The video chat configuration file was not found at: " + self.vc_file
-                enabled = False
+                self.enabled = False
                 return 
 
         except: 
             print "There was an error loading the video chat configuration."
-            enabled = False
+            self.enabled = False
             return
 
         
