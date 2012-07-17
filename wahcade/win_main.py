@@ -447,10 +447,8 @@ class WinMain(WahCade, threading.Thread):
         self.layout_file = ''
         self.load_emulator()
         
-        #Initialize video chat if enabled
-        self.video_chat_enabled = True
-        if self.video_chat_enabled:
-            self.setup_video_chat()
+        #Initialize video chat
+        self.setup_video_chat()
 
         # Get a list of games already on the server
         self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
@@ -782,15 +780,11 @@ class WinMain(WahCade, threading.Thread):
         
         
     def start_video_chat(self):
-        self.video_chat.start_streaming_video()
-        self.vid_container.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
-        self.sink.set_xwindow_id(self.vid_container.window.xid)
+        self.video_chat.start_receiver()
     
-    def pause_video_chat(self):
-        self.video_chat.pause_streaming_video()
-     
     def stop_video_chat(self):
-        self.video_chat.stop_streaming_video()
+        self.video_chat.stop_receiver()
+     
        
     def parse_high_score_text(self, text_string):
         """Parse the text file for high scores. 0 scores are not sent"""
@@ -1300,7 +1294,7 @@ class WinMain(WahCade, threading.Thread):
                         self.options.set_menu('exit')
                         self.show_window('options')
                     elif mw_func == 'TOGGLE_VIDEO':
-                        if self.video_chat_enabled:
+                        if self.video_chat.enabled:
                             #TODO: find a way to pause and play the stream without the video becoming choppy
                             #right now it just hides the gtk DrawingArea container
                             if self.vid_container.get_property("visible") == False:
@@ -1309,9 +1303,10 @@ class WinMain(WahCade, threading.Thread):
                                 self.vid_container.show()
                             else:
                                 #print "Hide video chat"
-                                #self.pause_video_chat()
+                                #self.stop_video_chat()
                                 self.vid_container.hide()
-                            
+                        else:
+                            print "Video Chat is disabled."  
                 elif current_window == 'options':
                     # Options form
                     if mw_func == 'OP_UP_1_OPTION':

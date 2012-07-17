@@ -16,31 +16,41 @@ from constants import *
 class video_chat:
     
     def __init__(self):
+        self.enabled = True
         self.vc_file = CONFIG_DIR + "/confs/VC-default.txt"
         try:
-            with open(self.vc_file, 'rt') as f: # Open the config file and extract the video config info
-                self.props = {}  # Dictionary
-                for line in f.readlines():
-                    val = line.split('=')
-                    self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
-                
-                self.video_width, self.video_height = int(self.props["width"]), int(self.props["height"])
-                self.localip, self.localport = self.props["localip"], self.props["localport"]
-                self.remoteip, self.remoteport = self.props["remoteip"], self.props["remoteport"]
+            if os.path.exists(self.vc_file):
+                with open(self.vc_file, 'rt') as f: # Open the config file and extract the video config info
+                    self.props = {}  # Dictionary
+                    for line in f.readlines():
+                        val = line.split('=')
+                        self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
+                    
+                    self.video_width, self.video_height = int(self.props["width"]), int(self.props["height"])
+                    self.localip, self.localport = self.props["localip"], self.props["localport"]
+                    self.remoteip, self.remoteport = self.props["remoteip"], self.props["remoteport"]
+            else:
+                print "The video chat configuration file was not found at: " + self.vc_file
+                enabled = False
+                return
         except: 
-            print "Couldn't load video chat configuration."
+            print "There was an error loading the video chat configuration."
+            enabled = False
             return
 
         
         #Set up the streaming pipelines
+        self.setup_streaming_video()
         self.start_video_receiver()
         #raw_input("Press Enter to start streaming your video camera")
-        self.setup_streaming_video()
         
     def start_video_receiver(self):
         #webm encoded video receiver
-        self.receivepipe = gst.parse_launch("tcpserversrc host=" + self.localip + " port=" + self.localport + " ! matroskademux name=d d. ! queue2 ! vp8dec ! ffmpegcolorspace ! xvimagesink name=sink d. ! queue2 ! vorbisdec ! audioconvert ! audioresample ! alsasink sync=false") 
-        self.receivepipe.set_state(gst.STATE_PLAYING)
+        command = "tcpclientsrc host=" + self.localip + " port=" + self.localport + " " 
+        command += "! matroskademux name=d d. ! queue2 ! vp8dec ! ffmpegcolorspace ! xvimagesink name=sink " 
+        command += "d. ! queue2 ! vorbisdec ! audioconvert ! audioresample ! alsasink sync=false"
+        self.receivepipe = gst.parse_launch(command) 
+        #self.receivepipe.set_state(gst.STATE_PLAYING)
         
         self.sink = self.receivepipe.get_by_name("sink")
         bus = self.receivepipe.get_bus()
@@ -80,29 +90,31 @@ class video_chat:
         command += "! ffmpegcolorspace ! vp8enc speed=2 max-latency=2 quality=10.0 max-keyframe-distance=3 threads=5 " 
         command += "! queue2 ! mux. alsasrc device=plughw:1,0 ! audioconvert ! vorbisenc " 
         command += "! queue2 ! mux. webmmux name=mux streamable=true "
-        command += "! tcpclientsink host=" + self.remoteip + " port=" + self.remoteport
+        command += "! tcpserversink host=" + self.remoteip + " port=" + self.remoteport
         
         self.streampipe = gst.parse_launch(command)
+        self.streampipe.set_state(gst.STATE_PLAYING)
         bus = self.streampipe.get_bus()
         bus.add_signal_watch()
         bus.connect("message", self.on_stream_message)
     
     def start_streaming_video(self):
-        #self.receivepipe.set_state(gst.STATE_PLAYING)
-        print self.video_is_streaming()
         if not self.video_is_streaming(): 
             self.streampipe.set_state(gst.STATE_PLAYING)
     
     def pause_streaming_video(self):
         self.streampipe.set_state(gst.STATE_PAUSED)
-        #self.receivepipe.set_state(gst.STATE_PAUSED)
     
     def stop_streaming_video(self):
         self.receivepipe.set_state(gst.STATE_NULL)
         self.streampipe.set_state(gst.STATE_NULL)
-        #print "state: " + str(self.receivepipe.get_state())
-        #self.receivepipe.set_state(gst.STATE_PAUSED)
-
+    
+    def stop_receiver(self):
+        self.receivepipe.set_state(gst.STATE_PAUSED)
+        
+    def start_receiver(self):
+        self.receivepipe.set_state(gst.STATE_PLAYING)
+    
     def on_message(self, bus, message):
         t = message.type
         if t == gst.MESSAGE_EOS:
@@ -114,7 +126,7 @@ class video_chat:
         elif t == gst.MESSAGE_STATE_CHANGED:
             #print 'Message: ' + str(message)
             old, new, pending = message.parse_state_changed()
-            #print new
+            #print "State: " + str(new)
             if new == gst.STATE_NULL:
                 print 'stopped'
     
@@ -125,8 +137,8 @@ class video_chat:
             print "Stream Error: %s" % err, debug
             self.stop_streaming_video()
         elif t == gst.MESSAGE_STATE_CHANGED:
-            #print 'Message: ' + str(message)
+            #print 'Stream Message: ' + str(message)
             old, new, pending = message.parse_state_changed()
-            #print new
+            #print "Stream State: " + str(new)
             if new == gst.STATE_NULL:
                 print 'stopped'
