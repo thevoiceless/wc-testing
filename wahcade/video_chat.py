@@ -127,7 +127,7 @@ class video_chat():
     def on_message(self, bus, message):
         t = message.type
         if t == gst.MESSAGE_EOS:
-            self.stop_streaming_video()
+            self.kill_pipelines()
         elif t == gst.MESSAGE_ERROR:
             err, debug = message.parse_error()
             print "Error: %s" % err, debug
