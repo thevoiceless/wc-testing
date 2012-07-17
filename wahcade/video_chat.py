@@ -12,10 +12,12 @@ import gst
 import commands
 import threading
 from constants import *
+import requests
 
-class video_chat:
+class video_chat():
     
-    def __init__(self):
+    def __init__(self, WinMain):
+        self.WinMain = WinMain
         self.enabled = True
         self.vc_file = CONFIG_DIR + "/confs/VC-default.txt"
         try:
@@ -27,12 +29,17 @@ class video_chat:
                         self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
                     
                     self.video_width, self.video_height = int(self.props["width"]), int(self.props["height"])
-                    self.localip, self.localport = self.props["localip"], self.props["localport"]
-                    self.remoteip, self.remoteport = self.props["remoteip"], self.props["remoteport"]
+                    self.localip, self.localport = self.WinMain.local_IP, self.props['localport']
+                    self.remoteip, self.remoteport = self.WinMain.local_IP, self.props["remoteport"]
+                    
+                    if self.localip != "" or self.localip != None:
+                        post_data = {"ipAddress":self.localip, "port":self.localport}
+                        r = requests.post(self.WinMain.connection_url, post_data)
             else:
                 print "The video chat configuration file was not found at: " + self.vc_file
                 enabled = False
-                return
+                return 
+
         except: 
             print "There was an error loading the video chat configuration."
             enabled = False

@@ -153,6 +153,16 @@ class WinMain(WahCade, threading.Thread):
         except requests.exceptions.ConnectionError, e: # Any exception would mean some sort of failed server connection
             self.connected_to_server = False
             print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + ":", str(e)
+        #Send IP to server
+        self.local_IP = ""
+        if self.connected_to_server:
+            import socket
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(('8.8.8.8', 80))
+            self.local_IP = s.getsockname()[0]
+            s.close()
+        self.connection_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/"
+        
         
         ### SETUP WAHCADE INI FILE
         self.wahcade_ini = MameWahIni(os.path.join(CONFIG_DIR, 'wahcade.ini'))
@@ -769,7 +779,7 @@ class WinMain(WahCade, threading.Thread):
         gtk.gdk.pointer_ungrab()
     
     def setup_video_chat(self):
-        self.video_chat = video_chat()
+        self.video_chat = video_chat(self)
         
         #link the sync to a DrawingArea
         self.vid_container = gtk.DrawingArea()
@@ -1568,14 +1578,16 @@ class WinMain(WahCade, threading.Thread):
         return score_string
     
     def portal_timer(self):
-        sound_time = random.randint((5*60), (15*60))
+        sound_time = random.randint((5), (6))
         if int(time.time() - self.portal_time_last_played) >= sound_time:
             if len(self.sounds) != 0:
-                pygame.mixer.init()
-                pygame.mixer.music.load(self.sounds[random.randrange(0, len(self.sounds))])
-                pygame.mixer.music.play()
-                self.portal_time_last_played = time.time()
-                #pygame.mixer.quit If you want to re-initialize mixer with different args
+                sound_file = self.sounds[random.randrange(0, len(self.sounds))]
+                if str(sound_file).endswith(".wav") or str(sound_file).endswith(".mp3") or str(sound_file).endswith(".mp4"):
+                    pygame.mixer.init()
+                    pygame.mixer.music.load(sound_file)
+                    pygame.mixer.music.play()
+                    self.portal_time_last_played = time.time()
+                    #pygame.mixer.quit If you want to re-initialize mixer with different args
         return True
             
     def on_scrsave_timer(self):
