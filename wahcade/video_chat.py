@@ -12,10 +12,12 @@ import gst
 import commands
 import threading
 from constants import *
+import requests
 
-class video_chat:
+class video_chat():
     
-    def __init__(self):
+    def __init__(self, WinMain):
+        self.WinMain = WinMain
         self.enabled = True
         self.vc_file = CONFIG_DIR + "/confs/VC-default.txt"
         try:
@@ -27,15 +29,20 @@ class video_chat:
                         self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
                     
                     self.video_width, self.video_height = int(self.props["width"]), int(self.props["height"])
-                    self.localip, self.localport = self.props["localip"], self.props["localport"]
-                    self.remoteip, self.remoteport = self.props["remoteip"], self.props["remoteport"]
+                    self.localip, self.localport = self.WinMain.local_IP, self.props['localport']
+                    self.remoteip, self.remoteport = self.WinMain.local_IP, self.props["remoteport"]
+                    
+                    if self.localip != "" or self.localip != None:
+                        post_data = {"ipAddress":self.localip, "port":self.localport}
+                        r = requests.post(self.WinMain.connection_url, post_data)
             else:
                 print "The video chat configuration file was not found at: " + self.vc_file
-                enabled = False
-                return
+                self.enabled = False
+                return 
+
         except: 
             print "There was an error loading the video chat configuration."
-            enabled = False
+            self.enabled = False
             return
 
         
@@ -47,7 +54,7 @@ class video_chat:
     def start_video_receiver(self):
         #webm encoded video receiver
         command = "tcpclientsrc host=" + self.localip + " port=" + self.localport + " " 
-        command += "! matroskademux name=d d. ! queue2 ! vp8dec ! ffmpegcolorspace ! xvimagesink name=sink " 
+        command += "! matroskademux name=d d. ! queue2 ! vp8dec ! ffmpegcolorspace ! xvimagesink name=sink sync=false " 
         command += "d. ! queue2 ! vorbisdec ! audioconvert ! audioresample ! alsasink sync=false"
         self.receivepipe = gst.parse_launch(command) 
         #self.receivepipe.set_state(gst.STATE_PLAYING)
@@ -71,7 +78,7 @@ class video_chat:
             print "No cameras were detected.  You can't stream video, but you can receive it."
         else:
             if int(camCount) == 1: 
-                print "There is", camCount, "camera: " + ", ".join(listOfCameras)
+                print "There is 1 camera: " + ", ".join(listOfCameras)
             else:
                 print "There are", camCount, "cameras: " + ", ".join(listOfCameras)
             device = "/dev/" + listOfCameras[index]
@@ -86,7 +93,7 @@ class video_chat:
     def setup_streaming_video(self):
         #webm video pipeline, optimized for video conferencing
         device = self.get_camera_name()
-        command = "v4l2src device=" + device + " ! video/x-raw-rgb, width=640, height=480 "
+        command = "v4l2src device=" + device + " ! video/x-raw-rgb, width=" + str(self.video_width) + ", height=" + str(self.video_height) + " "
         command += "! ffmpegcolorspace ! vp8enc speed=2 max-latency=2 quality=10.0 max-keyframe-distance=3 threads=5 " 
         command += "! queue2 ! mux. alsasrc device=plughw:1,0 ! audioconvert ! vorbisenc " 
         command += "! queue2 ! mux. webmmux name=mux streamable=true "
@@ -105,15 +112,17 @@ class video_chat:
     def pause_streaming_video(self):
         self.streampipe.set_state(gst.STATE_PAUSED)
     
-    def stop_streaming_video(self):
-        self.receivepipe.set_state(gst.STATE_NULL)
-        self.streampipe.set_state(gst.STATE_NULL)
+    
     
     def stop_receiver(self):
         self.receivepipe.set_state(gst.STATE_PAUSED)
         
     def start_receiver(self):
         self.receivepipe.set_state(gst.STATE_PLAYING)
+    
+    def kill_pipelines(self):
+        self.receivepipe.set_state(gst.STATE_NULL)
+        self.streampipe.set_state(gst.STATE_NULL)
     
     def on_message(self, bus, message):
         t = message.type
@@ -122,7 +131,7 @@ class video_chat:
         elif t == gst.MESSAGE_ERROR:
             err, debug = message.parse_error()
             print "Error: %s" % err, debug
-            self.stop_streaming_video()
+            self.kill_pipelines()
         elif t == gst.MESSAGE_STATE_CHANGED:
             #print 'Message: ' + str(message)
             old, new, pending = message.parse_state_changed()
@@ -140,5 +149,3 @@ class video_chat:
             #print 'Stream Message: ' + str(message)
             old, new, pending = message.parse_state_changed()
             #print "Stream State: " + str(new)
-            if new == gst.STATE_NULL:
-                print 'stopped'
