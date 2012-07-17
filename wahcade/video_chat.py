@@ -144,7 +144,7 @@ class video_chat():
         if t == gst.MESSAGE_ERROR:
             err, debug = message.parse_error()
             print "Stream Error: %s" % err, debug
-            self.stop_streaming_video()
+            self.kill_pipelines()
         elif t == gst.MESSAGE_STATE_CHANGED:
             #print 'Stream Message: ' + str(message)
             old, new, pending = message.parse_state_changed()
