@@ -385,7 +385,7 @@ class WinSetup(GladeSupport, WahCade):
 
     def on_mnuHAbout_activate(self, *args):
         """about dialog"""
-        self.show_about_dialog('Wah!Cade Setup', self.config_dir)
+        self.show_about_dialog('Rcade Setup', self.config_dir)
 
     def on_tvwKeys_row_activated(self, widget, path, column):
         """keys list double-clicked"""

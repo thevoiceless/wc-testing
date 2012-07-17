@@ -71,7 +71,7 @@ class video_chat:
             print "No cameras were detected.  You can't stream video, but you can receive it."
         else:
             if int(camCount) == 1: 
-                print "There is", camCount, "camera: " + ", ".join(listOfCameras)
+                print "There is 1 camera: " + ", ".join(listOfCameras)
             else:
                 print "There are", camCount, "cameras: " + ", ".join(listOfCameras)
             device = "/dev/" + listOfCameras[index]

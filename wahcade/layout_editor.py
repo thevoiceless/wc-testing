@@ -62,7 +62,7 @@ class WinLayout(GladeSupport, WahCade):
 
     def __init__(self, glade_filename, window_name, config_opts, config_args):
         """build the window"""
-        self.title = 'Wah!Cade Layout Editor'
+        self.title = 'Rcade Layout Editor'
         WahCade.__init__(self)
         GladeSupport.__init__(self, glade_filename, window_name)
         #dnd constants
@@ -77,7 +77,7 @@ class WinLayout(GladeSupport, WahCade):
             #got with the default config location
             self.config_dir = CONFIG_DIR
             if not os.path.exists(self.config_dir):
-                sys.exit(_('No Wah!Cade config files found.  Run wahcade or wahcade-setup first.'))
+                sys.exit(_('No config files found.  Run rcade or rcade-setup first.'))
         self.fixdMain = gtk.Fixed()
         self.fixdOpt = gtk.Fixed()
         self.fixdMsg = gtk.Fixed()
@@ -341,7 +341,7 @@ class WinLayout(GladeSupport, WahCade):
         if self.layout_altered or self.cpviewer_altered or self.histview_altered:
             msg = _('Save:')
             if self.layout_altered:
-                msg += _('\n  Wah!Cade Layout')
+                msg += _('\n  Rcade Layout')
             if self.cpviewer_altered:
                 msg += _('\n  CPViewer Layout')
             if self.histview_altered:
@@ -422,10 +422,10 @@ class WinLayout(GladeSupport, WahCade):
             #fixd.size_allocate(allocation)
 
     def on_mnuFOpen_activate(self, *args):
-        """open wahcade layout"""
+        """open rcade layout"""
         self.open_layout_dialog(
             self.layout_filename,
-            _('Open Wah!Cade Layout'),
+            _('Open Rcade Layout'),
             self.load_layout_file)
         self.set_window_title()
 
@@ -455,10 +455,10 @@ class WinLayout(GladeSupport, WahCade):
             self.save_histview_file()
 
     def on_mnuFSaveAs_activate(self, *args):
-        """save wahcade layout file as"""
+        """save rcade layout file as"""
         self.save_layout_dialog(
             self.layout_filename,
-            _('Save Wah!Cade Layout'),
+            _('Save Rcade Layout'),
             self.save_layout_file)
         self.set_window_title()
 

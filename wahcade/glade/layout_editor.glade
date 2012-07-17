@@ -747,7 +747,7 @@
 
 <widget class="GtkWindow" id="winMain">
   <property name="visible">True</property>
-  <property name="title" translatable="yes">Wah!Cade Layout Editor</property>
+  <property name="title" translatable="yes">Rcade Layout Editor</property>
   <property name="type">GTK_WINDOW_TOPLEVEL</property>
   <property name="window_position">GTK_WIN_POS_NONE</property>
   <property name="modal">False</property>
@@ -796,7 +796,7 @@
 		  <child>
 		    <widget class="GtkImageMenuItem" id="mnuFOpen">
 		      <property name="visible">True</property>
-		      <property name="label" translatable="yes">_Open Wah!Cade Layout</property>
+		      <property name="label" translatable="yes">_Open Rcade Layout</property>
 		      <property name="use_underline">True</property>
 		      <signal name="activate" handler="on_mnuFOpen_activate" last_modification_time="Tue, 04 Jul 2006 10:29:54 GMT"/>
 		      <accelerator key="O" modifiers="GDK_CONTROL_MASK" signal="activate"/>
@@ -869,7 +869,7 @@
 		  <child>
 		    <widget class="GtkImageMenuItem" id="mnuFSaveAs">
 		      <property name="visible">True</property>
-		      <property name="label" translatable="yes">Save Wah!Cade Layout _As</property>
+		      <property name="label" translatable="yes">Save Rcade Layout _As</property>
 		      <property name="use_underline">True</property>
 		      <signal name="activate" handler="on_mnuFSaveAs_activate" last_modification_time="Tue, 04 Jul 2006 10:29:54 GMT"/>
 
@@ -1629,7 +1629,7 @@
 	  <child>
 	    <widget class="GtkCheckButton" id="chkBackgroundImage">
 	      <property name="visible">True</property>
-	      <property name="tooltip" translatable="yes">Leave unchecked for Wah!Cade to auto-detect background images.</property>
+	      <property name="tooltip" translatable="yes">Leave unchecked for Rcade to auto-detect background images.</property>
 	      <property name="can_focus">True</property>
 	      <property name="label" translatable="yes">Background Image</property>
 	      <property name="use_underline">True</property>
