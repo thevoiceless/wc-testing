@@ -16,9 +16,10 @@ import requests
 
 class video_chat():
     
-    def __init__(self, WinMain):
+    def __init__(self, WinMain, connection):
         self.WinMain = WinMain
         self.enabled = True
+        self.WinMain.video_enabled = True
         self.vc_file = CONFIG_DIR + "/confs/VC-default.txt"
         try:
             if os.path.exists(self.vc_file):
@@ -37,12 +38,14 @@ class video_chat():
                         r = requests.post(self.WinMain.connection_url, post_data)
             else:
                 print "The video chat configuration file was not found at: " + self.vc_file
-                enabled = False
+                self.enabled = False
+                self.WinMain.video_enabled = False
                 return 
 
         except: 
             print "There was an error loading the video chat configuration."
-            enabled = False
+            self.enabled = False
+            self.WinMain.video_enabled = False
             return
 
         

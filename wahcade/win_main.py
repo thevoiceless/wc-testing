@@ -119,6 +119,7 @@ class WinMain(WahCade, threading.Thread):
         pygame_imported = True
         old_keyb_events = False
         debug_mode = False
+        self.video_chat_enabled = False
         self.showOverlayThresh = 10
         self.showImgThresh = 6
         self.showHighScoreThresh = 10
@@ -162,7 +163,7 @@ class WinMain(WahCade, threading.Thread):
             self.local_IP = s.getsockname()[0]
             s.close()
         self.connection_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/"
-        
+        self.start_timer('connection')
         
         ### SETUP WAHCADE INI FILE
         self.wahcade_ini = MameWahIni(os.path.join(CONFIG_DIR, 'wahcade.ini'))
@@ -558,7 +559,7 @@ class WinMain(WahCade, threading.Thread):
         self.drwVideo.set_property('visible', False)
         
         #Initialize video chat
-        self.setup_video_chat()
+#        self.setup_video_chat()
 
         if not self.showcursor:
             self.hide_mouse_cursor(self.winMain)
@@ -778,8 +779,8 @@ class WinMain(WahCade, threading.Thread):
         self.pointer_grabbed = False
         gtk.gdk.pointer_ungrab()
     
-    def setup_video_chat(self):
-        self.video_chat = video_chat(self)
+    def setup_video_chat(self, connection):
+        self.video_chat = video_chat(self, connection)
         
         #link the sync to a DrawingArea
         self.vid_container = gtk.DrawingArea()
@@ -1317,7 +1318,7 @@ class WinMain(WahCade, threading.Thread):
                         self.options.set_menu('exit')
                         self.show_window('options')
                     elif mw_func == 'TOGGLE_VIDEO':
-                        if self.video_chat.enabled:
+                        if self.video_chat_enabled:
                             #TODO: find a way to pause and play the stream without the video becoming choppy
                             #right now it just hides the gtk DrawingArea container
                             if self.vid_container.get_property("visible") == False:
@@ -2792,6 +2793,25 @@ class WinMain(WahCade, threading.Thread):
                 self.video_enabled = False
                 self.log_msg('Warning: Failed to create Video gstreamer objects','0')
                 return
+            
+    def check_for_connections(self):
+        data = requests.get(self.connection_url)
+#       self.check_connection(data.status_code)
+        data = fromstring(data.text)
+        list_of_ips = []
+        for ipAddr in data.getiterator('connection'):
+            list_of_ips.append([ipAddr.find('ipAddress').text, ipAddr.find('port').text])
+        for ip in list_of_ips:
+            if ip[0] != self.local_IP:
+                self.setup_video_chat(ip)
+                break
+        return False
+            
+    def on_connection_timer(self):
+        print 'checking connections'
+        self.check_for_connections()
+        return True
+        
 
     def start_timer(self, timer_type):
         """Start given timer"""
@@ -2819,6 +2839,8 @@ class WinMain(WahCade, threading.Thread):
             if self.portal_time:
                 gobject.source_remove(self.portal_time)
             self.portal_time = gobject.timeout_add(2500, self.portal_timer)
+        elif timer_type == 'connection':
+            self.connection_time = gobject.timeout_add(5000, self.on_connection_timer)
 
     def display_splash(self):
         """Show splash screen"""
