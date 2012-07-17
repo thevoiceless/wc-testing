@@ -161,6 +161,7 @@ class WinMain(WahCade, threading.Thread):
         self.keep_aspect = self.wahcade_ini.getint('keep_image_aspect')
         self.scrsave_delay = self.wahcade_ini.getint('delay') # TODO: Fix screensaver time
         self.auto_logout_delay = self.wahcade_ini.getint('log_out')
+        self.hide_logout_delay = self.wahcade_ini.getint('hide_message')
         self.layout_orientation = self.wahcade_ini.getint('layout_orientation', 0)
         self.screentype = self.wahcade_ini.getint('fullscreen', 0)
         self.intro_movie = self.wahcade_ini.get('intro_movie_file')
@@ -241,7 +242,8 @@ class WinMain(WahCade, threading.Thread):
         self.lblDriverStatus = gtk.Label()
         self.lblCatVer = gtk.Label()
         self.lblHighScoreData = gtk.Label()
-        self.user = gtk.Label()
+        self.lblUsersLoggedIn = gtk.Label()
+        self.lblUsersLoggedOut = gtk.Label()
         # Overlay for games list
         self.gamesOverlayBG = gtk.Image()
         self.lblGamesOverlayScrollLetters = gtk.Label()
@@ -327,6 +329,7 @@ class WinMain(WahCade, threading.Thread):
         self.scrsave_time = time.time()
         self.portal_time_last_played = time.time()
         self.portal_time = None
+        self.timeLogoutShown = time.time()
        
         ### Create options window
         self.options = WinOptions(self)
@@ -388,7 +391,8 @@ class WinMain(WahCade, threading.Thread):
             (281, self.lblCatVer, "CatVer"),
             (-1, self.gamesScrollOverlay, "ScrollOverlay"),
             (-1, self.lblHighScoreData, "HighScoreData"),               # High score data
-            (-1, self.user, "UserName")]                                # Currently logged in user
+            (-1, self.lblUsersLoggedIn, "LoggedInUsers"),               # Currently logged in users
+            (-1, self.lblUsersLoggedOut, "LoggedOutUsers")]             # Show when user(s) log out
         self._options_items = [
             (301, self.options.lblHeading, "OptHeading"),               # Options window title
             (314, self.options.sclOptions, "OptionsList"),              # Options list
@@ -517,8 +521,6 @@ class WinMain(WahCade, threading.Thread):
                 self.connected_to_arduino = False
                 print "Failed to connect to Arduino:", str(e)
         if self.connected_to_server:
-            self.user.set_text("Not Logged In")
-            self.user.show()
             self.running = True
             if self.connected_to_arduino:
                 self.log_in_queue = Queue.Queue()
@@ -532,8 +534,8 @@ class WinMain(WahCade, threading.Thread):
 #                                    ['Riley Moses', '5200001A9BD3'],
 #                                    ['John Kelly', '52000003C697']
 #                                    ['Devin Wilson, '52000007EFBA']]
-            self.user.set_text("Not Logged In")
-            self.user.show()
+            self.lblUsersLoggedIn.set_text("No Users Logged In")
+            self.lblUsersLoggedIn.show()
         # Generate unregistered user list
         self.identify.Setup_IDs_list()
 
@@ -816,7 +818,7 @@ class WinMain(WahCade, threading.Thread):
                             if 'SCORE' in high_score_table: # If high score table has score
                                 if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB
                                     if 'NAME' in high_score_table:
-                                        post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.user.get_text()}                         
+                                        post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.lblUsersLoggedIn.get_text()}                         
                                     else:
                                         post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.current_players[0]}
                                     r = requests.post(self.score_url, post_data)
@@ -915,6 +917,7 @@ class WinMain(WahCade, threading.Thread):
             if player_name in self.current_players:
                 self.recent_log = True
                 self.last_log = player_rfid
+                print "calling logout"
                 self.log_out(player_name)
             # Max players
 #            elif len(self.current_players) == 4:
@@ -925,7 +928,7 @@ class WinMain(WahCade, threading.Thread):
                 self.recent_log = True
                 self.last_log = player_rfid
                 self.current_players.append(player_name)
-                self.user.set_text(self.get_logged_in_user_string(self.current_players))   
+                self.lblUsersLoggedIn.set_text(self.get_logged_in_user_string(self.current_players))
             # If player doesn't exist then add them to DB
             else:
                 self.register_new_player(player_rfid)
@@ -954,26 +957,32 @@ class WinMain(WahCade, threading.Thread):
             if not player_rfid in players: # if player doesn't exist and add them to DB and log them in
                 self.register_new_player(random.randint(100000, 10000000000), player_rfid)
                 self.current_players.append(player_rfid)
-                self.user.set_text(self.get_logged_in_user_string(self.current_players))
+                self.lblUsersLoggedIn.set_text(self.get_logged_in_user_string(self.current_players))
             # If player already logged in, log them out
             elif player_rfid in self.current_players:
                 self.log_out(player_rfid)
             # Player not logged in, log them in
             else:
                 self.current_players.append(player_rfid)
-                self.user.set_text(self.get_logged_in_user_string(self.current_players))      
+                self.lblUsersLoggedIn.set_text(self.get_logged_in_user_string(self.current_players))      
 
             
     def log_out(self, player_name = "All"):
         """Logs a player out"""
         if player_name == "All":
             self.current_players = []
+            self.lblUsersLoggedOut.set_text("All users have been logged out.")
+            self.lblUsersLoggedOut.show()
+            self.timeLogoutShown = time.time()
         else:
             self.current_players.remove(player_name)
+            self.lblUsersLoggedOut.set_text(player_name + " has logged out.")
+            self.lblUsersLoggedOut.show()
+            self.timeLogoutShown = time.time()
         if self.current_players == []:
-            self.user.set_text("Not logged in")
+            self.lblUsersLoggedIn.set_text("Not logged in")
         else:
-            self.user.set_text(self.get_logged_in_user_string(self.current_players))
+            self.lblUsersLoggedIn.set_text(self.get_logged_in_user_string(self.current_players))
             
     def register_new_player(self, player_rfid, player_name = ''): # TODO: Ultimately we will remove player_name from this function call
         """Add a new player to the database"""
@@ -1014,15 +1023,16 @@ class WinMain(WahCade, threading.Thread):
         
     def get_logged_in_user_string(self, current_users):
         """Get string containing names of loged in users"""
-        index = 1
-        string = ''
-        for user in current_users:
-            if index == 1:
-                string += user
-                index += 1
+        s = ''
+        for index, user in enumerate(reversed(current_users)):
+            if index == 0:
+                s += user
+            elif index > 3:
+                s += ", ..."
+                break
             else:
-                string += ", " + user
-        return string
+                s += ", " + user
+        return s
 
     def reset_recent_log(self):
         """Reset's vars for preventing a user from rapidly logging in"""
@@ -1309,7 +1319,6 @@ class WinMain(WahCade, threading.Thread):
                                 #print "Hide video chat"
                                 #self.pause_video_chat()
                                 self.vid_container.hide()
-                            
                 elif current_window == 'options':
                     # Options form
                     if mw_func == 'OP_UP_1_OPTION':
@@ -1570,6 +1579,9 @@ class WinMain(WahCade, threading.Thread):
             
     def on_scrsave_timer(self):
         """Timer event - check to see if we need to start video or screen saver"""
+        # Hide the label saying when a user logs out
+        if int(time.time() - self.timeLogoutShown) >= self.hide_logout_delay:
+            self.lblUsersLoggedOut.hide()
         # Use timer for screen saver to log a person out after period of inactivity
         if int(time.time() - self.scrsave_time) >= self.auto_logout_delay and self.current_players != []:
             self.log_out()

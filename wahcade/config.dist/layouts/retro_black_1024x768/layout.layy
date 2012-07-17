@@ -31,7 +31,7 @@ main:
     width: 383
     x: 571
     y: 627
-  UserName:
+  LoggedInUsers:
     background-col: '#000000'
     font: SF Atarian System Extended
     font-bold: true
@@ -45,7 +45,22 @@ main:
     visible: false
     width: 1024
     x: 0
-    y: 5  
+    y: 5
+  LoggedOutUsers:
+    background-col: '#000000'
+    font: SF Atarian System Extended
+    font-bold: true
+    font-italic: false
+    font-size: 12.0
+    height: 25
+    text-align: 0.5
+    text-col: '#4ea63f'
+    text-rotation: 0
+    transparent: false
+    visible: false
+    width: 1024
+    x: 0
+    y: 30
   DriverStatus:
     background-col: '#000000'
     font: SF Atarian System Extended
@@ -77,7 +92,7 @@ main:
     visible: true
     width: 506
     x: 515
-    y: 13
+    y: 20
   GameDescription:
     background-col: '#000000'
     font: SF Atarian System Extended
@@ -128,7 +143,7 @@ main:
     visible: true
     width: 506
     x: 4
-    y: 13
+    y: 20
   GameSelected:
     background-col: '#000000'
     font: Sans
