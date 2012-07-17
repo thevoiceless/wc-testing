@@ -19,6 +19,7 @@ class video_chat():
     def __init__(self, WinMain):
         self.WinMain = WinMain
         self.enabled = True
+        self.receiver_running = False
         self.vc_file = CONFIG_DIR + "/confs/VC-default.txt"
         try:
             if os.path.exists(self.vc_file):
@@ -29,8 +30,10 @@ class video_chat():
                         self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
                     
                     self.video_width, self.video_height = int(self.props["width"]), int(self.props["height"])
+                    print self.WinMain.local_IP
+                    print self.props['localport']
                     self.localip, self.localport = self.WinMain.local_IP, self.props['localport']
-                    self.remoteip, self.remoteport = self.WinMain.local_IP, self.props["remoteport"]
+                    self.remoteip, self.remoteport = "", ""#self.WinMain.local_IP, self.props["remoteport"]
                     
                     if self.localip != "" or self.localip != None:
                         post_data = {"ipAddress":self.localip, "port":self.localport}
@@ -39,7 +42,6 @@ class video_chat():
                 print "The video chat configuration file was not found at: " + self.vc_file
                 self.enabled = False
                 return 
-
         except: 
             print "There was an error loading the video chat configuration."
             self.enabled = False
@@ -48,12 +50,13 @@ class video_chat():
         
         #Set up the streaming pipelines
         self.setup_streaming_video()
-        self.start_video_receiver()
+#        self.setup_video_receiver()
         #raw_input("Press Enter to start streaming your video camera")
         
-    def start_video_receiver(self):
+    def setup_video_receiver(self):
         #webm encoded video receiver
-        command = "tcpclientsrc host=" + self.localip + " port=" + self.localport + " " 
+        self.remoteip, self.remoteport = "192.168.50.22", "3000" #COMMENT THIS TO ALLOW MULTIPLE MACHINES
+        command = "tcpclientsrc host=" + self.remoteip + " port=" + self.remoteport + " " 
         command += "! matroskademux name=d d. ! queue2 ! vp8dec ! ffmpegcolorspace ! xvimagesink name=sink sync=false " 
         command += "d. ! queue2 ! vorbisdec ! audioconvert ! audioresample ! alsasink sync=false"
         self.receivepipe = gst.parse_launch(command) 
@@ -67,6 +70,7 @@ class video_chat():
 #        bus.connect("sync-message::element", self.on_sync_message)
         
 #        self.receivepipe.set_state(gst.STATE_PLAYING)
+        self.receiver_running = True
         print "Video Chat Receiver started"
         
     def get_camera_name(self, index = 0):
@@ -97,7 +101,7 @@ class video_chat():
         command += "! ffmpegcolorspace ! vp8enc speed=2 max-latency=2 quality=10.0 max-keyframe-distance=3 threads=5 " 
         command += "! queue2 ! mux. alsasrc device=plughw:1,0 ! audioconvert ! vorbisenc " 
         command += "! queue2 ! mux. webmmux name=mux streamable=true "
-        command += "! tcpserversink host=" + self.remoteip + " port=" + self.remoteport
+        command += "! tcpserversink host=" + self.localip + " port=" + self.localport
         
         self.streampipe = gst.parse_launch(command)
         self.streampipe.set_state(gst.STATE_PLAYING)
@@ -127,8 +131,10 @@ class video_chat():
     def on_message(self, bus, message):
         t = message.type
         if t == gst.MESSAGE_EOS:
+            self.receiver_running = False
             self.kill_pipelines()
         elif t == gst.MESSAGE_ERROR:
+            self.receiver_running = False
             err, debug = message.parse_error()
             print "Error: %s" % err, debug
             self.kill_pipelines()
@@ -144,7 +150,7 @@ class video_chat():
         if t == gst.MESSAGE_ERROR:
             err, debug = message.parse_error()
             print "Stream Error: %s" % err, debug
-            self.stop_streaming_video()
+            self.kill_pipelines()
         elif t == gst.MESSAGE_STATE_CHANGED:
             #print 'Stream Message: ' + str(message)
             old, new, pending = message.parse_state_changed()
