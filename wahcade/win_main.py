@@ -93,7 +93,7 @@ from mamewah_ini import MameWahIni      # Reads mamewah-formatted ini file
 import joystick                         # joystick.py, joystick class, uses pygame package (SDL bindings for games in Python)
 import requests
 import pygame
-from video_chat import video_chat       #import the video chat element
+#from video_chat import video_chat       #import the video chat element
 from xml.etree.ElementTree import fromstring
 # Set gettext function
 _ = gettext.gettext
@@ -461,9 +461,6 @@ class WinMain(WahCade, threading.Thread):
         self.layout_file = ''
         self.load_emulator()
                 
-        #Initialize video chat if enabled
-#        self.setup_video_chat()
-
         # Get a list of games already on the server
         self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
         self.player_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/"
@@ -556,7 +553,7 @@ class WinMain(WahCade, threading.Thread):
         self.drwVideo.set_property('visible', False)
         
         #Initialize video chat
-        self.setup_video_chat()
+#        self.setup_video_chat()
 
         if not self.showcursor:
             self.hide_mouse_cursor(self.winMain)
@@ -646,8 +643,8 @@ class WinMain(WahCade, threading.Thread):
         # Stop video playing if necessary
         self.stop_video()
         #stop video streaming
-        if self.video_chat.enabled:
-            self.clean_up_video_chat()
+#        if self.video_chat.enabled:
+#            self.clean_up_video_chat()
         # Tells the arduino thread to terminate properly
         self.running = False
         # Save ini files
@@ -776,28 +773,28 @@ class WinMain(WahCade, threading.Thread):
         self.pointer_grabbed = False
         gtk.gdk.pointer_ungrab()
     
-    def setup_video_chat(self):
-        self.video_chat = video_chat(self)
-        
-        #link the sync to a DrawingArea
-        self.vid_container = gtk.DrawingArea()
-        self.vid_container.modify_bg(gtk.STATE_NORMAL, self.vid_container.style.black)
-        self.fixd.put(self.vid_container, 645, 80)
-        self.vid_container.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
-        #print self.vid_container.window.xid
-        if self.video_chat.enabled:
-            self.video_chat.sink.set_xwindow_id(self.vid_container.window.xid)
-        
-        
-    def start_video_chat(self):
-        self.video_chat.start_receiver()
-        self.video_chat.sink.set_xwindow_id(self.vid_container.window.xid)
-    
-    def stop_video_chat(self):
-        self.video_chat.stop_receiver()
-        
-    def clean_up_video_chat(self):
-        self.video_chat.kill_pipelines()
+#    def setup_video_chat(self):
+#        self.video_chat = video_chat(self)
+#        
+#        #link the sync to a DrawingArea
+#        self.vid_container = gtk.DrawingArea()
+#        self.vid_container.modify_bg(gtk.STATE_NORMAL, self.vid_container.style.black)
+#        self.fixd.put(self.vid_container, 645, 80)
+#        self.vid_container.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
+#        #print self.vid_container.window.xid
+#        if self.video_chat.enabled:
+#            self.video_chat.sink.set_xwindow_id(self.vid_container.window.xid)
+#        
+#        
+#    def start_video_chat(self):
+#        self.video_chat.start_receiver()
+#        self.video_chat.sink.set_xwindow_id(self.vid_container.window.xid)
+#    
+#    def stop_video_chat(self):
+#        self.video_chat.stop_receiver()
+#        
+#    def clean_up_video_chat(self):
+#        self.video_chat.kill_pipelines()
        
     def parse_high_score_text(self, text_string):
         """Parse the text file for high scores. 0 scores are not sent"""
@@ -991,20 +988,20 @@ class WinMain(WahCade, threading.Thread):
             
     def register_new_player(self, player_rfid, player_name = ''): # TODO: Ultimately we will remove player_name from this function call
         """Add a new player to the database"""
-        in_db = False
         if self.connected_to_arduino:
             # Bring up new player list
+            print "before identity"
             self.show_window('identify')
             self.identify.setRFIDlbl(player_rfid)
             self.identify.sclIDs._update_display()
-            for person in self.player_info:
-                if person[1] == player_rfid:
-                    in_db=True
-                    break
+            print "identify brought up"
+            
             while self.current_window == 'identify':
-                self.wait_with_events(0.1)
+#                time.sleep(0.01)
+                pass
+            print "left identify"
             player_name = self.selected_player
-            if player_name != '' and not in_db:
+            if player_name != '':
                 self.player_info.append([player_name, player_rfid]) # parse player name and RFID from xml
                 post_data = {"name":player_name, "playerID":player_rfid}
                 requests.post(self.player_url, post_data)
@@ -1017,13 +1014,8 @@ class WinMain(WahCade, threading.Thread):
             if not self.connected_to_server:
                 print "Not connected to database"
                 return
-            for person in self.player_info:
-                if person[0] == player_rfid:
-                    in_db=True
-                    break
-            if not in_db:
-                post_data = {"name":player_name, "playerID":player_rfid}
-                requests.post(self.player_url, post_data)
+            post_data = {"name":player_name, "playerID":player_rfid}
+            requests.post(self.player_url, post_data)
                 
         
     def get_logged_in_user_string(self, current_users):
@@ -1046,6 +1038,7 @@ class WinMain(WahCade, threading.Thread):
 
     def on_winMain_key_press(self, widget, event, *args):
         """Respond to key presses"""
+        print "keypressed"
         if not os.path.exists(self.lock_filename):
             current_window = self.current_window
             mw_keys = []
@@ -1314,20 +1307,20 @@ class WinMain(WahCade, threading.Thread):
                         self.play_clip('EXIT_WITH_CHOICE')
                         self.options.set_menu('exit')
                         self.show_window('options')
-                    elif mw_func == 'TOGGLE_VIDEO':
-                        if self.video_chat.enabled:
-                            #TODO: find a way to pause and play the stream without the video becoming choppy
-                            #right now it just hides the gtk DrawingArea container
-                            if self.vid_container.get_property("visible") == False:
-                                #print "Show video chat"
-                                self.start_video_chat()
-                                self.vid_container.show()
-                            else:
-                                #print "Hide video chat"
-                                #self.stop_video_chat()
-                                self.vid_container.hide()
-                        else:
-                            print "Video Chat is disabled."  
+#                    elif mw_func == 'TOGGLE_VIDEO':
+#                        if self.video_chat.enabled:
+#                            #TODO: find a way to pause and play the stream without the video becoming choppy
+#                            #right now it just hides the gtk DrawingArea container
+#                            if self.vid_container.get_property("visible") == False:
+#                                #print "Show video chat"
+#                                self.start_video_chat()
+#                                self.vid_container.show()
+#                            else:
+#                                #print "Hide video chat"
+#                                #self.stop_video_chat()
+#                                self.vid_container.hide()
+#                        else:
+#                            print "Video Chat is disabled."  
                 elif current_window == 'options':
                     # Options form
                     if mw_func == 'OP_UP_1_OPTION':
@@ -1408,6 +1401,7 @@ class WinMain(WahCade, threading.Thread):
                         self.message.hide()
                 # Identify window
                 elif current_window == 'identify':
+                    print "keypress"
                     # Display first n letters of selected name when scrolling quickly
                     if self.scroll_count > self.showOverlayThresh:
                         overlayLetters = self.identify.sclIDs.ls[ self.identify.sclIDs.get_selected() ][ 0 : self.IDsScrollOverlay.charShowCount ]
@@ -3067,6 +3061,7 @@ class WinMain(WahCade, threading.Thread):
         while(self.running):
             # Checks if there is an RFID waiting in the output buffer of the arduino
             if self.rfid_reader.inWaiting() >= 12:
+                print "reading card"
                 self.scrsave_time = time.time()
                 if self.scrsaver.running:
                     self.scrsaver.stop_scrsaver()
