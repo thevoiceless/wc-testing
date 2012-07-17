@@ -47,7 +47,7 @@ class video_chat:
     def start_video_receiver(self):
         #webm encoded video receiver
         command = "tcpclientsrc host=" + self.localip + " port=" + self.localport + " " 
-        command += "! matroskademux name=d d. ! queue2 ! vp8dec ! ffmpegcolorspace ! xvimagesink name=sink " 
+        command += "! matroskademux name=d d. ! queue2 ! vp8dec ! ffmpegcolorspace ! xvimagesink name=sink sync=false " 
         command += "d. ! queue2 ! vorbisdec ! audioconvert ! audioresample ! alsasink sync=false"
         self.receivepipe = gst.parse_launch(command) 
         #self.receivepipe.set_state(gst.STATE_PLAYING)
@@ -86,7 +86,7 @@ class video_chat:
     def setup_streaming_video(self):
         #webm video pipeline, optimized for video conferencing
         device = self.get_camera_name()
-        command = "v4l2src device=" + device + " ! video/x-raw-rgb, width=640, height=480 "
+        command = "v4l2src device=" + device + " ! video/x-raw-rgb, width=" + str(self.video_width) + ", height=" + str(self.video_height) + " "
         command += "! ffmpegcolorspace ! vp8enc speed=2 max-latency=2 quality=10.0 max-keyframe-distance=3 threads=5 " 
         command += "! queue2 ! mux. alsasrc device=plughw:1,0 ! audioconvert ! vorbisenc " 
         command += "! queue2 ! mux. webmmux name=mux streamable=true "
@@ -105,15 +105,17 @@ class video_chat:
     def pause_streaming_video(self):
         self.streampipe.set_state(gst.STATE_PAUSED)
     
-    def stop_streaming_video(self):
-        self.receivepipe.set_state(gst.STATE_NULL)
-        self.streampipe.set_state(gst.STATE_NULL)
+    
     
     def stop_receiver(self):
         self.receivepipe.set_state(gst.STATE_PAUSED)
         
     def start_receiver(self):
         self.receivepipe.set_state(gst.STATE_PLAYING)
+    
+    def kill_pipelines(self):
+        self.receivepipe.set_state(gst.STATE_NULL)
+        self.streampipe.set_state(gst.STATE_NULL)
     
     def on_message(self, bus, message):
         t = message.type
@@ -140,5 +142,3 @@ class video_chat:
             #print 'Stream Message: ' + str(message)
             old, new, pending = message.parse_state_changed()
             #print "Stream State: " + str(new)
-            if new == gst.STATE_NULL:
-                print 'stopped'

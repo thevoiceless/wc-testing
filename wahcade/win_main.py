@@ -446,9 +446,6 @@ class WinMain(WahCade, threading.Thread):
         self.emu_ini = None
         self.layout_file = ''
         self.load_emulator()
-        
-        #Initialize video chat
-        self.setup_video_chat()
 
         # Get a list of games already on the server
         self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
@@ -547,6 +544,9 @@ class WinMain(WahCade, threading.Thread):
         self.winMain.show()
         
         self.drwVideo.set_property('visible', False)
+        
+        #Initialize video chat
+        self.setup_video_chat()
 
         if not self.showcursor:
             self.hide_mouse_cursor(self.winMain)
@@ -636,7 +636,8 @@ class WinMain(WahCade, threading.Thread):
         # Stop video playing if necessary
         self.stop_video()
         #stop video streaming
-        self.stop_video_chat()
+        if self.video_chat.enabled:
+            self.clean_up_video_chat()
         # Tells the arduino thread to terminate properly
         self.running = False
         # Save ini files
@@ -767,24 +768,26 @@ class WinMain(WahCade, threading.Thread):
     
     def setup_video_chat(self):
         self.video_chat = video_chat()
-        self.sink = self.video_chat.sink
         
         #link the sync to a DrawingArea
         self.vid_container = gtk.DrawingArea()
         self.vid_container.modify_bg(gtk.STATE_NORMAL, self.vid_container.style.black)
-        self.fixd.put(self.vid_container, 300, 80)
+        self.fixd.put(self.vid_container, 325, 80)
         self.vid_container.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
         #print self.vid_container.window.xid
         
-        self.sink.set_xwindow_id(self.vid_container.window.xid)
+        self.video_chat.sink.set_xwindow_id(self.vid_container.window.xid)
         
         
     def start_video_chat(self):
         self.video_chat.start_receiver()
+        self.video_chat.sink.set_xwindow_id(self.vid_container.window.xid)
     
     def stop_video_chat(self):
         self.video_chat.stop_receiver()
-     
+        
+    def clean_up_video_chat(self):
+        self.video_chat.kill_pipelines()
        
     def parse_high_score_text(self, text_string):
         """Parse the text file for high scores. 0 scores are not sent"""
