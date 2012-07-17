@@ -119,6 +119,7 @@ class WinMain(WahCade, threading.Thread):
         pygame_imported = True
         old_keyb_events = False
         debug_mode = False
+        self.remote_ip = None
         self.video_chat_enabled = False
         self.showOverlayThresh = 10
         self.showImgThresh = 6
@@ -155,12 +156,12 @@ class WinMain(WahCade, threading.Thread):
             self.connected_to_server = False
             print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + ":", str(e)
         #Send IP to server
-        self.local_IP = ""
+        self.local_IP = "" #Initialize local ip
         if self.connected_to_server:
             import socket
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect(('8.8.8.8', 80))
-            self.local_IP = s.getsockname()[0]
+            self.local_IP = s.getsockname()[0] #Get local ip address
             s.close()
         self.connection_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/"
         self.start_timer('connection')
@@ -559,7 +560,7 @@ class WinMain(WahCade, threading.Thread):
         self.drwVideo.set_property('visible', False)
         
         #Initialize video chat
-#        self.setup_video_chat()
+        self.setup_video_chat()
 
         if not self.showcursor:
             self.hide_mouse_cursor(self.winMain)
@@ -779,20 +780,21 @@ class WinMain(WahCade, threading.Thread):
         self.pointer_grabbed = False
         gtk.gdk.pointer_ungrab()
     
-    def setup_video_chat(self, connection):
-        self.video_chat = video_chat(self, connection)
+    def setup_video_chat(self):
+        self.video_chat = video_chat(self)
         
         #link the sync to a DrawingArea
         self.vid_container = gtk.DrawingArea()
         self.vid_container.modify_bg(gtk.STATE_NORMAL, self.vid_container.style.black)
-        self.fixd.put(self.vid_container, 325, 80)
+        self.fixd.put(self.vid_container, 645, 80)
         self.vid_container.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
         #print self.vid_container.window.xid
-        
-        self.video_chat.sink.set_xwindow_id(self.vid_container.window.xid)
+#        if self.video_chat.enabled:
+#            self.video_chat.sink.set_xwindow_id(self.vid_container.window.xid)
         
         
     def start_video_chat(self):
+#        self.video_chat.start_receiver()
         self.video_chat.start_receiver()
         self.video_chat.sink.set_xwindow_id(self.vid_container.window.xid)
     
@@ -1318,12 +1320,19 @@ class WinMain(WahCade, threading.Thread):
                         self.options.set_menu('exit')
                         self.show_window('options')
                     elif mw_func == 'TOGGLE_VIDEO':
-                        if self.video_chat_enabled:
+                        self.remote_ip = self.local_IP #REMOVE THIS WHEN CONNECTING TO MULTIPLE MACHINES
+                        if self.video_chat.enabled and self.remote_ip:
                             #TODO: find a way to pause and play the stream without the video becoming choppy
                             #right now it just hides the gtk DrawingArea container
+                            if not self.video_chat.receiver_running:
+                                self.video_chat.remoteip = self.remote_ip[0]
+                                self.video_chat.remoteport = self.remote_ip[1]
+                                self.video_chat.setup_video_receiver()
+                            
                             if self.vid_container.get_property("visible") == False:
                                 #print "Show video chat"
                                 self.start_video_chat()
+                                self.wait_with_events(0.01)
                                 self.vid_container.show()
                             else:
                                 #print "Hide video chat"
@@ -2803,7 +2812,7 @@ class WinMain(WahCade, threading.Thread):
             list_of_ips.append([ipAddr.find('ipAddress').text, ipAddr.find('port').text])
         for ip in list_of_ips:
             if ip[0] != self.local_IP:
-                self.setup_video_chat(ip)
+                self.remote_ip = ip
                 break
         return False
             
