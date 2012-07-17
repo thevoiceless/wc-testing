@@ -107,20 +107,6 @@ class WinMain(WahCade, threading.Thread):
         # Begin the thread for reading from arduino
         threading.Thread.__init__(self)
         
-        # Try connecting to a database, otherwise
-        self.db_file = CONFIG_DIR + "/confs/DB-" + config_opts.db_config_file + ".txt"
-        try:
-            with open(self.db_file, 'rt') as f: # Open the config file and extract the database connection information
-                self.props = {}  # Dictionary
-                for line in f.readlines():
-                    val = line.split('=')
-                    self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
-                r = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']) # Attempt to make connection to server
-                self.check_connection(r.status_code)
-        except requests.exceptions.ConnectionError, e: # Any exception would mean some sort of failed server connection
-            self.connected_to_server = False
-            print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + ":", str(e)
-        
         #TODO: temporary
         self.videoCount = 0
         
@@ -153,7 +139,21 @@ class WinMain(WahCade, threading.Thread):
             self.copy_user_config()
             # Now we've copied stuff, quit and tell the user
             self.log_msg("Wah!Cade updating user config files in: "+ self.userpath)
-
+        
+        # Try connecting to a database, otherwise
+        self.db_file = CONFIG_DIR + "/confs/DB-" + config_opts.db_config_file + ".txt"
+        try:
+            with open(self.db_file, 'rt') as f: # Open the config file and extract the database connection information
+                self.props = {}  # Dictionary
+                for line in f.readlines():
+                    val = line.split('=')
+                    self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
+                r = requests.get(self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']) # Attempt to make connection to server
+                self.check_connection(r.status_code)
+        except requests.exceptions.ConnectionError, e: # Any exception would mean some sort of failed server connection
+            self.connected_to_server = False
+            print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + ":", str(e)
+        
         ### SETUP WAHCADE INI FILE
         self.wahcade_ini = MameWahIni(os.path.join(CONFIG_DIR, 'wahcade.ini'))
         ## Read in options wahcade.ini, 
