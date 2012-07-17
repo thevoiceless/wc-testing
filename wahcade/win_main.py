@@ -774,7 +774,7 @@ class WinMain(WahCade, threading.Thread):
         #link the sync to a DrawingArea
         self.vid_container = gtk.DrawingArea()
         self.vid_container.modify_bg(gtk.STATE_NORMAL, self.vid_container.style.black)
-        self.fixd.put(self.vid_container, 325, 80)
+        self.fixd.put(self.vid_container, 645, 80)
         self.vid_container.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
         #print self.vid_container.window.xid
         
