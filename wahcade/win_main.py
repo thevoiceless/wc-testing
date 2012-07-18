@@ -171,7 +171,7 @@ class WinMain(WahCade, threading.Thread):
         ## Read in options wahcade.ini, 
         self.lck_time = self.wahcade_ini.getint('lock_time')        # getint comes from mamewah_ini.py
         self.keep_aspect = self.wahcade_ini.getint('keep_image_aspect')
-        self.scrsave_delay = self.wahcade_ini.getint('delay') # TODO: Fix screensaver time
+        self.scrsave_delay = self.wahcade_ini.getint('delay')
         self.auto_logout_delay = self.wahcade_ini.getint('log_out')
         self.hide_log_delay = self.wahcade_ini.getint('hide_message')
         self.layout_orientation = self.wahcade_ini.getint('layout_orientation', 0)
@@ -465,7 +465,7 @@ class WinMain(WahCade, threading.Thread):
         self.emu_ini = None
         self.layout_file = ''
         self.load_emulator()
-
+                
         # Get a list of games already on the server
         self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
         self.player_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/"
@@ -539,11 +539,6 @@ class WinMain(WahCade, threading.Thread):
             data = fromstring(r.text)
             for player in data.getiterator('player'):
                 self.player_info.append((player.find('name').text, player.find('playerID').text)) # parse player name and RFID from xml
-#                self.player_info = [['Terek Campbell', '52000032DCBC'],
-#                                    ['Zach McGaughey', '5100FFE36C21'],
-#                                    ['Riley Moses', '5200001A9BD3'],
-#                                    ['John Kelly', '52000003C697']
-#                                    ['Devin Wilson, '52000007EFBA']]
             self.lblUsers.set_text("No Users Logged In")
             self.lblUsers.show()
         # Generate unregistered user list
@@ -931,10 +926,6 @@ class WinMain(WahCade, threading.Thread):
                 self.recent_log = True
                 self.last_log = player_rfid
                 self.log_out(player_name)
-            # Max players
-#            elif len(self.current_players) == 4:
-#                print "The maximum number of players are logged in. Please have someone logout and try again"
-#                return
             # Log the player in
             elif player_name != '':
                 self.recent_log = True
@@ -953,7 +944,6 @@ class WinMain(WahCade, threading.Thread):
                     if not self.timer_existing:
                         self.timer_existing = True
                         self.start_timer('login')
-                    print "here"
                     return
                 self.log_in(player_rfid)
         # If not connected to arduino
@@ -1007,20 +997,15 @@ class WinMain(WahCade, threading.Thread):
             
     def register_new_player(self, player_rfid, player_name = ''): # TODO: Ultimately we will remove player_name from this function call
         """Add a new player to the database"""
-        in_db = False
         if self.connected_to_arduino:
             # Bring up new player list
             self.show_window('identify')
             self.identify.setRFIDlbl(player_rfid)
             self.identify.sclIDs._update_display()
-            for person in self.player_info:
-                if person[1] == player_rfid:
-                    in_db=True
-                    break
             while self.current_window == 'identify':
-                self.wait_with_events(0.1)
+                pass
             player_name = self.selected_player
-            if player_name != '' and not in_db:
+            if player_name != '':
                 self.player_info.append([player_name, player_rfid]) # parse player name and RFID from xml
                 post_data = {"name":player_name, "playerID":player_rfid}
                 requests.post(self.player_url, post_data)
@@ -1033,13 +1018,8 @@ class WinMain(WahCade, threading.Thread):
             if not self.connected_to_server:
                 print "Not connected to database"
                 return
-            for person in self.player_info:
-                if person[0] == player_rfid:
-                    in_db=True
-                    break
-            if not in_db:
-                post_data = {"name":player_name, "playerID":player_rfid}
-                requests.post(self.player_url, post_data)
+            post_data = {"name":player_name, "playerID":player_rfid}
+            requests.post(self.player_url, post_data)
                 
         
     def get_logged_in_user_string(self, current_users):
@@ -1794,7 +1774,7 @@ class WinMain(WahCade, threading.Thread):
         # Wait a bit - to let message window display
         self.show_window('message')
         self.wait_with_events(0.25)
-        # Get command line options
+        # Get command line optio
         if cmdline_args:
             opts = cmdline_args
         else:
@@ -1870,7 +1850,6 @@ class WinMain(WahCade, threading.Thread):
             os.chdir(os.path.dirname(emulator_executable))
         except:
             pass
-        
         # Run emulator & wait for it to finish
         if not wshell:
             self.p = Popen(cmd, shell=False)
@@ -3096,11 +3075,17 @@ class WinMain(WahCade, threading.Thread):
         """Start recording with RecordMyDesktop"""
         self.wait_with_events(2.00)
         window_name = 'MAME: %s [%s]' % (self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME], rom)
-        os.system('recordmydesktop --full-shots --fps 16 --no-frame --windowid $(xwininfo -name ' + "\'" + str(window_name) + "\'" + ' | awk \'/Window id:/ {print $4}\') -o \'recorded games\'/' + rom + '_highscore &')
+        try:
+            os.system('recordmydesktop --full-shots --fps 16 --no-frame --windowid $(xwininfo -name ' + "\'" + str(window_name) + "\'" + ' | awk \'/Window id:/ {print $4}\') -o \'recorded games\'/' + rom + '_highscore &')
+        except:
+            print "User does not have recordmydesktop installed"
 
     def stop_recording_video(self):
         """Stop recording by killing RecordMyDesktop"""
-        return os.system('kill `ps -e | awk \'/recordmydesktop/{a=$1}END{print a}\'`')
+        try:
+            return os.system('kill `ps -e | awk \'/recordmydesktop/{a=$1}END{print a}\'`')
+        except:
+            pass
 
     def run(self):
         """Catches any RFID swipes and sends them to log_in"""
@@ -3108,6 +3093,7 @@ class WinMain(WahCade, threading.Thread):
         while(self.running):
             # Checks if there is an RFID waiting in the output buffer of the arduino
             if self.rfid_reader.inWaiting() >= 12:
+                print "reading card"
                 self.scrsave_time = time.time()
                 if self.scrsaver.running:
                     self.scrsaver.stop_scrsaver()
