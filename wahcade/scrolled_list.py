@@ -432,15 +432,12 @@ class ScrollList(object):
             self.arwScrollBottom.set_property('visible', (top_ls_idx < (len_ls - self.num_rows)))
         # Display items
         for i in range(self.num_rows):
-            if (top_ls_idx + i > (len_ls - 1)) or ((top_ls_idx + i) < 0):
-                self._rows[i][1].set_text('')
-            elif self.WinMain.current_window == 'main' or self.WinMain.current_window == 'popular':
-                if 0 <= top_ls_idx + i < len(self.WinMain.lsGames):
-                    if len(self.WinMain.lsGames) > 0 and self.WinMain.lsGames[top_ls_idx + i][1] in self.WinMain.supported_games:
-                        if '&' in self.ls[top_ls_idx + i]:
-                            self._rows[i][1].set_markup(('<span color="%s">%s%s') % (self.WinMain.scroll_selected_color, self.ls[top_ls_idx + i].replace('&', '&amp;'), '</span>'))
-                        else:
-                            self._rows[i][1].set_markup(('<span color="%s">%s%s') % (self.WinMain.scroll_selected_color, self.ls[top_ls_idx + i], '</span>'))      
+            if (top_ls_idx+i) not in range(0, len_ls):
+                self._rows[i][1].set_text("")
+            elif self.WinMain.current_window == 'main':
+                if (top_ls_idx+i) in range(0 , len(self.WinMain.lsGames)):
+                    if self.WinMain.lsGames and self.WinMain.lsGames[top_ls_idx + i][1] in self.WinMain.supported_games:
+                        self._rows[i][1].set_markup(('<span color="%s">%s%s') % (self.WinMain.scroll_selected_color, self.ls[top_ls_idx + i].replace('&', '&amp;'), '</span>'))   
                     else:
                         self._rows[i][1].set_text(self.ls[top_ls_idx + i])
             else:

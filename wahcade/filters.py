@@ -130,7 +130,10 @@ def open_file(filename, filemode='r'):
         file_enc = 'utf-8'
     #open file using correct encoding
 #    f = codecs.open(filename, mode=filemode, encoding=file_enc)
-    f = codecs.open(filename, mode=filemode, encoding='utf-8-sig')
+    if os.path.isfile(filename):
+        f = codecs.open(filename, mode=filemode)
+    else:
+        f = codecs.open(filename, mode=filemode, encoding='utf-8-sig')
 #    f = codecs.open(filename, mode=filemode, encoding=file_enc)
     return f, file_enc
 
