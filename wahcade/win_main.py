@@ -119,6 +119,8 @@ class WinMain(WahCade, threading.Thread):
         pygame_imported = True
         old_keyb_events = False
         debug_mode = False
+        self.remote_ip = None
+        self.video_chat_enabled = False
         self.showOverlayThresh = 10
         self.showImgThresh = 6
         self.showHighScoreThresh = 10
@@ -154,22 +156,22 @@ class WinMain(WahCade, threading.Thread):
             self.connected_to_server = False
             print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + ":", str(e)
         #Send IP to server
-        self.local_IP = ""
+        self.local_IP = "" #Initialize local ip
         if self.connected_to_server:
             import socket
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect(('8.8.8.8', 80))
-            self.local_IP = s.getsockname()[0]
+            self.local_IP = s.getsockname()[0] #Get local ip address
             s.close()
-        self.connection_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/"
-        
+            self.connection_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/"
+            self.start_timer('connection')
         
         ### SETUP WAHCADE INI FILE
         self.wahcade_ini = MameWahIni(os.path.join(CONFIG_DIR, 'wahcade.ini'))
         ## Read in options wahcade.ini, 
         self.lck_time = self.wahcade_ini.getint('lock_time')        # getint comes from mamewah_ini.py
         self.keep_aspect = self.wahcade_ini.getint('keep_image_aspect')
-        self.scrsave_delay = self.wahcade_ini.getint('delay') # TODO: Fix screensaver time
+        self.scrsave_delay = self.wahcade_ini.getint('delay')
         self.auto_logout_delay = self.wahcade_ini.getint('log_out')
         self.hide_log_delay = self.wahcade_ini.getint('hide_message')
         self.layout_orientation = self.wahcade_ini.getint('layout_orientation', 0)
@@ -463,7 +465,7 @@ class WinMain(WahCade, threading.Thread):
         self.emu_ini = None
         self.layout_file = ''
         self.load_emulator()
-
+                
         # Get a list of games already on the server
         self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
         self.player_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/"
@@ -537,11 +539,6 @@ class WinMain(WahCade, threading.Thread):
             data = fromstring(r.text)
             for player in data.getiterator('player'):
                 self.player_info.append((player.find('name').text, player.find('playerID').text)) # parse player name and RFID from xml
-#                self.player_info = [['Terek Campbell', '52000032DCBC'],
-#                                    ['Zach McGaughey', '5100FFE36C21'],
-#                                    ['Riley Moses', '5200001A9BD3'],
-#                                    ['John Kelly', '52000003C697']
-#                                    ['Devin Wilson, '52000007EFBA']]
             self.lblUsers.set_text("No Users Logged In")
             self.lblUsers.show()
         # Generate unregistered user list
@@ -562,6 +559,7 @@ class WinMain(WahCade, threading.Thread):
         
         #Initialize video chat
         self.setup_video_chat()
+        self.on_connection_timer()
 
         if not self.showcursor:
             self.hide_mouse_cursor(self.winMain)
@@ -669,6 +667,8 @@ class WinMain(WahCade, threading.Thread):
 
     def exit_wahcade(self, exit_mode='default'):
         """Quit"""
+        if self.connected_to_server: #No longer connected to server
+            requests.delete(self.connection_url + self.local_IP)
         exit_movie = os.path.isfile(self.exit_movie_file)
         self.stop_video()
         if dbus_imported:
@@ -790,11 +790,12 @@ class WinMain(WahCade, threading.Thread):
         self.fixd.put(self.vid_container, 645, 80)
         self.vid_container.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
         #print self.vid_container.window.xid
-        if self.video_chat.enabled:
-            self.video_chat.sink.set_xwindow_id(self.vid_container.window.xid)
+#        if self.video_chat.enabled:
+#            self.video_chat.sink.set_xwindow_id(self.vid_container.window.xid)
         
         
     def start_video_chat(self):
+#        self.video_chat.start_receiver()
         self.video_chat.start_receiver()
         self.video_chat.sink.set_xwindow_id(self.vid_container.window.xid)
     
@@ -909,10 +910,30 @@ class WinMain(WahCade, threading.Thread):
              
     def log_in(self, player_rfid):
         """Logs a player in"""
-        if self.connected_to_arduino:
+        if self.connected_to_arduino: # TODO: Get rid of connected to arduino altogether
             # resets self.selected_player for later use
             self.selected_player = ''
             player_name = ''
+            if player_rfid == "Manual Login":
+                old_list = self.identify.sclIDs.ls # TODO: Do this a better way
+                self.identify.sclIDs.ls = []
+                for v in self.player_info:
+                    self.identify.sclIDs.ls.append(v[0])
+                self.identify.sclIDs.ls.sort()
+                self.show_window('identify')
+                self.identify.setRFIDlbl(player_rfid) # TODO: Populate this differently
+                self.identify.sclIDs._update_display()
+                while self.current_window == 'identify':
+                    self.wait_with_events(0.01)
+                for v in self.player_info:
+                    if v[0] == self.selected_player:
+                        player_rfid = v[1]
+                        break
+                self.selected_player = ''
+                self.identify.sclIDs.ls = old_list
+                if player_rfid == "Manual Login":
+                    print "No name selected, not logging in"
+                    return
             # Prevents the reader from logging someone in and then out immediately
             if self.recent_log and self.last_log == player_rfid:
                 return
@@ -928,10 +949,6 @@ class WinMain(WahCade, threading.Thread):
                 self.recent_log = True
                 self.last_log = player_rfid
                 self.log_out(player_name)
-            # Max players
-#            elif len(self.current_players) == 4:
-#                print "The maximum number of players are logged in. Please have someone logout and try again"
-#                return
             # Log the player in
             elif player_name != '':
                 self.recent_log = True
@@ -950,7 +967,6 @@ class WinMain(WahCade, threading.Thread):
                     if not self.timer_existing:
                         self.timer_existing = True
                         self.start_timer('login')
-                    print "here"
                     return
                 self.log_in(player_rfid)
         # If not connected to arduino
@@ -1004,20 +1020,15 @@ class WinMain(WahCade, threading.Thread):
             
     def register_new_player(self, player_rfid, player_name = ''): # TODO: Ultimately we will remove player_name from this function call
         """Add a new player to the database"""
-        in_db = False
         if self.connected_to_arduino:
             # Bring up new player list
             self.show_window('identify')
             self.identify.setRFIDlbl(player_rfid)
             self.identify.sclIDs._update_display()
-            for person in self.player_info:
-                if person[1] == player_rfid:
-                    in_db=True
-                    break
             while self.current_window == 'identify':
-                self.wait_with_events(0.1)
+                pass
             player_name = self.selected_player
-            if player_name != '' and not in_db:
+            if player_name != '':
                 self.player_info.append([player_name, player_rfid]) # parse player name and RFID from xml
                 post_data = {"name":player_name, "playerID":player_rfid}
                 requests.post(self.player_url, post_data)
@@ -1030,13 +1041,8 @@ class WinMain(WahCade, threading.Thread):
             if not self.connected_to_server:
                 print "Not connected to database"
                 return
-            for person in self.player_info:
-                if person[0] == player_rfid:
-                    in_db=True
-                    break
-            if not in_db:
-                post_data = {"name":player_name, "playerID":player_rfid}
-                requests.post(self.player_url, post_data)
+            post_data = {"name":player_name, "playerID":player_rfid}
+            requests.post(self.player_url, post_data)
                 
         
     def get_logged_in_user_string(self, current_users):
@@ -1059,6 +1065,7 @@ class WinMain(WahCade, threading.Thread):
 
     def on_winMain_key_press(self, widget, event, *args):
         """Respond to key presses"""
+        print "key pressed"
         if not os.path.exists(self.lock_filename):
             current_window = self.current_window
             mw_keys = []
@@ -1128,11 +1135,6 @@ class WinMain(WahCade, threading.Thread):
                 else:
                     # Keyboard pressed, get GTK keyname
                     keyname = gtk.gdk.keyval_name(event.keyval).lower()
-                    # TODO: Integrate this with wahcade-setup, wahcade.ini, etc
-                    # Special character to log in
-                    if keyname == 'bracketright':
-                        if self.current_players:
-                            self.log_out()
                     # Got something?
                     if keyname not in mamewah_keys:
                         return
@@ -1181,9 +1183,9 @@ class WinMain(WahCade, threading.Thread):
                     break
             for mw_func in mw_functions:
                 # Which function?
-                if mw_func == 'ID_SHOW' and current_window != 'identify' and current_window != 'playerselect' and self.identify.ldap.LDAP_connected and self.connected_to_server:  # Show identify window any time
+                if mw_func == 'ID_SHOW' and current_window == 'main' and self.identify.ldap.LDAP_connected and self.connected_to_server:  # Show identify window any time
                     if self.connected_to_arduino:
-                        self.register_new_player("New player")
+                        self.log_in("Manual Login")
                     else:
                         self.show_window('identify')
                         self.identify.sclIDs._update_display()
@@ -1327,13 +1329,23 @@ class WinMain(WahCade, threading.Thread):
                         self.play_clip('EXIT_WITH_CHOICE')
                         self.options.set_menu('exit')
                         self.show_window('options')
+                    elif mw_func == 'LOG_OUT':
+                        if self.current_players:
+                            self.log_out()
                     elif mw_func == 'TOGGLE_VIDEO':
-                        if self.video_chat.enabled:
+                        self.remote_ip = self.local_IP #REMOVE THIS WHEN CONNECTING TO MULTIPLE MACHINES
+                        if self.video_chat.enabled and self.remote_ip:
                             #TODO: find a way to pause and play the stream without the video becoming choppy
                             #right now it just hides the gtk DrawingArea container
+                            if not self.video_chat.receiver_running:
+                                self.video_chat.remoteip = self.remote_ip[0]
+                                self.video_chat.remoteport = self.remote_ip[1]
+                                self.video_chat.setup_video_receiver()
+                            
                             if self.vid_container.get_property("visible") == False:
                                 #print "Show video chat"
                                 self.start_video_chat()
+                                self.wait_with_events(0.01)
                                 self.vid_container.show()
                             else:
                                 #print "Hide video chat"
@@ -1784,7 +1796,7 @@ class WinMain(WahCade, threading.Thread):
         # Wait a bit - to let message window display
         self.show_window('message')
         self.wait_with_events(0.25)
-        # Get command line options
+        # Get command line optio
         if cmdline_args:
             opts = cmdline_args
         else:
@@ -1860,7 +1872,6 @@ class WinMain(WahCade, threading.Thread):
             os.chdir(os.path.dirname(emulator_executable))
         except:
             pass
-        
         # Run emulator & wait for it to finish
         if not wshell:
             self.p = Popen(cmd, shell=False)
@@ -2805,6 +2816,15 @@ class WinMain(WahCade, threading.Thread):
                 self.video_enabled = False
                 self.log_msg('Warning: Failed to create Video gstreamer objects','0')
                 return
+            
+    def on_connection_timer(self):
+        data = fromstring(requests.get(self.connection_url).text)
+        for ipAddr in data.getiterator('connection'):
+            if ipAddr.find('ipAddress').text != self.local_IP:
+                self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
+                return False #Stop the timer if connected
+        return True
+        
 
     def start_timer(self, timer_type):
         """Start given timer"""
@@ -2832,6 +2852,8 @@ class WinMain(WahCade, threading.Thread):
             if self.portal_time:
                 gobject.source_remove(self.portal_time)
             self.portal_time = gobject.timeout_add(2500, self.portal_timer)
+        elif timer_type == 'connection':
+            self.connection_time = gobject.timeout_add(10000, self.on_connection_timer)
 
     def display_splash(self):
         """Show splash screen"""
@@ -2988,7 +3010,7 @@ class WinMain(WahCade, threading.Thread):
             child_win.show()
             try:
                 child_win.window.raise_()
-                #child_win.window.focus() #for bug #382247
+#                child_win.window.focus() #for bug #382247
             except AttributeError:
                 pass
             self.current_window = window_name
@@ -3065,11 +3087,17 @@ class WinMain(WahCade, threading.Thread):
         """Start recording with RecordMyDesktop"""
         self.wait_with_events(2.00)
         window_name = 'MAME: %s [%s]' % (self.lsGames[self.sclGames.get_selected()][GL_GAME_NAME], rom)
-        os.system('recordmydesktop --full-shots --fps 16 --no-frame --windowid $(xwininfo -name ' + "\'" + str(window_name) + "\'" + ' | awk \'/Window id:/ {print $4}\') -o \'recorded games\'/' + rom + '_highscore &')
+        try:
+            os.system('recordmydesktop --full-shots --fps 16 --no-frame --windowid $(xwininfo -name ' + "\'" + str(window_name) + "\'" + ' | awk \'/Window id:/ {print $4}\') -o \'recorded games\'/' + rom + '_highscore &')
+        except:
+            print "User does not have recordmydesktop installed"
 
     def stop_recording_video(self):
         """Stop recording by killing RecordMyDesktop"""
-        return os.system('kill `ps -e | awk \'/recordmydesktop/{a=$1}END{print a}\'`')
+        try:
+            return os.system('kill `ps -e | awk \'/recordmydesktop/{a=$1}END{print a}\'`')
+        except:
+            pass
 
     def run(self):
         """Catches any RFID swipes and sends them to log_in"""
@@ -3077,6 +3105,7 @@ class WinMain(WahCade, threading.Thread):
         while(self.running):
             # Checks if there is an RFID waiting in the output buffer of the arduino
             if self.rfid_reader.inWaiting() >= 12:
+                print "reading card"
                 self.scrsave_time = time.time()
                 if self.scrsaver.running:
                     self.scrsaver.stop_scrsaver()
