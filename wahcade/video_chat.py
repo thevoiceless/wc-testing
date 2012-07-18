@@ -58,7 +58,7 @@ class video_chat():
         
     def setup_video_receiver(self):
         #webm encoded video receiver
-        self.remoteip, self.remoteport = "192.168.50.22", "3000" #COMMENT THIS TO ALLOW MULTIPLE MACHINES
+        self.remoteip, self.remoteport = "127.0.0.1", "3000" #COMMENT THIS TO ALLOW MULTIPLE MACHINES
         command = "tcpclientsrc host=" + self.remoteip + " port=" + self.remoteport + " " 
         command += "! matroskademux name=d d. ! queue2 ! vp8dec ! ffmpegcolorspace ! xvimagesink name=sink sync=false " 
         command += "d. ! queue2 ! vorbisdec ! audioconvert ! audioresample ! alsasink sync=false"
