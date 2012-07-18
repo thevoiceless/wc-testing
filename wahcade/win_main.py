@@ -119,6 +119,8 @@ class WinMain(WahCade, threading.Thread):
         pygame_imported = True
         old_keyb_events = False
         debug_mode = False
+        self.remote_ip = None
+        self.video_chat_enabled = False
         self.showOverlayThresh = 10
         self.showImgThresh = 6
         self.showHighScoreThresh = 10
@@ -154,15 +156,15 @@ class WinMain(WahCade, threading.Thread):
             self.connected_to_server = False
             print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + ":", str(e)
         #Send IP to server
-        self.local_IP = ""
+        self.local_IP = "" #Initialize local ip
         if self.connected_to_server:
             import socket
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect(('8.8.8.8', 80))
-            self.local_IP = s.getsockname()[0]
+            self.local_IP = s.getsockname()[0] #Get local ip address
             s.close()
         self.connection_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/"
-        
+        self.start_timer('connection')
         
         ### SETUP WAHCADE INI FILE
         self.wahcade_ini = MameWahIni(os.path.join(CONFIG_DIR, 'wahcade.ini'))
@@ -171,7 +173,7 @@ class WinMain(WahCade, threading.Thread):
         self.keep_aspect = self.wahcade_ini.getint('keep_image_aspect')
         self.scrsave_delay = self.wahcade_ini.getint('delay') # TODO: Fix screensaver time
         self.auto_logout_delay = self.wahcade_ini.getint('log_out')
-        self.hide_logout_delay = self.wahcade_ini.getint('hide_message')
+        self.hide_log_delay = self.wahcade_ini.getint('hide_message')
         self.layout_orientation = self.wahcade_ini.getint('layout_orientation', 0)
         self.screentype = self.wahcade_ini.getint('fullscreen', 0)
         self.intro_movie = self.wahcade_ini.get('intro_movie_file')
@@ -252,6 +254,7 @@ class WinMain(WahCade, threading.Thread):
         self.lblDriverStatus = gtk.Label()
         self.lblCatVer = gtk.Label()
         self.lblHighScoreData = gtk.Label()
+        self.lblUsers = gtk.Label()
         self.lblUsersLoggedIn = gtk.Label()
         self.lblUsersLoggedOut = gtk.Label()
         # Overlay for games list
@@ -340,6 +343,7 @@ class WinMain(WahCade, threading.Thread):
         self.portal_time_last_played = time.time()
         self.portal_time = None
         self.timeLogoutShown = time.time()
+        self.timeLoginShown = time.time()
        
         ### Create options window
         self.options = WinOptions(self)
@@ -401,8 +405,9 @@ class WinMain(WahCade, threading.Thread):
             (281, self.lblCatVer, "CatVer"),
             (-1, self.gamesScrollOverlay, "ScrollOverlay"),
             (-1, self.lblHighScoreData, "HighScoreData"),               # High score data
-            (-1, self.lblUsersLoggedIn, "LoggedInUsers"),               # Currently logged in users
-            (-1, self.lblUsersLoggedOut, "LoggedOutUsers")]             # Show when user(s) log out
+            (-1, self.lblUsers, "Users"),                               # Currently logged in users
+            (-1, self.lblUsersLoggedIn, "UsersLoggedIn"),               # Show when user(s) log in
+            (-1, self.lblUsersLoggedOut, "UsersLoggedOut")]             # Show when user(s) log out
         self._options_items = [
             (301, self.options.lblHeading, "OptHeading"),               # Options window title
             (314, self.options.sclOptions, "OptionsList"),              # Options list
@@ -539,8 +544,8 @@ class WinMain(WahCade, threading.Thread):
 #                                    ['Riley Moses', '5200001A9BD3'],
 #                                    ['John Kelly', '52000003C697']
 #                                    ['Devin Wilson, '52000007EFBA']]
-            self.lblUsersLoggedIn.set_text("No Users Logged In")
-            self.lblUsersLoggedIn.show()
+            self.lblUsers.set_text("No Users Logged In")
+            self.lblUsers.show()
         # Generate unregistered user list
         self.identify.Setup_IDs_list()
 
@@ -779,7 +784,7 @@ class WinMain(WahCade, threading.Thread):
         gtk.gdk.pointer_ungrab()
     
     def setup_video_chat(self):
-        self.video_chat = video_chat()
+        self.video_chat = video_chat(self)
         
         #link the sync to a DrawingArea
         self.vid_container = gtk.DrawingArea()
@@ -787,11 +792,12 @@ class WinMain(WahCade, threading.Thread):
         self.fixd.put(self.vid_container, 625, 80)
         self.vid_container.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
         #print self.vid_container.window.xid
-        if self.video_chat.enabled:
-            self.video_chat.sink.set_xwindow_id(self.vid_container.window.xid)
+#        if self.video_chat.enabled:
+#            self.video_chat.sink.set_xwindow_id(self.vid_container.window.xid)
         
         
     def start_video_chat(self):
+#        self.video_chat.start_receiver()
         self.video_chat.start_receiver()
         self.video_chat.sink.set_xwindow_id(self.vid_container.window.xid)
     
@@ -825,7 +831,7 @@ class WinMain(WahCade, threading.Thread):
                             if 'SCORE' in high_score_table: # If high score table has score
                                 if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB
                                     if 'NAME' in high_score_table:
-                                        post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.lblUsersLoggedIn.get_text()}                         
+                                        post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.lblUsers.get_text()}                         
                                     else:
                                         post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.current_players[0]}
                                     r = requests.post(self.score_url, post_data)
@@ -924,7 +930,6 @@ class WinMain(WahCade, threading.Thread):
             if player_name in self.current_players:
                 self.recent_log = True
                 self.last_log = player_rfid
-                print "calling logout"
                 self.log_out(player_name)
             # Max players
 #            elif len(self.current_players) == 4:
@@ -935,7 +940,10 @@ class WinMain(WahCade, threading.Thread):
                 self.recent_log = True
                 self.last_log = player_rfid
                 self.current_players.append(player_name)
-                self.lblUsersLoggedIn.set_text(self.get_logged_in_user_string(self.current_players))
+                self.lblUsersLoggedIn.set_text(player_name + " has logged in.")
+                self.lblUsersLoggedIn.show()
+                self.timeLoginShown = time.time()
+                self.lblUsers.set_text(self.get_logged_in_user_string(self.current_players))
             # If player doesn't exist then add them to DB
             else:
                 self.register_new_player(player_rfid)
@@ -964,14 +972,20 @@ class WinMain(WahCade, threading.Thread):
             if not player_rfid in players: # if player doesn't exist and add them to DB and log them in
                 self.register_new_player(random.randint(100000, 10000000000), player_rfid)
                 self.current_players.append(player_rfid)
-                self.lblUsersLoggedIn.set_text(self.get_logged_in_user_string(self.current_players))
+                self.lblUsersLoggedIn.set_text(player_rfid + " has logged in.")
+                self.lblUsersLoggedIn.show()
+                self.timeLoginShown = time.time()
+                self.lblUsers.set_text(self.get_logged_in_user_string(self.current_players))
             # If player already logged in, log them out
             elif player_rfid in self.current_players:
                 self.log_out(player_rfid)
             # Player not logged in, log them in
             else:
                 self.current_players.append(player_rfid)
-                self.lblUsersLoggedIn.set_text(self.get_logged_in_user_string(self.current_players))      
+                self.lblUsersLoggedIn.set_text(player_rfid + " has logged in.")
+                self.lblUsersLoggedIn.show()
+                self.timeLoginShown = time.time()
+                self.lblUsers.set_text(self.get_logged_in_user_string(self.current_players))      
 
             
     def log_out(self, player_name = "All"):
@@ -987,9 +1001,9 @@ class WinMain(WahCade, threading.Thread):
             self.lblUsersLoggedOut.show()
             self.timeLogoutShown = time.time()
         if self.current_players == []:
-            self.lblUsersLoggedIn.set_text("Not logged in")
+            self.lblUsers.set_text("Not logged in")
         else:
-            self.lblUsersLoggedIn.set_text(self.get_logged_in_user_string(self.current_players))
+            self.lblUsers.set_text(self.get_logged_in_user_string(self.current_players))
             
     def register_new_player(self, player_rfid, player_name = ''): # TODO: Ultimately we will remove player_name from this function call
         """Add a new player to the database"""
@@ -1317,12 +1331,19 @@ class WinMain(WahCade, threading.Thread):
                         self.options.set_menu('exit')
                         self.show_window('options')
                     elif mw_func == 'TOGGLE_VIDEO':
-                        if self.video_chat.enabled:
+                        #self.remote_ip = self.local_IP #REMOVE THIS WHEN CONNECTING TO MULTIPLE MACHINES
+                        if self.video_chat.enabled and self.remote_ip:
                             #TODO: find a way to pause and play the stream without the video becoming choppy
                             #right now it just hides the gtk DrawingArea container
+                            if not self.video_chat.receiver_running:
+                                self.video_chat.remoteip = self.remote_ip[0]
+                                self.video_chat.remoteport = self.remote_ip[1]
+                                self.video_chat.setup_video_receiver()
+                            
                             if self.vid_container.get_property("visible") == False:
                                 #print "Show video chat"
                                 self.start_video_chat()
+                                self.wait_with_events(0.01)
                                 self.vid_container.show()
                             else:
                                 #print "Hide video chat"
@@ -1592,9 +1613,11 @@ class WinMain(WahCade, threading.Thread):
             
     def on_scrsave_timer(self):
         """Timer event - check to see if we need to start video or screen saver"""
-        # Hide the label saying when a user logs out
-        if int(time.time() - self.timeLogoutShown) >= self.hide_logout_delay:
+        # Hide the label saying when a user logs in/out
+        if int(time.time() - self.timeLogoutShown) >= self.hide_log_delay:
             self.lblUsersLoggedOut.hide()
+        if int(time.time() - self.timeLoginShown) >= self.hide_log_delay:
+            self.lblUsersLoggedIn.hide()
         # Use timer for screen saver to log a person out after period of inactivity
         if int(time.time() - self.scrsave_time) >= self.auto_logout_delay and self.current_players != []:
             self.log_out()
@@ -2792,6 +2815,25 @@ class WinMain(WahCade, threading.Thread):
                 self.video_enabled = False
                 self.log_msg('Warning: Failed to create Video gstreamer objects','0')
                 return
+            
+    def check_for_connections(self):
+        data = requests.get(self.connection_url)
+#       self.check_connection(data.status_code)
+        data = fromstring(data.text)
+        list_of_ips = []
+        for ipAddr in data.getiterator('connection'):
+            list_of_ips.append([ipAddr.find('ipAddress').text, ipAddr.find('port').text])
+        for ip in list_of_ips:
+            if ip[0] != self.local_IP:
+                self.remote_ip = ip
+                break
+        return False
+            
+    def on_connection_timer(self):
+        print 'checking connections'
+        self.check_for_connections()
+        return True
+        
 
     def start_timer(self, timer_type):
         """Start given timer"""
@@ -2819,6 +2861,8 @@ class WinMain(WahCade, threading.Thread):
             if self.portal_time:
                 gobject.source_remove(self.portal_time)
             self.portal_time = gobject.timeout_add(2500, self.portal_timer)
+        elif timer_type == 'connection':
+            self.connection_time = gobject.timeout_add(5000, self.on_connection_timer)
 
     def display_splash(self):
         """Show splash screen"""
