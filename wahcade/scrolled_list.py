@@ -434,7 +434,7 @@ class ScrollList(object):
         for i in range(self.num_rows):
             if (top_ls_idx + i > (len_ls - 1)) or ((top_ls_idx + i) < 0):
                 self._rows[i][1].set_text('')
-            elif self.WinMain.current_window == 'main' or self.WinMain.current_window == 'popular':
+            elif self.WinMain.current_window == 'main':
                 if 0 <= top_ls_idx + i < len(self.WinMain.lsGames):
                     if len(self.WinMain.lsGames) > 0 and self.WinMain.lsGames[top_ls_idx + i][1] in self.WinMain.supported_games:
                         if '&' in self.ls[top_ls_idx + i]:

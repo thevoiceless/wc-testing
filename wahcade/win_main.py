@@ -907,10 +907,30 @@ class WinMain(WahCade, threading.Thread):
              
     def log_in(self, player_rfid):
         """Logs a player in"""
-        if self.connected_to_arduino:
+        if self.connected_to_arduino: # TODO: Get rid of connected to arduino altogether
             # resets self.selected_player for later use
             self.selected_player = ''
             player_name = ''
+            if player_rfid == "Manual Login":
+                old_list = self.identify.sclIDs.ls # TODO: Do this a better way
+                self.identify.sclIDs.ls = []
+                for v in self.player_info:
+                    self.identify.sclIDs.ls.append(v[0])
+                self.identify.sclIDs.ls.sort()
+                self.show_window('identify')
+                self.identify.setRFIDlbl(player_rfid) # TODO: Populate this differently
+                self.identify.sclIDs._update_display()
+                while self.current_window == 'identify':
+                    self.wait_with_events(0.01)
+                for v in self.player_info:
+                    if v[0] == self.selected_player:
+                        player_rfid = v[1]
+                        break
+                self.selected_player = ''
+                self.identify.sclIDs.ls = old_list
+                if player_rfid == "Manual Login":
+                    print "No name selected, not logging in"
+                    return
             # Prevents the reader from logging someone in and then out immediately
             if self.recent_log and self.last_log == player_rfid:
                 return
@@ -1042,6 +1062,7 @@ class WinMain(WahCade, threading.Thread):
 
     def on_winMain_key_press(self, widget, event, *args):
         """Respond to key presses"""
+        print "key pressed"
         if not os.path.exists(self.lock_filename):
             current_window = self.current_window
             mw_keys = []
@@ -1164,9 +1185,9 @@ class WinMain(WahCade, threading.Thread):
                     break
             for mw_func in mw_functions:
                 # Which function?
-                if mw_func == 'ID_SHOW' and current_window != 'identify' and current_window != 'playerselect' and self.identify.ldap.LDAP_connected and self.connected_to_server:  # Show identify window any time
+                if mw_func == 'ID_SHOW' and current_window == 'main' and self.identify.ldap.LDAP_connected and self.connected_to_server:  # Show identify window any time
                     if self.connected_to_arduino:
-                        self.register_new_player("New player")
+                        self.log_in("Manual Login")
                     else:
                         self.show_window('identify')
                         self.identify.sclIDs._update_display()
@@ -2998,7 +3019,7 @@ class WinMain(WahCade, threading.Thread):
             child_win.show()
             try:
                 child_win.window.raise_()
-                #child_win.window.focus() #for bug #382247
+#                child_win.window.focus() #for bug #382247
             except AttributeError:
                 pass
             self.current_window = window_name
