@@ -5,14 +5,15 @@ Created on Jul 12, 2012
 @author: dwilson
 '''
 
-import sys, os
-import gobject, pygst
+import os
+import pygst
 pygst.require("0.10")
 import gst
 import commands
-import threading
-from constants import *
+from constants import CONFIG_DIR
 import requests
+import socket
+import gtk
 
 class video_chat():
     
@@ -20,48 +21,40 @@ class video_chat():
         self.WinMain = WinMain
         self.enabled = True
         self.receiver_running = False
-        self.vc_file = CONFIG_DIR + "/confs/VC-default.txt"
-        try:
-            if os.path.exists(self.vc_file):
-                with open(self.vc_file, 'rt') as f: # Open the config file and extract the video config info
-                    self.props = {}  # Dictionary
-                    for line in f.readlines():
-                        val = line.split('=')
-                        self.props[val[0].strip()] = val[1].strip()  # Match each key with its value
-                    
-                    self.video_width, self.video_height = 320, 240
-                    self.localip, self.localport = self.props["localip"], self.props['localport']
-                    self.remoteip, self.remoteport = self.props["remoteip"], self.props["remoteport"]
-                    
-                    #self.video_width, self.video_height = int(self.props["width"]), int(self.props["height"])
-                    print self.WinMain.local_IP
-                    print "Test"
-                    print self.props['localport']
-                    self.localip, self.localport = self.WinMain.local_IP, self.props['localport']
-                    self.remoteip, self.remoteport = "", ""#self.WinMain.local_IP, self.props["remoteport"]
-                    
-                    if self.localip != "" or self.localip != None:
-                        post_data = {"ipAddress":self.localip, "port":self.localport}
-                        r = requests.post(self.WinMain.connection_url, post_data)
-            else:
-                print "The video chat configuration file was not found at: " + self.vc_file
-                self.enabled = False
-                return 
-        except: 
-            print "There was an error loading the video chat configuration."
-            self.enabled = False
-            raise
-            return
+        
+        self.receivepipe = None
 
+        self.video_width, self.video_height = 320, 240
+        #self.localip, self.localport = self.WinMain.local_IP, str(self.get_open_port())
+        self.localip, self.localport = str(self.get_local_ip()), str(self.get_open_port())
+        #print self.localip + " " + self.localport 
+        self.remoteip, self.remoteport = "", ""
+        
+        if self.localip != "" or self.localip != None:
+            post_data = {"ipAddress":self.localip, "port":self.localport}
+            r = requests.post(self.WinMain.connection_url, post_data)
         
         #Set up the streaming pipelines
-        self.setup_streaming_video()
-#        self.setup_video_receiver()
-        #raw_input("Press Enter to start streaming your video camera")
+        self.setup_video_streamer()
+    
+    def setup_video_streamer(self):
+        #webm video pipeline, optimized for video conferencing
+        device = self.get_camera_name()
+        command = "v4l2src device=" + device + " ! video/x-raw-rgb, width=" + str(self.video_width) + ", height=" + str(self.video_height) + " "
+        command += "! ffmpegcolorspace ! vp8enc speed=2 max-latency=2 quality=10.0 max-keyframe-distance=3 threads=5 " 
+        command += "! queue2 ! mux. autoaudiosrc ! audioconvert ! vorbisenc " 
+        command += "! queue2 ! mux. webmmux name=mux streamable=true "
+        command += "! tcpserversink host=" + self.localip + " port=" + self.localport
         
+        self.streampipe = gst.parse_launch(command)
+        self.streampipe.set_state(gst.STATE_PLAYING) #start the video stream
+        bus = self.streampipe.get_bus()
+        bus.add_signal_watch()
+        bus.connect("message", self.on_stream_message)
+    
     def setup_video_receiver(self):
         #webm encoded video receiver
-        #self.remoteip, self.remoteport = "127.0.0.1", "3000" #COMMENT THIS TO ALLOW MULTIPLE MACHINES
+        #self.remoteip, self.remoteport = "127.0.0.1", self.localport #COMMENT THIS TO ALLOW MULTIPLE MACHINES
         command = "tcpclientsrc host=" + self.remoteip + " port=" + self.remoteport + " " 
         command += "! matroskademux name=d d. ! queue2 ! vp8dec ! ffmpegcolorspace ! xvimagesink name=sink sync=false " 
         command += "d. ! queue2 ! vorbisdec ! audioconvert ! audioresample ! alsasink sync=false"
@@ -71,14 +64,30 @@ class video_chat():
         self.sink = self.receivepipe.get_by_name("sink")
         bus = self.receivepipe.get_bus()
         bus.add_signal_watch()
-#        bus.enable_sync_message_emission()
         bus.connect("message", self.on_message)
-#        bus.connect("sync-message::element", self.on_sync_message)
+        bus.enable_sync_message_emission()
+        bus.connect("sync-message::element", self.on_sync_message)
         
 #        self.receivepipe.set_state(gst.STATE_PLAYING)
         self.receiver_running = True
-        print "Video Chat Receiver started"
-        
+        #print "Video Chat Receiver started"
+    
+    def get_local_ip(self):
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80)) #connect to Google's DNS server
+        #self.local_IP = s.getsockname()[0] #Get local ip address
+        localip = s.getsockname()[0]
+        s.close()
+        return localip
+    
+    def get_open_port(self):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(("",0))
+        s.listen(1)
+        port = s.getsockname()[1]
+        s.close()
+        return port
+    
     def get_camera_name(self, index = 0):
         #Get the first camera's device number
         listOfCameras = commands.getoutput("dir -format -1 /dev | grep 'video*'").split("\n")
@@ -100,21 +109,6 @@ class video_chat():
             return True
         return False
     
-    def setup_streaming_video(self):
-        #webm video pipeline, optimized for video conferencing
-        device = self.get_camera_name()
-        command = "v4l2src device=" + device + " ! video/x-raw-rgb, width=" + str(self.video_width) + ", height=" + str(self.video_height) + " "
-        command += "! ffmpegcolorspace ! vp8enc speed=2 max-latency=2 quality=10.0 max-keyframe-distance=3 threads=5 " 
-        command += "! queue2 ! mux. autoaudiosrc ! audioconvert ! vorbisenc " 
-        command += "! queue2 ! mux. webmmux name=mux streamable=true "
-        command += "! tcpserversink host=" + self.localip + " port=" + self.localport
-        
-        self.streampipe = gst.parse_launch(command)
-        self.streampipe.set_state(gst.STATE_PLAYING)
-        bus = self.streampipe.get_bus()
-        bus.add_signal_watch()
-        bus.connect("message", self.on_stream_message)
-    
     def start_streaming_video(self):
         if not self.video_is_streaming(): 
             self.streampipe.set_state(gst.STATE_PLAYING)
@@ -122,19 +116,19 @@ class video_chat():
     def pause_streaming_video(self):
         self.streampipe.set_state(gst.STATE_PAUSED)
     
-    
-    
-    def stop_receiver(self):
-        pass
-        #self.receivepipe.set_state(gst.STATE_PAUSED)
-        #self.receivepipe.set_state(gst.STATE_NULL)
-        
     def start_receiver(self):
-        self.receivepipe.set_state(gst.STATE_PLAYING)
-    
+        if self.receivepipe:
+            self.receivepipe.set_state(gst.STATE_PLAYING)
+            
+    def stop_receiver(self):
+        if self.receivepipe:
+            self.receivepipe.set_state(gst.STATE_NULL)
+            self.receiver_running = False
+
     def kill_pipelines(self):
-        self.receivepipe.set_state(gst.STATE_NULL)
-        self.streampipe.set_state(gst.STATE_NULL)
+        if self.receivepipe:
+            self.receivepipe.set_state(gst.STATE_NULL)
+            self.streampipe.set_state(gst.STATE_NULL)
     
     def on_message(self, bus, message):
         t = message.type
@@ -144,14 +138,25 @@ class video_chat():
         elif t == gst.MESSAGE_ERROR:
             self.receiver_running = False
             err, debug = message.parse_error()
-            print "Error: %s" % err, debug
+            print "Receiver Error: %s" % err, debug
             self.kill_pipelines()
         elif t == gst.MESSAGE_STATE_CHANGED:
             #print 'Message: ' + str(message)
             old, new, pending = message.parse_state_changed()
             #print "State: " + str(new)
-            if new == gst.STATE_NULL:
-                print 'stopped'
+    
+    def on_sync_message(self, bus, message):
+        if message.structure is None:
+            return False
+        name = message.structure.get_name()
+        if name == "prepare-xwindow-id":
+            gtk.gdk.threads_enter()
+            gtk.gdk.display_get_default().sync()
+            
+            videooutput = message.src
+            videooutput.set_property("force-aspect-ratio", True)
+            videooutput.set_xwindow_id(self.WinMain.vid_container.window.xid)
+            gtk.gdk.threads_leave()
     
     def on_stream_message(self, bus, message):
         t = message.type

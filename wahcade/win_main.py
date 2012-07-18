@@ -155,16 +155,7 @@ class WinMain(WahCade, threading.Thread):
         except requests.exceptions.ConnectionError, e: # Any exception would mean some sort of failed server connection
             self.connected_to_server = False
             print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + ":", str(e)
-        #Send IP to server
-        self.local_IP = "" #Initialize local ip
-        if self.connected_to_server:
-            import socket
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(('8.8.8.8', 80))
-            self.local_IP = s.getsockname()[0] #Get local ip address
-            s.close()
-        self.connection_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/"
-        self.start_timer('connection')
+        
         
         ### SETUP WAHCADE INI FILE
         self.wahcade_ini = MameWahIni(os.path.join(CONFIG_DIR, 'wahcade.ini'))
@@ -558,7 +549,12 @@ class WinMain(WahCade, threading.Thread):
         self.drwVideo.set_property('visible', False)
         
         #Initialize video chat
-        self.setup_video_chat()
+        self.video_chat = None
+        #self.local_IP = "" #Initialize local ip
+        if self.connected_to_server:
+            self.connection_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/"
+            self.setup_video_chat()
+            
 
         if not self.showcursor:
             self.hide_mouse_cursor(self.winMain)
@@ -666,6 +662,8 @@ class WinMain(WahCade, threading.Thread):
 
     def exit_wahcade(self, exit_mode='default'):
         """Quit"""
+        if self.connected_to_server and self.video_chat: #No longer connected to server
+            requests.delete(self.connection_url + self.video_chat.localip)
         exit_movie = os.path.isfile(self.exit_movie_file)
         self.stop_video()
         if dbus_imported:
@@ -779,22 +777,28 @@ class WinMain(WahCade, threading.Thread):
         gtk.gdk.pointer_ungrab()
     
     def setup_video_chat(self):
+        self.vid_container = gtk.DrawingArea()
         self.video_chat = video_chat(self)
         
-        #link the sync to a DrawingArea
-        self.vid_container = gtk.DrawingArea()
-        self.vid_container.modify_bg(gtk.STATE_NORMAL, self.vid_container.style.black)
-        self.fixd.put(self.vid_container, 625, 80)
-        self.vid_container.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
-        #print self.vid_container.window.xid
-#        if self.video_chat.enabled:
-#            self.video_chat.sink.set_xwindow_id(self.vid_container.window.xid)
+        #TODO: move this code to the layout file
         
+        self.vid_container.modify_bg(gtk.STATE_NORMAL, self.vid_container.style.black)
+        self.fixd.put(self.vid_container, 600, 80) 
+        self.vid_container.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
+        
+        #don't poll the server if video chat is disabled
+        if self.video_chat.enabled:
+            self.on_connection_timer()
+            self.start_timer('connection')
+            #print "Checking server for another user to video chat with"   
         
     def start_video_chat(self):
-#        self.video_chat.start_receiver()
+        if not self.video_chat.receiver_running:
+            self.video_chat.remoteip = self.remote_ip[0]
+            self.video_chat.remoteport = self.remote_ip[1]
+            self.video_chat.setup_video_receiver()
+        
         self.video_chat.start_receiver()
-        self.video_chat.sink.set_xwindow_id(self.vid_container.window.xid)
     
     def stop_video_chat(self):
         self.video_chat.stop_receiver()
@@ -1111,11 +1115,6 @@ class WinMain(WahCade, threading.Thread):
                 else:
                     # Keyboard pressed, get GTK keyname
                     keyname = gtk.gdk.keyval_name(event.keyval).lower()
-                    # TODO: Integrate this with wahcade-setup, wahcade.ini, etc
-                    # Special character to log in
-                    if keyname == 'bracketright':
-                        if self.current_players:
-                            self.log_out()
                     # Got something?
                     if keyname not in mamewah_keys:
                         return
@@ -1310,25 +1309,23 @@ class WinMain(WahCade, threading.Thread):
                         self.play_clip('EXIT_WITH_CHOICE')
                         self.options.set_menu('exit')
                         self.show_window('options')
+                    elif mw_func == 'LOG_OUT':
+                        if self.current_players:
+                            self.log_out()
                     elif mw_func == 'TOGGLE_VIDEO':
                         #self.remote_ip = self.local_IP #REMOVE THIS WHEN CONNECTING TO MULTIPLE MACHINES
                         if self.video_chat.enabled and self.remote_ip:
-                            #TODO: find a way to pause and play the stream without the video becoming choppy
-                            #right now it just hides the gtk DrawingArea container
-                            if not self.video_chat.receiver_running:
-                                self.video_chat.remoteip = self.remote_ip[0]
-                                self.video_chat.remoteport = self.remote_ip[1]
-                                self.video_chat.setup_video_receiver()
-                            
                             if self.vid_container.get_property("visible") == False:
                                 #print "Show video chat"
                                 self.start_video_chat()
-                                self.wait_with_events(0.01)
+                                #self.wait_with_events(0.01)
                                 self.vid_container.show()
                             else:
                                 #print "Hide video chat"
                                 self.stop_video_chat()
                                 self.vid_container.hide()
+                        elif not self.remote_ip:
+                            print "Waiting to receive remote IP from server"
                         else:
                             print "Video Chat is disabled."  
                 elif current_window == 'options':
@@ -2795,22 +2792,20 @@ class WinMain(WahCade, threading.Thread):
                 self.log_msg('Warning: Failed to create Video gstreamer objects','0')
                 return
             
-    def check_for_connections(self):
-        data = requests.get(self.connection_url)
-#       self.check_connection(data.status_code)
-        data = fromstring(data.text)
-        list_of_ips = []
-        for ipAddr in data.getiterator('connection'):
-            list_of_ips.append([ipAddr.find('ipAddress').text, ipAddr.find('port').text])
-        for ip in list_of_ips:
-            if ip[0] != self.local_IP:
-                self.remote_ip = ip
-                break
-        return False
-            
     def on_connection_timer(self):
-        print 'checking connections'
-        self.check_for_connections()
+        data = fromstring(requests.get(self.connection_url).text)
+        for ipAddr in data.getiterator('connection'):
+            if len(data.getiterator('connection')) == 1:
+                self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
+                #print "Showing local video: " + str(self.remote_ip)
+                #TODO: display a message to the user that the system is waiting for another user to join
+                return True
+            elif ipAddr.find('ipAddress').text != self.video_chat.localip:
+                self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
+                print "Found a computer to chat with: " + str(self.remote_ip)
+                self.stop_video_chat()
+                self.start_video_chat()
+                return False #Stop the timer if connected
         return True
         
 
@@ -2841,7 +2836,7 @@ class WinMain(WahCade, threading.Thread):
                 gobject.source_remove(self.portal_time)
             self.portal_time = gobject.timeout_add(2500, self.portal_timer)
         elif timer_type == 'connection':
-            self.connection_time = gobject.timeout_add(5000, self.on_connection_timer)
+            self.connection_time = gobject.timeout_add(10000, self.on_connection_timer)
 
     def display_splash(self):
         """Show splash screen"""
