@@ -20,6 +20,9 @@ class video_chat():
         self.WinMain = WinMain
         self.enabled = True
         self.receiver_running = False
+        
+        self.receivepipe = None
+        
         self.vc_file = CONFIG_DIR + "/confs/VC-default.txt"
         try:
             if os.path.exists(self.vc_file):
@@ -119,14 +122,17 @@ class video_chat():
     
     
     def stop_receiver(self):
-        self.receivepipe.set_state(gst.STATE_PAUSED)
+        if self.receivepipe:
+            self.receivepipe.set_state(gst.STATE_PAUSED)
         
     def start_receiver(self):
-        self.receivepipe.set_state(gst.STATE_PLAYING)
+        if self.receivepipe:
+            self.receivepipe.set_state(gst.STATE_PLAYING)
     
     def kill_pipelines(self):
-        self.receivepipe.set_state(gst.STATE_NULL)
-        self.streampipe.set_state(gst.STATE_NULL)
+        if self.receivepipe:
+            self.receivepipe.set_state(gst.STATE_NULL)
+            self.streampipe.set_state(gst.STATE_NULL)
     
     def on_message(self, bus, message):
         t = message.type

@@ -163,8 +163,8 @@ class WinMain(WahCade, threading.Thread):
             s.connect(('8.8.8.8', 80))
             self.local_IP = s.getsockname()[0] #Get local ip address
             s.close()
-        self.connection_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/"
-        self.start_timer('connection')
+            self.connection_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/"
+            self.start_timer('connection')
         
         ### SETUP WAHCADE INI FILE
         self.wahcade_ini = MameWahIni(os.path.join(CONFIG_DIR, 'wahcade.ini'))
@@ -564,6 +564,7 @@ class WinMain(WahCade, threading.Thread):
         
         #Initialize video chat
         self.setup_video_chat()
+        self.on_connection_timer()
 
         if not self.showcursor:
             self.hide_mouse_cursor(self.winMain)
@@ -671,6 +672,8 @@ class WinMain(WahCade, threading.Thread):
 
     def exit_wahcade(self, exit_mode='default'):
         """Quit"""
+        if self.connected_to_server: #No longer connected to server
+            requests.delete(self.connection_url + self.local_IP)
         exit_movie = os.path.isfile(self.exit_movie_file)
         self.stop_video()
         if dbus_imported:
@@ -1131,11 +1134,6 @@ class WinMain(WahCade, threading.Thread):
                 else:
                     # Keyboard pressed, get GTK keyname
                     keyname = gtk.gdk.keyval_name(event.keyval).lower()
-                    # TODO: Integrate this with wahcade-setup, wahcade.ini, etc
-                    # Special character to log in
-                    if keyname == 'bracketright':
-                        if self.current_players:
-                            self.log_out()
                     # Got something?
                     if keyname not in mamewah_keys:
                         return
@@ -1330,6 +1328,9 @@ class WinMain(WahCade, threading.Thread):
                         self.play_clip('EXIT_WITH_CHOICE')
                         self.options.set_menu('exit')
                         self.show_window('options')
+                    elif mw_func == 'LOG_OUT':
+                        if self.current_players:
+                            self.log_out()
                     elif mw_func == 'TOGGLE_VIDEO':
                         self.remote_ip = self.local_IP #REMOVE THIS WHEN CONNECTING TO MULTIPLE MACHINES
                         if self.video_chat.enabled and self.remote_ip:
@@ -2816,22 +2817,12 @@ class WinMain(WahCade, threading.Thread):
                 self.log_msg('Warning: Failed to create Video gstreamer objects','0')
                 return
             
-    def check_for_connections(self):
-        data = requests.get(self.connection_url)
-#       self.check_connection(data.status_code)
-        data = fromstring(data.text)
-        list_of_ips = []
-        for ipAddr in data.getiterator('connection'):
-            list_of_ips.append([ipAddr.find('ipAddress').text, ipAddr.find('port').text])
-        for ip in list_of_ips:
-            if ip[0] != self.local_IP:
-                self.remote_ip = ip
-                break
-        return False
-            
     def on_connection_timer(self):
-        print 'checking connections'
-        self.check_for_connections()
+        data = fromstring(requests.get(self.connection_url).text)
+        for ipAddr in data.getiterator('connection'):
+            if ipAddr.find('ipAddress').text != self.local_IP:
+                self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
+                return False #Stop the timer if connected
         return True
         
 
@@ -2862,7 +2853,7 @@ class WinMain(WahCade, threading.Thread):
                 gobject.source_remove(self.portal_time)
             self.portal_time = gobject.timeout_add(2500, self.portal_timer)
         elif timer_type == 'connection':
-            self.connection_time = gobject.timeout_add(5000, self.on_connection_timer)
+            self.connection_time = gobject.timeout_add(10000, self.on_connection_timer)
 
     def display_splash(self):
         """Show splash screen"""
