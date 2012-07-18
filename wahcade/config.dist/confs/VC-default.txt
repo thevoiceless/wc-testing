@@ -1,6 +1,6 @@
-localip=192.168.50.21
+localip=192.168.50.23
 localport=3000
-remoteip=192.168.50.183
+remoteip=192.168.50.23
 remoteport=3000
 width=640
 height=480
