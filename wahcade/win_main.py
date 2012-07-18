@@ -965,6 +965,8 @@ class WinMain(WahCade, threading.Thread):
             self.recent_log = True
             self.last_log = player_rfid
             self.current_players.append(player_name)
+            if self.lblUsersLoggedOut.get_visible():
+                self.lblUsersLoggedOut.hide()
             self.lblUsersLoggedIn.set_text(player_name + " has logged in.")
             self.lblUsersLoggedIn.show()
             self.timeLoginShown = time.time()
@@ -985,11 +987,15 @@ class WinMain(WahCade, threading.Thread):
         """Logs a player out"""
         if player_name == "All":
             self.current_players = []
+            if self.lblUsersLoggedIn.get_visible():
+                self.lblUsersLoggedIn.hide()
             self.lblUsersLoggedOut.set_text("All users have been logged out.")
             self.lblUsersLoggedOut.show()
             self.timeLogoutShown = time.time()
         else:
             self.current_players.remove(player_name)
+            if self.lblUsersLoggedIn.get_visible():
+                self.lblUsersLoggedIn.hide()
             self.lblUsersLoggedOut.set_text(player_name + " has logged out.")
             self.lblUsersLoggedOut.show()
             self.timeLogoutShown = time.time()
