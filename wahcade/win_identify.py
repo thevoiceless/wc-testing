@@ -69,9 +69,7 @@ class WinIdentify(WahCade):
         self.sclIDs.connect('mouse-left-click', self.on_sclIDs_changed)
         self.sclIDs.connect('mouse-double-click', self.ID_selected)
         # Init window
-        self.lblPrompt.set_text("Unknown RFID:")
-        self.lblRFID.set_text("____________")
-        self.lblPromptText.set_text("Select your name from the list.")
+        self.set_lbls()
         self.record = False
         self.on_keypress = False
         
@@ -98,5 +96,10 @@ class WinIdentify(WahCade):
         for v in self.WinMain.player_info:
             if v[0] in self.sclIDs.ls:
                 self.sclIDs.ls.remove(v[0])
+
+    def set_lbls(self, lblPrompt = "Unknown RFID:", lblRFID = "____________", lblPromptText = "Select your name from the list."):
+        self.lblPrompt.set_text(lblPrompt)
+        self.lblRFID.set_text(lblRFID)
+        self.lblPromptText.set_text(lblPromptText)
 
     
