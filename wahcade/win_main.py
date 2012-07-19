@@ -648,6 +648,7 @@ class WinMain(WahCade, threading.Thread):
         if self.video_chat.enabled:
             self.clean_up_video_chat()
         # Tells the arduino thread to terminate properly
+        self.current_window = 'main'
         self.running = False
         # Save ini files
         self.wahcade_ini.write()
@@ -929,7 +930,7 @@ class WinMain(WahCade, threading.Thread):
                 # Add an option to register a new player
                 self.identify.sclIDs.ls.insert(0, "Register New Player")
             self.show_window('identify')
-            self.identify.setRFIDlbl(player_rfid) # TODO: Populate this differently
+            self.identify.setRFIDlbl(player_rfid)
             self.identify.sclIDs.set_selected(1)
             self.identify.sclIDs._update_display()
             self.identify.set_lbls("", "Manually Logging In")
@@ -1017,7 +1018,7 @@ class WinMain(WahCade, threading.Thread):
                 time.sleep(0.01)
         player_name = self.selected_player
         if player_name != 'Register New Player' and player_name != '':
-            self.player_info.append([player_name, player_rfid]) # parse player name and RFID from xml
+            self.player_info.append([player_name, player_rfid])
             post_data = {"name":player_name, "playerID":player_rfid}
             requests.post(self.player_url, post_data)
             self.identify.sclIDs.ls.remove(player_name)
