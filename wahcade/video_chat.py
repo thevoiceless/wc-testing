@@ -111,11 +111,12 @@ class video_chat():
         return device
     
     def change_remote_ip(self, ip, port):
+        #was_running = True 
         was_running = self.receiver_running
-        self.video_chat.remoteip = ip
-        self.video_chat.remoteport = port
+        self.remoteip = ip
+        self.remoteport = port
         self.stop_receiver()
-        self.video_chat.setup_video_receiver()
+        self.setup_video_receiver()
         if was_running:
             self.start_receiver()
     
