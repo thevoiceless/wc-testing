@@ -916,20 +916,25 @@ class WinMain(WahCade, threading.Thread):
         # resets self.selected_player for later use
         self.selected_player = ''
         player_name = ''
+        # If the player logs in with backslash
         if player_rfid == "Manual Login":
+            # Because we are using the identify window rather than creating a new onewe have to temporariy overwrite this list
             old_list = self.identify.sclIDs.ls
             self.identify.sclIDs.ls = []
             for v in self.player_info:
                 self.identify.sclIDs.ls.append(v[0])
             self.identify.sclIDs.ls.sort()
             if not self.connected_to_arduino:
+                # Add an option to register a new player
                 self.identify.sclIDs.ls.insert(0, "Register New Player")
             self.show_window('identify')
             self.identify.setRFIDlbl(player_rfid) # TODO: Populate this differently
             self.identify.sclIDs.set_selected(1)
             self.identify.sclIDs._update_display()
+            self.identify.set_lbls("", "Manually Logging In")
             while self.current_window == 'identify':
                 self.wait_with_events(0.01)
+            self.identify.set_lbls()
             if not self.connected_to_arduino:
                 if self.selected_player == "Register New Player":
                     self.identify.sclIDs.ls = old_list
@@ -964,6 +969,8 @@ class WinMain(WahCade, threading.Thread):
             self.recent_log = True
             self.last_log = player_rfid
             self.current_players.append(player_name)
+            if self.lblUsersLoggedOut.get_visible():
+                self.lblUsersLoggedOut.hide()
             self.lblUsersLoggedIn.set_text(player_name + " has logged in.")
             self.lblUsersLoggedIn.show()
             self.timeLoginShown = time.time()
@@ -984,11 +991,15 @@ class WinMain(WahCade, threading.Thread):
         """Logs a player out"""
         if player_name == "All":
             self.current_players = []
+            if self.lblUsersLoggedIn.get_visible():
+                self.lblUsersLoggedIn.hide()
             self.lblUsersLoggedOut.set_text("All users have been logged out.")
             self.lblUsersLoggedOut.show()
             self.timeLogoutShown = time.time()
         else:
             self.current_players.remove(player_name)
+            if self.lblUsersLoggedIn.get_visible():
+                self.lblUsersLoggedIn.hide()
             self.lblUsersLoggedOut.set_text(player_name + " has logged out.")
             self.lblUsersLoggedOut.show()
             self.timeLogoutShown = time.time()
@@ -1008,7 +1019,7 @@ class WinMain(WahCade, threading.Thread):
             if self.main_log == True:
                 self.wait_with_events(0.01)
             else:
-                pass
+                time.sleep(0.01)
         player_name = self.selected_player
         if player_name != 'Register New Player' and player_name != '':
             self.player_info.append([player_name, player_rfid]) # parse player name and RFID from xml
