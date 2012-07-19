@@ -932,7 +932,7 @@ class WinMain(WahCade, threading.Thread):
             self.identify.setRFIDlbl(player_rfid)
             self.identify.sclIDs.set_selected(1)
             self.identify.sclIDs._update_display()
-            self.identify.set_lbls("", "Manually Logging In")
+            self.identify.set_lbls("Manually Logging In", "Select your name", "or register" )
             while self.current_window == 'identify':
                 self.wait_with_events(0.01)
             self.identify.set_lbls()
