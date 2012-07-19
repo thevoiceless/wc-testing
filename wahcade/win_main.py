@@ -551,7 +551,6 @@ class WinMain(WahCade, threading.Thread):
         
         #Initialize video chat
         self.video_chat = None
-        #self.local_IP = "" #Initialize local ip
         if self.connected_to_server:
             self.connection_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/"
             self.setup_video_chat()
@@ -645,8 +644,7 @@ class WinMain(WahCade, threading.Thread):
         # Stop video playing if necessary
         self.stop_video()
         #stop video streaming
-        if self.video_chat.enabled:
-            self.clean_up_video_chat()
+        self.clean_up_video_chat()
         # Tells the arduino thread to terminate properly
         self.current_window = 'main'
         self.running = False
@@ -664,8 +662,6 @@ class WinMain(WahCade, threading.Thread):
 
     def exit_wahcade(self, exit_mode='default'):
         """Quit"""
-        if self.connected_to_server and self.video_chat: #No longer connected to server
-            requests.delete(self.connection_url + self.video_chat.localip)
         exit_movie = os.path.isfile(self.exit_movie_file)
         self.stop_video()
         if dbus_imported:
@@ -781,11 +777,11 @@ class WinMain(WahCade, threading.Thread):
         gtk.gdk.pointer_ungrab()
     
     def setup_video_chat(self):
-        self.vid_container = gtk.DrawingArea()
         self.video_chat = video_chat(self)
+        self.video_chat.setup_video_streamer()
         
         #TODO: move this code to the layout file
-        
+        self.vid_container = gtk.DrawingArea()
         self.vid_container.modify_bg(gtk.STATE_NORMAL, self.vid_container.style.black)
         self.fixd.put(self.vid_container, 600, 80) 
         self.vid_container.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
@@ -803,12 +799,15 @@ class WinMain(WahCade, threading.Thread):
             self.video_chat.setup_video_receiver()
         
         self.video_chat.start_receiver()
+        self.start_timer('connection')
     
     def stop_video_chat(self):
         self.video_chat.stop_receiver()
         
     def clean_up_video_chat(self):
-        self.video_chat.kill_pipelines()
+        if self.connected_to_server and self.video_chat:
+            self.video_chat.kill_pipelines()
+            requests.delete(self.connection_url + self.video_chat.localip)
        
     def parse_high_score_text(self, text_string):
         """Parse the text file for high scores. 0 scores are not sent"""
@@ -971,6 +970,8 @@ class WinMain(WahCade, threading.Thread):
             self.recent_log = True
             self.last_log = player_rfid
             self.current_players.append(player_name)
+            if self.lblUsersLoggedOut.get_visible():
+                self.lblUsersLoggedOut.hide()
             self.lblUsersLoggedIn.set_text(player_name + " has logged in.")
             self.lblUsersLoggedIn.show()
             self.timeLoginShown = time.time()
@@ -991,11 +992,15 @@ class WinMain(WahCade, threading.Thread):
         """Logs a player out"""
         if player_name == "All":
             self.current_players = []
+            if self.lblUsersLoggedIn.get_visible():
+                self.lblUsersLoggedIn.hide()
             self.lblUsersLoggedOut.set_text("All users have been logged out.")
             self.lblUsersLoggedOut.show()
             self.timeLogoutShown = time.time()
         else:
             self.current_players.remove(player_name)
+            if self.lblUsersLoggedIn.get_visible():
+                self.lblUsersLoggedIn.hide()
             self.lblUsersLoggedOut.set_text(player_name + " has logged out.")
             self.lblUsersLoggedOut.show()
             self.timeLogoutShown = time.time()
@@ -1316,21 +1321,21 @@ class WinMain(WahCade, threading.Thread):
                         if self.current_players:
                             self.log_out()
                     elif mw_func == 'TOGGLE_VIDEO':
-                        #self.remote_ip = self.local_IP #REMOVE THIS WHEN CONNECTING TO MULTIPLE MACHINES
-                        if self.video_chat.enabled and self.remote_ip:
-                            if self.vid_container.get_property("visible") == False:
-                                #print "Show video chat"
-                                self.start_video_chat()
-                                #self.wait_with_events(0.01)
-                                self.vid_container.show()
-                            else:
-                                #print "Hide video chat"
-                                self.stop_video_chat()
-                                self.vid_container.hide()
-                        elif not self.remote_ip:
-                            print "Waiting to receive remote IP from server"
+                        if self.connected_to_server and self.video_chat and self.video_chat.enabled:
+                            if self.remote_ip:
+                                if self.vid_container.get_property("visible") == False:
+                                    #print "Show video chat"
+                                    self.start_video_chat()
+                                    #self.wait_with_events(0.01)
+                                    self.vid_container.show()
+                                else:
+                                    #print "Hide video chat"
+                                    self.stop_video_chat()
+                                    self.vid_container.hide()
+                            elif not self.remote_ip:
+                                print "Waiting to receive remote IP from server"
                         else:
-                            print "Video Chat is disabled."  
+                            print "Video Chat is disabled (you are not connected to the server)."
                 elif current_window == 'options':
                     # Options form
                     if mw_func == 'OP_UP_1_OPTION':
@@ -2801,7 +2806,7 @@ class WinMain(WahCade, threading.Thread):
                 #print "Showing local video: " + str(self.remote_ip)
                 #TODO: display a message to the user that the system is waiting for another user to join
                 return True
-            elif ipAddr.find('ipAddress').text != self.video_chat.localip:
+            elif ipAddr.find('ipAddress').text != self.video_chat.localip and not self.video_chat.receiver_running:
                 self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
                 print "Found a computer to chat with: " + str(self.remote_ip)
                 self.stop_video_chat()
