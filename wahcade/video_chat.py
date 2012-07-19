@@ -30,17 +30,16 @@ class video_chat():
         #print self.localip + " " + self.localport 
         self.remoteip, self.remoteport = "", ""
         
-        if self.localip != "" or self.localip != None:
-            post_data = {"ipAddress":self.localip, "port":self.localport}
-            r = requests.post(self.WinMain.connection_url, post_data)
+        
         
         #Set up the streaming pipelines
-        self.setup_video_streamer()
+        #self.setup_video_streamer()
     
     def setup_video_streamer(self):
         #webm video pipeline, optimized for video conferencing
         device = self.get_camera_name()
-        command = "v4l2src device=" + device + " ! video/x-raw-rgb, width=" + str(self.video_width) + ", height=" + str(self.video_height) + " "
+        #v4l2src device=" + device + "
+        command = "autovideosrc ! video/x-raw-rgb, width=" + str(self.video_width) + ", height=" + str(self.video_height) + " "
         command += "! ffmpegcolorspace ! vp8enc speed=2 max-latency=2 quality=10.0 max-keyframe-distance=3 threads=5 " 
         command += "! queue2 ! mux. autoaudiosrc ! audioconvert ! vorbisenc " 
         command += "! queue2 ! mux. webmmux name=mux streamable=true "
@@ -51,6 +50,11 @@ class video_chat():
         bus = self.streampipe.get_bus()
         bus.add_signal_watch()
         bus.connect("message", self.on_stream_message)
+        
+        #Send the local IP to the server
+        if self.localip != "" or self.localip != None:
+            post_data = {"ipAddress":self.localip, "port":self.localport}
+            r = requests.post(self.WinMain.connection_url, post_data)
     
     def setup_video_receiver(self):
         #webm encoded video receiver
@@ -110,11 +114,12 @@ class video_chat():
         return False
     
     def start_streaming_video(self):
-        if not self.video_is_streaming(): 
+        if self.streampipe and not self.video_is_streaming(): 
             self.streampipe.set_state(gst.STATE_PLAYING)
     
-    def pause_streaming_video(self):
-        self.streampipe.set_state(gst.STATE_PAUSED)
+    def stop_streamer(self):
+        if self.streampipe:
+            self.streampipe.set_state(gst.STATE_NULL)
     
     def start_receiver(self):
         if self.receivepipe:
@@ -127,8 +132,9 @@ class video_chat():
 
     def kill_pipelines(self):
         if self.receivepipe:
-            self.receivepipe.set_state(gst.STATE_NULL)
-            self.streampipe.set_state(gst.STATE_NULL)
+            self.stop_receiver()
+        if self.streampipe:
+            self.stop_streamer()
     
     def on_message(self, bus, message):
         t = message.type
@@ -138,12 +144,12 @@ class video_chat():
         elif t == gst.MESSAGE_ERROR:
             self.receiver_running = False
             err, debug = message.parse_error()
-            print "Receiver Error: %s" % err, debug
+            print "Receiver Error: %s" % self.remoteip, self.remoteport, err, debug
             self.kill_pipelines()
         elif t == gst.MESSAGE_STATE_CHANGED:
             #print 'Message: ' + str(message)
             old, new, pending = message.parse_state_changed()
-            #print "State: " + str(new)
+            #print "Receiver State: " + str(new)
     
     def on_sync_message(self, bus, message):
         if message.structure is None:
