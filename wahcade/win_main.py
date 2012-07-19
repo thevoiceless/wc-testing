@@ -2807,22 +2807,25 @@ class WinMain(WahCade, threading.Thread):
         data = fromstring(requests.get(self.connection_url).text)
         print "Checking for IP Addresses"
         for ipAddr in data.getiterator('connection'):
-            if len(data.getiterator('connection')) == 1 and self.remote_ip and ipAddr.find('ipAddress').text == self.video_chat.localip:
-                print "Option 1"
-                self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
-                if not self.video_chat.receiver_running:
+            if ipAddr.find('ipAddress').text != self.video_chat.remoteip:
+                if len(data.getiterator('connection')) == 1 and self.remote_ip and ipAddr.find('ipAddress').text == self.video_chat.localip:
+                    print "Option 1"
+                    self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
+                    #if not self.video_chat.receiver_running:
                     self.change_video_chat_target(ipAddr.find('ipAddress').text, ipAddr.find('port').text)
-                return True
-            elif ipAddr.find('ipAddress').text != self.video_chat.localip and ipAddr.find('ipAddress').text != self.video_chat.remoteip:
-                print "Option 2"
-                if not self.video_chat.receiver_running:
+                    self.vc_caption.set_text("Local video: " + str(self.remote_ip))
+                    print "Switching back to local video: " + str(self.remote_ip)
+                    return True
+                elif ipAddr.find('ipAddress').text != self.video_chat.localip:
+                    print "Option 2"
+                    #if not self.video_chat.receiver_running:
                     self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
                     self.change_video_chat_target(ipAddr.find('ipAddress').text, ipAddr.find('port').text)
                 
                     self.vc_caption.set_text("Chatting with " + str(self.remote_ip))
                     print "Found a computer to chat with: " + str(self.remote_ip)
                     self.connection_time_running = False
-                return False #Stop the timer if connected
+                    return False #Stop the timer if connected
         return True
         
 
