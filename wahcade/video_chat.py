@@ -28,7 +28,7 @@ class video_chat():
         #self.localip, self.localport = self.WinMain.local_IP, str(self.get_open_port())
         self.localip, self.localport = str(self.get_local_ip()), str(self.get_open_port())
         #print self.localip + " " + self.localport 
-        self.remoteip, self.remoteport = "", ""
+        self.remoteip, self.remoteport = self.localip, self.localport #do a video loopback initially
         
         
         
@@ -55,6 +55,8 @@ class video_chat():
         if self.localip != "" or self.localip != None:
             post_data = {"ipAddress":self.localip, "port":self.localport}
             r = requests.post(self.WinMain.connection_url, post_data)
+            
+        print "Streaming video on " + self.localip + ":" + self.localport
     
     def setup_video_receiver(self):
         #webm encoded video receiver
@@ -73,7 +75,7 @@ class video_chat():
         bus.connect("sync-message::element", self.on_sync_message)
         
 #        self.receivepipe.set_state(gst.STATE_PLAYING)
-        self.receiver_running = True
+        
         #print "Video Chat Receiver started"
     
     def get_local_ip(self):
@@ -108,6 +110,15 @@ class video_chat():
         
         return device
     
+    def change_remote_ip(self, ip, port):
+        was_running = self.receiver_running
+        self.video_chat.remoteip = ip
+        self.video_chat.remoteport = port
+        self.stop_receiver()
+        self.video_chat.setup_video_receiver()
+        if was_running:
+            self.start_receiver()
+    
     def video_is_streaming(self):
         if self.streampipe.get_state()[1] == gst.STATE_PLAYING:
             return True
@@ -124,6 +135,7 @@ class video_chat():
     def start_receiver(self):
         if self.receivepipe:
             self.receivepipe.set_state(gst.STATE_PLAYING)
+            self.receiver_running = True
             
     def stop_receiver(self):
         if self.receivepipe:
@@ -161,7 +173,7 @@ class video_chat():
             
             videooutput = message.src
             videooutput.set_property("force-aspect-ratio", True)
-            videooutput.set_xwindow_id(self.WinMain.vid_container.window.xid)
+            videooutput.set_xwindow_id(self.WinMain.vc_box.window.xid)
             gtk.gdk.threads_leave()
     
     def on_stream_message(self, bus, message):
