@@ -780,24 +780,31 @@ class WinMain(WahCade, threading.Thread):
         self.video_chat.setup_video_streamer()
         
         #TODO: move this code to the layout file
-        self.vid_container = gtk.DrawingArea()
-        self.vid_container.modify_bg(gtk.STATE_NORMAL, self.vid_container.style.black)
-        self.fixd.put(self.vid_container, 600, 80) 
-        self.vid_container.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
+        self.vid_container = gtk.VBox(False, 10)
         
-        #don't poll the server if video chat is disabled
-        if self.video_chat.enabled:
-            self.on_connection_timer()
-            self.start_timer('connection')
-            #print "Checking server for another user to video chat with"   
+        self.vc_box = gtk.DrawingArea()
+        self.vc_box.modify_bg(gtk.STATE_NORMAL, self.vid_container.style.black)
+        self.vc_box.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
+        self.vid_container.pack_start(self.vc_box)
+        
+        self.vc_caption = gtk.Label("Waiting for another user to join...")
+        self.vc_caption.modify_fg(gtk.STATE_NORMAL, self.vc_caption.style.white)
+        self.vid_container.pack_start(self.vc_caption)
+        
+        self.fixd.put(self.vid_container, 603, 140)
+        
+        self.connection_time_running = False
+
+    
+    def change_video_chat_target(self, ip, port):
+        self.video_chat.change_remote_ip(ip, port)
         
     def start_video_chat(self):
         if not self.video_chat.receiver_running:
-            self.video_chat.remoteip = self.remote_ip[0]
-            self.video_chat.remoteport = self.remote_ip[1]
             self.video_chat.setup_video_receiver()
-        
+            
         self.video_chat.start_receiver()
+        self.on_connection_timer()
         self.start_timer('connection')
     
     def stop_video_chat(self):
@@ -1321,18 +1328,16 @@ class WinMain(WahCade, threading.Thread):
                             self.log_out()
                     elif mw_func == 'TOGGLE_VIDEO':
                         if self.connected_to_server and self.video_chat and self.video_chat.enabled:
-                            if self.remote_ip:
-                                if self.vid_container.get_property("visible") == False:
-                                    #print "Show video chat"
-                                    self.start_video_chat()
-                                    #self.wait_with_events(0.01)
-                                    self.vid_container.show()
-                                else:
-                                    #print "Hide video chat"
-                                    self.stop_video_chat()
-                                    self.vid_container.hide()
-                            elif not self.remote_ip:
-                                print "Waiting to receive remote IP from server"
+                            if self.vid_container.get_property("visible") == False:
+                                #print "Show video chat"
+                                self.start_video_chat()
+                                self.vid_container.show_all()
+                                self.imgArtwork1.hide()
+                            else:
+                                #print "Hide video chat"
+                                self.stop_video_chat()
+                                self.vid_container.hide_all()
+                                self.imgArtwork1.show()
                         else:
                             print "Video Chat is disabled (you are not connected to the server)."
                 elif current_window == 'options':
@@ -2799,17 +2804,23 @@ class WinMain(WahCade, threading.Thread):
             
     def on_connection_timer(self):
         data = fromstring(requests.get(self.connection_url).text)
+        print "Checking for IP Addresses"
         for ipAddr in data.getiterator('connection'):
-            if len(data.getiterator('connection')) == 1:
+            if len(data.getiterator('connection')) == 1 and self.remote_ip and ipAddr.find('ipAddress').text == self.video_chat.localip:
+                print "Option 1"
                 self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
-                #print "Showing local video: " + str(self.remote_ip)
-                #TODO: display a message to the user that the system is waiting for another user to join
+                if not self.video_chat.receiver_running:
+                    self.change_video_chat_target(ipAddr.find('ipAddress').text, ipAddr.find('port').text)
                 return True
-            elif ipAddr.find('ipAddress').text != self.video_chat.localip and not self.video_chat.receiver_running:
-                self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
-                print "Found a computer to chat with: " + str(self.remote_ip)
-                self.stop_video_chat()
-                self.start_video_chat()
+            elif ipAddr.find('ipAddress').text != self.video_chat.localip and ipAddr.find('ipAddress').text != self.video_chat.remoteip:
+                print "Option 2"
+                if not self.video_chat.receiver_running:
+                    self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
+                    self.change_video_chat_target(ipAddr.find('ipAddress').text, ipAddr.find('port').text)
+                
+                    self.vc_caption.set_text("Chatting with " + str(self.remote_ip))
+                    print "Found a computer to chat with: " + str(self.remote_ip)
+                    self.connection_time_running = False
                 return False #Stop the timer if connected
         return True
         
@@ -2840,8 +2851,9 @@ class WinMain(WahCade, threading.Thread):
             if self.portal_time:
                 gobject.source_remove(self.portal_time)
             self.portal_time = gobject.timeout_add(2500, self.portal_timer)
-        elif timer_type == 'connection':
+        elif timer_type == 'connection' and not self.connection_time_running:
             self.connection_time = gobject.timeout_add(10000, self.on_connection_timer)
+            self.connection_time_running = True
 
     def display_splash(self):
         """Show splash screen"""
