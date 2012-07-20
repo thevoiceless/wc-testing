@@ -780,6 +780,11 @@ class WinMain(WahCade, threading.Thread):
         self.video_chat = video_chat(self)
         self.video_chat.setup_video_streamer()
         
+        #Send the local IP to the server
+        if self.video_chat.localip != "" or self.video_chat.localip != None:
+            post_data = {"ipAddress":self.video_chat.localip, "port":self.video_chat.localport}
+            r = requests.post(self.WinMain.connection_url, post_data)
+        
         #TODO: move this code to the layout file
         self.vid_container = gtk.VBox(False, 10)
         
