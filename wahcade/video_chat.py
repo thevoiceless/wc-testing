@@ -177,6 +177,7 @@ class video_chat():
             
             videooutput = message.src
             videooutput.set_property("force-aspect-ratio", True)
+            self.WinMain.vc_box.show()
             if self.WinMain.vc_box and self.WinMain.vc_box.window:
                 videooutput.set_xwindow_id(self.WinMain.vc_box.window.xid)
             else:
