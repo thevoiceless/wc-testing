@@ -806,6 +806,8 @@ class WinMain(WahCade, threading.Thread):
         #self.video_chat.change_remote_ip(ip, port)
         
     def start_video_chat(self):
+        self.vid_container.show_all()
+        self.imgArtwork1.hide()
         if not self.video_chat.receiver_running:
             self.video_chat.remoteip = self.remote_ip[0]
             self.video_chat.remoteport = self.remote_ip[1]
@@ -817,6 +819,8 @@ class WinMain(WahCade, threading.Thread):
             self.start_timer('connection')
     
     def stop_video_chat(self):
+        self.vid_container.hide_all()
+        self.imgArtwork1.show()
         self.video_chat.stop_receiver()
         
     def clean_up_video_chat(self):
@@ -1341,13 +1345,9 @@ class WinMain(WahCade, threading.Thread):
                                 if self.vid_container.get_property("visible") == False:
                                     #print "Show video chat"
                                     self.start_video_chat()
-                                    self.vid_container.show_all()
-                                    self.imgArtwork1.hide()
                                 else:
                                     #print "Hide video chat"
                                     self.stop_video_chat()
-                                    self.vid_container.hide_all()
-                                    self.imgArtwork1.show()
                             else:
                                 print "Waiting for remote IP Address."
                         else:
