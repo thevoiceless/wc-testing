@@ -787,6 +787,8 @@ class WinMain(WahCade, threading.Thread):
         self.vc_box.modify_bg(gtk.STATE_NORMAL, self.vid_container.style.black)
         self.vc_box.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
         self.vid_container.pack_start(self.vc_box)
+        self.vc_box.show()
+        self.vc_box.hide()
         
         self.vc_caption = gtk.Label("Waiting for another user to join...")
         self.vc_caption.modify_fg(gtk.STATE_NORMAL, self.vc_caption.style.white)
@@ -2825,7 +2827,7 @@ class WinMain(WahCade, threading.Thread):
                     self.vc_caption.set_text("Showing local video: " + str(self.remote_ip))
                     print "Showing local video: " + str(self.remote_ip)
                     return True
-                elif ipAddr.find('ipAddress').text != self.video_chat.localip or ipAddr.find('port').text != self.video_chat.remoteport:
+                elif ipAddr.find('ipAddress').text != self.video_chat.localip or ipAddr.find('port').text != self.video_chat.localport:
                     #print "Showing remote video"
                     #if not self.video_chat.receiver_running:
                     self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
