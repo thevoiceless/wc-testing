@@ -177,7 +177,10 @@ class video_chat():
             
             videooutput = message.src
             videooutput.set_property("force-aspect-ratio", True)
-            videooutput.set_xwindow_id(self.WinMain.vc_box.window.xid)
+            if self.WinMain.vc_box and self.WinMain.vc_box.window:
+                videooutput.set_xwindow_id(self.WinMain.vc_box.window.xid)
+            else:
+                print "Video Chat Error: Unable to link the video source to the receiver sink."
             gtk.gdk.threads_leave()
     
     def on_stream_message(self, bus, message):
