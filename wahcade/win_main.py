@@ -552,7 +552,7 @@ class WinMain(WahCade, threading.Thread):
         #Initialize video chat
         self.video_chat = None
         if self.connected_to_server:
-            self.connection_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/"
+            self.connection_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/rcade/"
             self.setup_video_chat()
             
 
@@ -2833,7 +2833,7 @@ class WinMain(WahCade, threading.Thread):
                     self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
                     #self.change_video_chat_target(ipAddr.find('ipAddress').text, ipAddr.find('port').text)
                     self.stop_video_chat()
-                    self.start_video_chat()
+                    #self.start_video_chat()
                     self.vc_caption.set_text("Chatting with " + str(self.remote_ip))
                     print "Found a computer to chat with: " + str(self.remote_ip)
                     self.connection_time_running = False
