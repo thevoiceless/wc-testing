@@ -28,18 +28,16 @@ class video_chat():
         #self.localip, self.localport = self.WinMain.local_IP, str(self.get_open_port())
         self.localip, self.localport = str(self.get_local_ip()), str(self.get_open_port())
         #print self.localip + " " + self.localport 
-        self.remoteip, self.remoteport = self.localip, self.localport #do a video loopback initially
-        
-        
-        
-        #Set up the streaming pipelines
-        #self.setup_video_streamer()
+        self.remoteip, self.remoteport = "", "" #self.localip, self.localport #do a video loopback initially
     
     def setup_video_streamer(self):
         #webm video pipeline, optimized for video conferencing
         device = self.get_camera_name()
+        #videosrc = "v4l2src device=" + device #specify a specific camera
+        videoSrc = "autovideosrc" #auto detect the source
+        #videoSrc = "videotestsrc" #test source
         #v4l2src device=" + device + "
-        command = "autovideosrc ! video/x-raw-rgb, width=" + str(self.video_width) + ", height=" + str(self.video_height) + " "
+        command = videoSrc + " ! video/x-raw-rgb, width=" + str(self.video_width) + ", height=" + str(self.video_height) + " "
         command += "! ffmpegcolorspace ! vp8enc speed=2 max-latency=2 quality=10.0 max-keyframe-distance=3 threads=5 " 
         command += "! queue2 ! mux. autoaudiosrc ! audioconvert ! vorbisenc " 
         command += "! queue2 ! mux. webmmux name=mux streamable=true "
@@ -73,11 +71,16 @@ class video_chat():
         bus.connect("message", self.on_message)
         bus.enable_sync_message_emission()
         bus.connect("sync-message::element", self.on_sync_message)
-        
+        self.receiver_running = True
 #        self.receivepipe.set_state(gst.STATE_PLAYING)
         
         #print "Video Chat Receiver started"
-    
+        
+    def receiver_ready(self):
+        if not self.receivepipe:
+            return False
+        return True
+            
     def get_local_ip(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(('8.8.8.8', 80)) #connect to Google's DNS server
@@ -121,7 +124,7 @@ class video_chat():
             self.start_receiver()
     
     def video_is_streaming(self):
-        if self.streampipe.get_state()[1] == gst.STATE_PLAYING:
+        if self.streampipe and self.streampipe.get_state()[1] == gst.STATE_PLAYING:
             return True
         return False
     
@@ -136,7 +139,7 @@ class video_chat():
     def start_receiver(self):
         if self.receivepipe:
             self.receivepipe.set_state(gst.STATE_PLAYING)
-            self.receiver_running = True
+            #self.receiver_running = True
             
     def stop_receiver(self):
         if self.receivepipe:
@@ -174,7 +177,10 @@ class video_chat():
             
             videooutput = message.src
             videooutput.set_property("force-aspect-ratio", True)
-            videooutput.set_xwindow_id(self.WinMain.vc_box.window.xid)
+            if self.WinMain.vc_box and self.WinMain.vc_box.window:
+                videooutput.set_xwindow_id(self.WinMain.vc_box.window.xid)
+            else:
+                print "Video Chat Error: Unable to link the video source to the receiver sink."
             gtk.gdk.threads_leave()
     
     def on_stream_message(self, bus, message):

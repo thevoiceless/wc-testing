@@ -795,18 +795,24 @@ class WinMain(WahCade, threading.Thread):
         self.fixd.put(self.vid_container, 603, 140)
         
         self.connection_time_running = False
+        if self.video_chat.enabled:
+            self.on_connection_timer()
+            self.start_timer('connection')
 
     
-    def change_video_chat_target(self, ip, port):
-        self.video_chat.change_remote_ip(ip, port)
+    #def change_video_chat_target(self, ip, port):
+        #self.video_chat.change_remote_ip(ip, port)
         
     def start_video_chat(self):
         if not self.video_chat.receiver_running:
+            self.video_chat.remoteip = self.remote_ip[0]
+            self.video_chat.remoteport = self.remote_ip[1]
             self.video_chat.setup_video_receiver()
             
         self.video_chat.start_receiver()
-        self.on_connection_timer()
-        self.start_timer('connection')
+        #self.on_connection_timer()
+        if not self.connection_time_running:
+            self.start_timer('connection')
     
     def stop_video_chat(self):
         self.video_chat.stop_receiver()
@@ -1329,16 +1335,19 @@ class WinMain(WahCade, threading.Thread):
                             self.log_out()
                     elif mw_func == 'TOGGLE_VIDEO':
                         if self.connected_to_server and self.video_chat and self.video_chat.enabled:
-                            if self.vid_container.get_property("visible") == False:
-                                #print "Show video chat"
-                                self.start_video_chat()
-                                self.vid_container.show_all()
-                                self.imgArtwork1.hide()
+                            if self.remote_ip:
+                                if self.vid_container.get_property("visible") == False:
+                                    #print "Show video chat"
+                                    self.start_video_chat()
+                                    self.vid_container.show_all()
+                                    self.imgArtwork1.hide()
+                                else:
+                                    #print "Hide video chat"
+                                    self.stop_video_chat()
+                                    self.vid_container.hide_all()
+                                    self.imgArtwork1.show()
                             else:
-                                #print "Hide video chat"
-                                self.stop_video_chat()
-                                self.vid_container.hide_all()
-                                self.imgArtwork1.show()
+                                print "Waiting for remote IP Address."
                         else:
                             print "Video Chat is disabled (you are not connected to the server)."
                 elif current_window == 'options':
@@ -2805,27 +2814,31 @@ class WinMain(WahCade, threading.Thread):
             
     def on_connection_timer(self):
         data = fromstring(requests.get(self.connection_url).text)
-        print "Checking for IP Addresses"
+        print "Checking for IP Addresses: " + str(len(data.getiterator('connection'))) + " found"
         for ipAddr in data.getiterator('connection'):
-            if ipAddr.find('ipAddress').text != self.video_chat.remoteip:
-                if len(data.getiterator('connection')) == 1 and self.remote_ip and ipAddr.find('ipAddress').text == self.video_chat.localip:
-                    print "Option 1"
+            if not (ipAddr.find('ipAddress').text == self.video_chat.remoteip and ipAddr.find('port').text == self.video_chat.remoteport):
+                if len(data.getiterator('connection')) == 1 and ipAddr.find('ipAddress').text == self.video_chat.localip:
+                    #print "Show local video"
                     self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
                     #if not self.video_chat.receiver_running:
-                    self.change_video_chat_target(ipAddr.find('ipAddress').text, ipAddr.find('port').text)
-                    self.vc_caption.set_text("Local video: " + str(self.remote_ip))
-                    print "Switching back to local video: " + str(self.remote_ip)
+                    #self.change_video_chat_target(ipAddr.find('ipAddress').text, ipAddr.find('port').text)
+                    self.vc_caption.set_text("Showing local video: " + str(self.remote_ip))
+                    print "Showing local video: " + str(self.remote_ip)
                     return True
-                elif ipAddr.find('ipAddress').text != self.video_chat.localip:
-                    print "Option 2"
+                elif ipAddr.find('ipAddress').text != self.video_chat.localip or ipAddr.find('port').text != self.video_chat.remoteport:
+                    #print "Showing remote video"
                     #if not self.video_chat.receiver_running:
                     self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
-                    self.change_video_chat_target(ipAddr.find('ipAddress').text, ipAddr.find('port').text)
-                
+                    #self.change_video_chat_target(ipAddr.find('ipAddress').text, ipAddr.find('port').text)
+                    self.stop_video_chat()
+                    self.start_video_chat()
                     self.vc_caption.set_text("Chatting with " + str(self.remote_ip))
                     print "Found a computer to chat with: " + str(self.remote_ip)
                     self.connection_time_running = False
                     return False #Stop the timer if connected
+            else:
+                pass
+                #print ipAddr.find('ipAddress').text + " " + self.video_chat.remoteip + " " + ipAddr.find('port').text + " " + self.video_chat.remoteport
         return True
         
 
