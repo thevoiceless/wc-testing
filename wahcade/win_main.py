@@ -552,7 +552,7 @@ class WinMain(WahCade, threading.Thread):
         #Initialize video chat
         self.video_chat = None
         if self.connected_to_server:
-            self.connection_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/"
+            self.connection_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/rcade/"
             self.setup_video_chat()
             
 
@@ -779,6 +779,11 @@ class WinMain(WahCade, threading.Thread):
     def setup_video_chat(self):
         self.video_chat = video_chat(self)
         self.video_chat.setup_video_streamer()
+        
+        #Send the local IP to the server
+        if self.video_chat.localip != "" or self.video_chat.localip != None:
+            post_data = {"ipAddress":self.video_chat.localip, "port":self.video_chat.localport}
+            r = requests.post(self.connection_url, post_data)
         
         #TODO: move this code to the layout file
         self.vid_container = gtk.VBox(False, 10)
@@ -2833,7 +2838,7 @@ class WinMain(WahCade, threading.Thread):
                     self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
                     #self.change_video_chat_target(ipAddr.find('ipAddress').text, ipAddr.find('port').text)
                     self.stop_video_chat()
-                    self.start_video_chat()
+                    #self.start_video_chat()
                     self.vc_caption.set_text("Chatting with " + str(self.remote_ip))
                     print "Found a computer to chat with: " + str(self.remote_ip)
                     self.connection_time_running = False

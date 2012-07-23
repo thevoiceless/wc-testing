@@ -48,12 +48,7 @@ class video_chat():
         bus = self.streampipe.get_bus()
         bus.add_signal_watch()
         bus.connect("message", self.on_stream_message)
-        
-        #Send the local IP to the server
-        if self.localip != "" or self.localip != None:
-            post_data = {"ipAddress":self.localip, "port":self.localport}
-            r = requests.post(self.WinMain.connection_url, post_data)
-            
+
         print "Streaming video on " + self.localip + ":" + self.localport
     
     def setup_video_receiver(self):
@@ -157,12 +152,14 @@ class video_chat():
         t = message.type
         if t == gst.MESSAGE_EOS:
             self.receiver_running = False
-            self.kill_pipelines()
+            #self.kill_pipelines()
+            self.stop_receiver()
         elif t == gst.MESSAGE_ERROR:
             self.receiver_running = False
             err, debug = message.parse_error()
             print "Receiver Error: %s" % self.remoteip, self.remoteport, err, debug
-            self.kill_pipelines()
+            #self.kill_pipelines()
+            self.stop_receiver()
         elif t == gst.MESSAGE_STATE_CHANGED:
             #print 'Message: ' + str(message)
             old, new, pending = message.parse_state_changed()
@@ -190,8 +187,68 @@ class video_chat():
         if t == gst.MESSAGE_ERROR:
             err, debug = message.parse_error()
             print "Stream Error: %s" % err, debug
-            self.kill_pipelines()
+            #self.kill_pipelines()
+            self.stop_streamer()
         elif t == gst.MESSAGE_STATE_CHANGED:
             #print 'Stream Message: ' + str(message)
             old, new, pending = message.parse_state_changed()
             #print "Stream State: " + str(new)
+
+#Creates a stand alone version of video chat
+class standalone_player():
+    def __init__(self):
+        self.vc = video_chat(self)
+        
+        self.vc.remoteip = self.vc.localip
+        self.vc.remoteport = self.vc.localport
+        
+        window = gtk.Window()
+        window.set_title('Video Chat Test')
+        #window.set_default_size(640, 480)
+        window.connect("destroy", gtk.main_quit, "WM destroy")
+        
+        fixed = gtk.Fixed()
+        vbox = gtk.VBox()
+        self.vc_box = gtk.DrawingArea()
+        self.vc_box.set_size_request(self.vc.video_width,self.vc.video_height)
+        startStreamButton = gtk.Button("Start Streaming")
+        startStreamButton.connect("clicked", self.OnStreamStart)
+        stopStreamButton = gtk.Button("Stop Streaming")
+        stopStreamButton.connect("clicked", self.OnStreamStop)
+        
+        startReceiveButton = gtk.Button("Start Receiving")
+        startReceiveButton.connect("clicked", self.OnReceiveStart)
+        stopReceiveButton = gtk.Button("Stop Receiving")
+        stopReceiveButton.connect("clicked", self.OnReceiveStop)
+        
+        buttonBox = gtk.HButtonBox()
+        buttonBox.add(startStreamButton)
+        buttonBox.add(stopStreamButton)
+        buttonBox.add(startReceiveButton)
+        buttonBox.add(stopReceiveButton)
+        
+        vbox.pack_start(self.vc_box)
+        
+        vbox.pack_start(buttonBox)
+        fixed.put(vbox, 0, 0)
+        window.add(fixed)
+        
+        window.show_all()
+        
+        
+    
+    def OnStreamStart(self, widget):
+        self.vc.setup_video_streamer()
+    def OnStreamStop(self, widget):
+        self.vc.stop_streamer()
+    
+    def OnReceiveStart(self, widget):
+        self.vc.setup_video_receiver()
+        self.vc.start_receiver()
+    def OnReceiveStop(self, widget):
+        self.vc.stop_receiver()
+    
+if __name__ == "__main__":
+    standalone_player()
+    gtk.gdk.threads_init()
+    gtk.main()
