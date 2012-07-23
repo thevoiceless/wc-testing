@@ -155,7 +155,19 @@ class WinMain(WahCade, threading.Thread):
         except requests.exceptions.ConnectionError, e: # Any exception would mean some sort of failed server connection
             self.connected_to_server = False
             print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + ":", str(e)
-        
+        #Send IP to server
+        self.local_IP = "" #Initialize local ip
+        if self.connected_to_server:
+            self.connection_time_running = False
+            import socket
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(('8.8.8.8', 80))
+            self.local_IP = s.getsockname()[0] #Get local ip address
+            s.close()
+            self.connection_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/"
+            self.start_timer('connection')
+            self.start_timer('tstconnect')
+
         
         ### SETUP WAHCADE INI FILE
         self.wahcade_ini = MameWahIni(os.path.join(CONFIG_DIR, 'wahcade.ini'))
@@ -478,9 +490,7 @@ class WinMain(WahCade, threading.Thread):
                         self.supported_games_name.append(romToName[game])
              
                 # Get a list of games already on the server
-                data = requests.get(self.game_url)
-#                self.check_connection(data.status_code)
-                data = fromstring(data.text)
+                data = fromstring(requests.get(self.game_url, timeout=1).text)
                 games_on_server = []
                 for game in data.getiterator('game'):
                     games_on_server.append(game.find('romName').text)
@@ -491,6 +501,8 @@ class WinMain(WahCade, threading.Thread):
                         post_data = {"romName":rom, "gameName":romToName[rom]}
                         r = requests.post(self.game_url, post_data)
 #                        self.check_connection(r.status_code)
+            
+            
             except e:
                 self.connected_to_server = False                    
 
@@ -527,8 +539,7 @@ class WinMain(WahCade, threading.Thread):
             if self.connected_to_arduino:
                 self.log_in_queue = Queue.Queue()
                 # Get players from server
-            r = requests.get(self.player_url)
-            data = fromstring(r.text)
+            data = fromstring(requests.get(self.player_url).text)
             for player in data.getiterator('player'):
                 self.player_info.append((player.find('name').text, player.find('playerID').text)) # parse player name and RFID from xml
             self.lblUsers.set_text("No Users Logged In")
@@ -809,20 +820,19 @@ class WinMain(WahCade, threading.Thread):
             self.start_timer('connection')
         else:
             print "Video chat is disabled because no camera was found."
-        
+    
     def start_video_chat(self, overrideip = True):
-        self.vid_container.show_all()
-        self.imgArtwork1.hide()
         if not self.video_chat.receiver_running:
             if overrideip:
                 self.video_chat.remoteip = self.remote_ip[0]
                 self.video_chat.remoteport = self.remote_ip[1]
-            self.video_chat.setup_video_receiver()
-            
-        self.video_chat.start_receiver()
-        #self.on_connection_timer()
-        if not self.connection_time_running:
-            self.start_timer('connection')
+            valid = self.video_chat.setup_video_receiver()
+        if valid:
+            self.vid_container.show_all()
+            self.imgArtwork1.hide()    
+            self.video_chat.start_receiver()
+            if not self.connection_time_running:
+                self.start_timer('connection')
     
     def stop_video_chat(self):
         self.vid_container.hide_all()
@@ -861,7 +871,7 @@ class WinMain(WahCade, threading.Thread):
                                         post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.lblUsers.get_text()}                         
                                     else:
                                         post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.current_players[0]}
-                                    r = requests.post(self.score_url, post_data)
+                                    requests.post(self.score_url, post_data)
                         else: #TODO: handle multiple players scores coming back
                             for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
                                 high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
@@ -2698,8 +2708,7 @@ class WinMain(WahCade, threading.Thread):
         elif self.current_list_ini.get('list_type') == 'xml_remote':
             # XML remote-populated, so get the source URL
             sourceURL = self.props['host']+":"+self.props['port']+"/"+self.props['db']+self.current_list_ini.get('params')
-            list_source = requests.get(sourceURL)
-            data = fromstring(list_source.text)
+            data = fromstring(requests.get(sourceURL).text)
             gList = []
             # Use all games to gen list
             list_filename = os.path.join(
@@ -2851,8 +2860,20 @@ class WinMain(WahCade, threading.Thread):
             else:
                 pass
                 #print ipAddr.find('ipAddress').text + " " + self.video_chat.remoteip + " " + ipAddr.find('port').text + " " + self.video_chat.remoteport
+        return True 
+    
+    def on_test_connect_timer(self):
+        found_local = False
+        data = fromstring(requests.get(self.connection_url).text)
+        for ipAddr in data.getiterator('connection'):
+            if ipAddr.find('ipAddress').text == self.video_chat.localip:
+                found_local = True
+                break
+        if not found_local:
+            print 'couldnt find local ip'
+            post_data = {"ipAddress":self.video_chat.localip, "port":self.video_chat.localport}
+            r = requests.post(self.connection_url, post_data)
         return True
-        
 
     def start_timer(self, timer_type):
         """Start given timer"""
@@ -2883,6 +2904,8 @@ class WinMain(WahCade, threading.Thread):
         elif timer_type == 'connection' and not self.connection_time_running:
             self.connection_time = gobject.timeout_add(10000, self.on_connection_timer)
             self.connection_time_running = True
+        elif timer_type == 'tstconnect':
+            self.test_connection_time = gobject.timeout_add(120000, self.on_test_connect_timer)
 
     def display_splash(self):
         """Show splash screen"""
