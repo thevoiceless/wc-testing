@@ -14,6 +14,7 @@ from constants import CONFIG_DIR
 import requests
 import socket
 import gtk
+import pygame
 
 class video_chat():
     
@@ -29,6 +30,9 @@ class video_chat():
         self.localip, self.localport = str(self.get_local_ip()), str(self.get_open_port())
         #print self.localip + " " + self.localport 
         self.remoteip, self.remoteport = "", "" #self.localip, self.localport #do a video loopback initially
+        
+        self.enabled = self.camera_available()
+        
     
     def setup_video_streamer(self):
         #webm video pipeline, optimized for video conferencing
@@ -106,15 +110,20 @@ class video_chat():
         s.close()
         return port
     
+    def camera_available(self):
+        camNames = commands.getoutput("dir -format -1 /dev | grep 'video*'").strip()
+        if len(camNames) == 0:
+            return False
+        else:
+            return True
+    
     def get_camera_name(self, index = 0):
         #Get the first camera's device number
-        listOfCameras = commands.getoutput("dir -format -1 /dev | grep 'video*'").split("\n")
-        camCount = str(len(listOfCameras))
+        listOfCameras = commands.getoutput("dir -format -1 /dev | grep 'video*'").strip().split("\n")
+        camCount = len(listOfCameras)
         device = ""
-        if camCount == 0:
-            print "No cameras were detected.  You can't stream video, but you can receive it."
-        else:
-            if int(camCount) == 1: 
+        if self.camera_available():
+            if camCount == 1: 
                 print "There is 1 camera: " + ", ".join(listOfCameras)
             else:
                 print "There are", camCount, "cameras: " + ", ".join(listOfCameras)
@@ -164,13 +173,18 @@ class video_chat():
     def on_message(self, bus, message):
         t = message.type
         if t == gst.MESSAGE_EOS:
+            was_running = self.receiver_running
             self.receiver_running = False
-            self.kill_pipelines()
+            self.stop_receiver()
+            if was_running:
+                self.WinMain.start_video_chat()
+            #self.kill_pipelines()
         elif t == gst.MESSAGE_ERROR:
             self.receiver_running = False
             err, debug = message.parse_error()
             print "Receiver Error: %s" % self.remoteip, self.remoteport, err, debug
-            self.kill_pipelines()
+            #self.kill_pipelines()
+            self.stop_receiver()
         elif t == gst.MESSAGE_STATE_CHANGED:
             #print 'Message: ' + str(message)
             old, new, pending = message.parse_state_changed()
@@ -198,7 +212,8 @@ class video_chat():
         if t == gst.MESSAGE_ERROR:
             err, debug = message.parse_error()
             print "Stream Error: %s" % err, debug
-            self.kill_pipelines()
+            #self.kill_pipelines()
+            self.stop_streamer()
         elif t == gst.MESSAGE_STATE_CHANGED:
             #print 'Stream Message: ' + str(message)
             old, new, pending = message.parse_state_changed()
@@ -245,7 +260,7 @@ class standalone_player():
         
         window.show_all()
         
-        
+        print self.vc.camera_available()
     
     def OnStreamStart(self, widget):
         self.vc.setup_video_streamer()
