@@ -809,16 +809,14 @@ class WinMain(WahCade, threading.Thread):
             self.start_timer('connection')
         else:
             print "Video chat is disabled because no camera was found."
-    
-    #def change_video_chat_target(self, ip, port):
-        #self.video_chat.change_remote_ip(ip, port)
         
-    def start_video_chat(self):
+    def start_video_chat(self, overrideip = True):
         self.vid_container.show_all()
         self.imgArtwork1.hide()
         if not self.video_chat.receiver_running:
-            self.video_chat.remoteip = self.remote_ip[0]
-            self.video_chat.remoteport = self.remote_ip[1]
+            if overrideip:
+                self.video_chat.remoteip = self.remote_ip[0]
+                self.video_chat.remoteport = self.remote_ip[1]
             self.video_chat.setup_video_receiver()
             
         self.video_chat.start_receiver()
@@ -2830,19 +2828,24 @@ class WinMain(WahCade, threading.Thread):
                 if len(data.getiterator('connection')) == 1 and ipAddr.find('ipAddress').text == self.video_chat.localip:
                     #print "Show local video"
                     self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
-                    #if not self.video_chat.receiver_running:
-                    #self.change_video_chat_target(ipAddr.find('ipAddress').text, ipAddr.find('port').text)
+                    was_running = self.video_chat.receiver_running
+                    self.stop_video_chat()
+                    if was_running:
+                        self.start_video_chat()
                     self.vc_caption.set_text("Showing local video: " + str(self.remote_ip))
                     print "Showing local video: " + str(self.remote_ip)
                     return True
                 elif ipAddr.find('ipAddress').text != self.video_chat.localip or ipAddr.find('port').text != self.video_chat.localport:
                     self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
+                    self.vc_caption.set_text("Chatting with " + str(self.remote_ip))
+                    print "Found a computer to chat with: " + str(self.remote_ip)
+                    
                     was_running = self.video_chat.receiver_running
                     self.stop_video_chat()
                     if was_running:
                         self.start_video_chat()
-                    self.vc_caption.set_text("Chatting with " + str(self.remote_ip))
-                    print "Found a computer to chat with: " + str(self.remote_ip)
+                        return True
+                    
                     self.connection_time_running = False
                     return False #Stop the timer if connected
             else:

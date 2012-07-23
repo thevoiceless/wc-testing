@@ -14,7 +14,7 @@ from constants import CONFIG_DIR
 import requests
 import socket
 import gtk
-import pygame
+import inspect
 
 class video_chat():
     
@@ -32,7 +32,6 @@ class video_chat():
         self.remoteip, self.remoteport = "", "" #self.localip, self.localport #do a video loopback initially
         
         self.enabled = self.camera_available()
-        
     
     def setup_video_streamer(self):
         #webm video pipeline, optimized for video conferencing
@@ -117,15 +116,9 @@ class video_chat():
         
         return device
     
-    def change_remote_ip(self, ip, port):
-        #was_running = True 
-        was_running = self.receiver_running
+    def set_remote_info(self, ip, port):
         self.remoteip = ip
         self.remoteport = port
-        self.stop_receiver()
-        self.setup_video_receiver()
-        if was_running:
-            self.start_receiver()
     
     def video_is_streaming(self):
         if self.streampipe and self.streampipe.get_state()[1] == gst.STATE_PLAYING:
@@ -162,8 +155,10 @@ class video_chat():
             was_running = self.receiver_running
             self.receiver_running = False
             self.stop_receiver()
-            if was_running:
-                self.WinMain.start_video_chat()
+            if was_running and hasattr(self.WinMain, 'start_video_chat'):
+                self.remoteip = self.localip
+                self.remoteport = self.localport
+                self.WinMain.start_video_chat(False)
             #self.kill_pipelines()
         elif t == gst.MESSAGE_ERROR:
             self.receiver_running = False
@@ -232,6 +227,15 @@ class standalone_player():
         stopReceiveButton = gtk.Button("Stop Receiving")
         stopReceiveButton.connect("clicked", self.OnReceiveStop)
         
+        self.remoteip = gtk.Entry()
+        self.remoteip.set_text(self.vc.remoteip)
+        self.remoteport = gtk.Entry()
+        self.remoteport.set_text(self.vc.remoteport)
+        
+        remoteInfo = gtk.HBox()
+        remoteInfo.add(self.remoteip)
+        remoteInfo.add(self.remoteport)
+        
         buttonBox = gtk.HButtonBox()
         buttonBox.add(startStreamButton)
         buttonBox.add(stopStreamButton)
@@ -239,14 +243,15 @@ class standalone_player():
         buttonBox.add(stopReceiveButton)
         
         vbox.pack_start(self.vc_box)
-        
         vbox.pack_start(buttonBox)
+        vbox.pack_start(remoteInfo)
+        
         fixed.put(vbox, 0, 0)
         window.add(fixed)
         
         window.show_all()
         
-        print self.vc.camera_available()
+        #print self.vc.camera_available()
     
     def OnStreamStart(self, widget):
         self.vc.setup_video_streamer()
@@ -254,6 +259,10 @@ class standalone_player():
         self.vc.stop_streamer()
     
     def OnReceiveStart(self, widget):
+        if not self.remoteip.get_text() == "":
+            self.vc.remoteip = self.remoteip.get_text()
+        if not self.remoteport.get_text() == "":
+            self.vc.remoteport = self.remoteport.get_text()
         self.vc.setup_video_receiver()
         self.vc.start_receiver()
     def OnReceiveStop(self, widget):
