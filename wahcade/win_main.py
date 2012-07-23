@@ -158,6 +158,7 @@ class WinMain(WahCade, threading.Thread):
         #Send IP to server
         self.local_IP = "" #Initialize local ip
         if self.connected_to_server:
+            self.connection_time_running = False
             import socket
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect(('8.8.8.8', 80))
@@ -165,8 +166,8 @@ class WinMain(WahCade, threading.Thread):
             s.close()
             self.connection_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/"
             self.start_timer('connection')
-            self.start_timer('ping_request')
-            
+            self.start_timer('tstconnect')
+
         
         ### SETUP WAHCADE INI FILE
         self.wahcade_ini = MameWahIni(os.path.join(CONFIG_DIR, 'wahcade.ini'))
@@ -472,7 +473,6 @@ class WinMain(WahCade, threading.Thread):
         self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
         self.player_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/"
         self.score_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/score/"
-        self.ping_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/ping/"
 
         self.connected_to_arduino = False
         self.nameToRom = {}
@@ -501,9 +501,6 @@ class WinMain(WahCade, threading.Thread):
                         post_data = {"romName":rom, "gameName":romToName[rom]}
                         r = requests.post(self.game_url, post_data)
 #                        self.check_connection(r.status_code)
-
-                post_data = {'ip':self.local_IP}
-                requests.post(self.ping_url, post_data)
             
             
             except e:
@@ -514,6 +511,7 @@ class WinMain(WahCade, threading.Thread):
         self.unregistered_users = []
         self.recent_log = False
         self.timer_existing = False
+        self.main_log = False
         self.not_in_database = True
         self.running = True
         self.last_log = ''
@@ -563,8 +561,11 @@ class WinMain(WahCade, threading.Thread):
         self.drwVideo.set_property('visible', False)
         
         #Initialize video chat
-        self.setup_video_chat()
-        self.on_connection_timer()
+        self.video_chat = None
+        if self.connected_to_server:
+            self.connection_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/rcade/"
+            self.setup_video_chat()
+            
 
         if not self.showcursor:
             self.hide_mouse_cursor(self.winMain)
@@ -654,9 +655,9 @@ class WinMain(WahCade, threading.Thread):
         # Stop video playing if necessary
         self.stop_video()
         #stop video streaming
-        if self.video_chat.enabled:
-            self.clean_up_video_chat()
+        self.clean_up_video_chat()
         # Tells the arduino thread to terminate properly
+        self.current_window = 'main'
         self.running = False
         # Save ini files
         self.wahcade_ini.write()
@@ -672,8 +673,6 @@ class WinMain(WahCade, threading.Thread):
 
     def exit_wahcade(self, exit_mode='default'):
         """Quit"""
-        if self.connected_to_server: #No longer connected to server
-            requests.delete(self.connection_url + self.local_IP)
         exit_movie = os.path.isfile(self.exit_movie_file)
         self.stop_video()
         if dbus_imported:
@@ -753,7 +752,9 @@ class WinMain(WahCade, threading.Thread):
             # Call log_in with any RFID's that were scanned while MAME had control
             if self.connected_to_arduino:
                 while not self.log_in_queue.empty():
+                    self.main_log = True
                     self.log_in(self.log_in_queue.get())
+                    self.main_log = False
 #                    print self.current_players
             # If the game supports high scores run the HiToText executions
             if self.current_rom in self.supported_games and len(self.current_players) != 0:
@@ -788,27 +789,62 @@ class WinMain(WahCade, threading.Thread):
     
     def setup_video_chat(self):
         self.video_chat = video_chat(self)
+        self.video_chat.setup_video_streamer()
         
-        #link the sync to a DrawingArea
-        self.vid_container = gtk.DrawingArea()
-        self.vid_container.modify_bg(gtk.STATE_NORMAL, self.vid_container.style.black)
-        self.fixd.put(self.vid_container, 645, 80)
-        self.vid_container.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
-        #print self.vid_container.window.xid
-#        if self.video_chat.enabled:
-#            self.video_chat.sink.set_xwindow_id(self.vid_container.window.xid)
+        #Send the local IP to the server
+        if self.video_chat.localip != "" or self.video_chat.localip != None:
+            post_data = {"ipAddress":self.video_chat.localip, "port":self.video_chat.localport}
+            r = requests.post(self.connection_url, post_data)
         
+        #TODO: move this code to the layout file
+        self.vid_container = gtk.VBox(False, 10)
+        
+        self.vc_box = gtk.DrawingArea()
+        self.vc_box.modify_bg(gtk.STATE_NORMAL, self.vid_container.style.black)
+        self.vc_box.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
+        self.vid_container.pack_start(self.vc_box)
+        self.vc_box.show()
+        self.vc_box.hide()
+        
+        self.vc_caption = gtk.Label("Waiting for another user to join...")
+        self.vc_caption.modify_fg(gtk.STATE_NORMAL, self.vc_caption.style.white)
+        self.vid_container.pack_start(self.vc_caption)
+        
+        self.fixd.put(self.vid_container, 603, 140)
+        
+        self.connection_time_running = False
+        if self.video_chat.enabled:
+            self.on_connection_timer()
+            self.start_timer('connection')
+
+    
+    #def change_video_chat_target(self, ip, port):
+        #self.video_chat.change_remote_ip(ip, port)
         
     def start_video_chat(self):
-#        self.video_chat.start_receiver()
-        self.video_chat.start_receiver()
-        self.video_chat.sink.set_xwindow_id(self.vid_container.window.xid)
+#        self.vid_container.show_all()
+#        self.imgArtwork1.hide()
+        if not self.video_chat.receiver_running:
+            self.video_chat.remoteip = self.remote_ip[0]
+            self.video_chat.remoteport = self.remote_ip[1]
+            valid = self.video_chat.setup_video_receiver()
+        if valid:
+            self.vid_container.show_all()
+            self.imgArtwork1.hide()    
+            self.video_chat.start_receiver()
+            #self.on_connection_timer()
+            if not self.connection_time_running:
+                self.start_timer('connection')
     
     def stop_video_chat(self):
+        self.vid_container.hide_all()
+        self.imgArtwork1.show()
         self.video_chat.stop_receiver()
         
     def clean_up_video_chat(self):
-        self.video_chat.kill_pipelines()
+        if self.connected_to_server and self.video_chat:
+            self.video_chat.kill_pipelines()
+            requests.delete(self.connection_url + self.video_chat.localip)
        
     def parse_high_score_text(self, text_string):
         """Parse the text file for high scores. 0 scores are not sent"""
@@ -915,83 +951,93 @@ class WinMain(WahCade, threading.Thread):
              
     def log_in(self, player_rfid):
         """Logs a player in"""
-        if self.connected_to_arduino:
-            # resets self.selected_player for later use
-            self.selected_player = ''
-            player_name = ''
-            # Prevents the reader from logging someone in and then out immediately
-            if self.recent_log and self.last_log == player_rfid:
-                return
-            if not self.timer_existing:
-                self.timer_existing = True
-                self.start_timer('login')
+        # resets self.selected_player for later use
+        self.selected_player = ''
+        player_name = ''
+        # If the player logs in with backslash
+        if player_rfid == "Manual Login":
+            # Because we are using the identify window rather than creating a new onewe have to temporariy overwrite this list
+            old_list = self.identify.sclIDs.ls
+            self.identify.sclIDs.ls = []
             for v in self.player_info:
-                if v[1] == player_rfid:
-                    player_name = v[0]
-                    break
-            # If player is logged in, log them out
-            if player_name in self.current_players:
-                self.recent_log = True
-                self.last_log = player_rfid
-                self.log_out(player_name)
-            # Log the player in
-            elif player_name != '':
-                self.recent_log = True
-                self.last_log = player_rfid
-                self.current_players.append(player_name)
-                self.lblUsersLoggedIn.set_text(player_name + " has logged in.")
-                self.lblUsersLoggedIn.show()
-                self.timeLoginShown = time.time()
-                self.lblUsers.set_text(self.get_logged_in_user_string(self.current_players))
-            # If player doesn't exist then add them to DB
-            else:
-                self.register_new_player(player_rfid)
-                if self.name_not_given:
-                    self.recent_log = True
-                    self.last_log = player_rfid
-                    if not self.timer_existing:
-                        self.timer_existing = True
-                        self.start_timer('login')
-                    return
-                self.log_in(player_rfid)
-        # If not connected to arduino
-        else:
-            # Get all players
-            data = fromstring(requests.get(self.player_url).text)
-            players = []            
-            for player in data.getiterator('player'):  # Parse player name from xml
-                players.append(player.find('name').text)
-                
-            # NOTE: player_rfid is actually player_name in the lines below
-            # If player doesn't exist and add them to DB and log them in
-            if not player_rfid in players: # if player doesn't exist and add them to DB and log them in
-                self.register_new_player(random.randint(100000, 10000000000), player_rfid)
-                self.current_players.append(player_rfid)
-                self.lblUsersLoggedIn.set_text(player_rfid + " has logged in.")
-                self.lblUsersLoggedIn.show()
-                self.timeLoginShown = time.time()
-                self.lblUsers.set_text(self.get_logged_in_user_string(self.current_players))
-            # If player already logged in, log them out
-            elif player_rfid in self.current_players:
-                self.log_out(player_rfid)
-            # Player not logged in, log them in
-            else:
-                self.current_players.append(player_rfid)
-                self.lblUsersLoggedIn.set_text(player_rfid + " has logged in.")
-                self.lblUsersLoggedIn.show()
-                self.timeLoginShown = time.time()
-                self.lblUsers.set_text(self.get_logged_in_user_string(self.current_players))      
+                self.identify.sclIDs.ls.append(v[0])
+            self.identify.sclIDs.ls.sort()
+            if not self.connected_to_arduino:
+                # Add an option to register a new player
+                self.identify.sclIDs.ls.insert(0, "Register New Player")
+            self.show_window('identify')
+            self.identify.setRFIDlbl(player_rfid)
+            self.identify.sclIDs.set_selected(1)
+            self.identify.sclIDs._update_display()
+            self.identify.set_lbls("", "Manually Logging In")
+            while self.current_window == 'identify':
+                self.wait_with_events(0.01)
+            self.identify.set_lbls()
+            if not self.connected_to_arduino:
+                if self.selected_player == "Register New Player":
+                    self.identify.sclIDs.ls = old_list
+                    self.register_new_player(str(random.randint(100000, 10000000000)))
 
+            for v in self.player_info:
+                if v[0] == self.selected_player:
+                    player_rfid = v[1]
+                    break
+            self.selected_player = ''
+            self.identify.sclIDs.ls = old_list
+            if player_rfid == "Manual Login":
+                print "No name selected, not logging in"
+                return
+        # Prevents the reader from logging someone in and then out immediately
+        if self.recent_log and self.last_log == player_rfid:
+            return
+        if not self.timer_existing:
+            self.timer_existing = True
+            self.start_timer('login')
+        for v in self.player_info:
+            if v[1] == player_rfid:
+                player_name = v[0]
+                break
+        # If player is logged in, log them out
+        if player_name in self.current_players:
+            self.recent_log = True
+            self.last_log = player_rfid
+            self.log_out(player_name)
+        # Log the player in
+        elif player_name != '':
+            self.recent_log = True
+            self.last_log = player_rfid
+            self.current_players.append(player_name)
+            if self.lblUsersLoggedOut.get_visible():
+                self.lblUsersLoggedOut.hide()
+            self.lblUsersLoggedIn.set_text(player_name + " has logged in.")
+            self.lblUsersLoggedIn.show()
+            self.timeLoginShown = time.time()
+            self.lblUsers.set_text(self.get_logged_in_user_string(self.current_players))
+        # If player doesn't exist then add them to DB
+        else:
+            self.register_new_player(player_rfid)
+            if self.name_not_given:
+                self.recent_log = True
+                self.last_log = player_rfid
+                if not self.timer_existing:
+                    self.timer_existing = True
+                    self.start_timer('login')
+                return
+            self.log_in(player_rfid)
             
     def log_out(self, player_name = "All"):
         """Logs a player out"""
         if player_name == "All":
             self.current_players = []
+            if self.lblUsersLoggedIn.get_visible():
+                self.lblUsersLoggedIn.hide()
             self.lblUsersLoggedOut.set_text("All users have been logged out.")
             self.lblUsersLoggedOut.show()
             self.timeLogoutShown = time.time()
         else:
             self.current_players.remove(player_name)
+            if self.lblUsersLoggedIn.get_visible():
+                self.lblUsersLoggedIn.hide()
             self.lblUsersLoggedOut.set_text(player_name + " has logged out.")
             self.lblUsersLoggedOut.show()
             self.timeLogoutShown = time.time()
@@ -1000,32 +1046,28 @@ class WinMain(WahCade, threading.Thread):
         else:
             self.lblUsers.set_text(self.get_logged_in_user_string(self.current_players))
             
-    def register_new_player(self, player_rfid, player_name = ''): # TODO: Ultimately we will remove player_name from this function call
+    def register_new_player(self, player_rfid):
         """Add a new player to the database"""
-        if self.connected_to_arduino:
-            # Bring up new player list
-            self.show_window('identify')
-            self.identify.setRFIDlbl(player_rfid)
-            self.identify.sclIDs._update_display()
-            while self.current_window == 'identify':
-                pass
-            player_name = self.selected_player
-            if player_name != '':
-                self.player_info.append([player_name, player_rfid]) # parse player name and RFID from xml
-                post_data = {"name":player_name, "playerID":player_rfid}
-                requests.post(self.player_url, post_data)
-                self.identify.sclIDs.ls.remove(player_name)
-                self.name_not_given = False
+#        if self.connected_to_arduino:
+        # Bring up new player list
+        self.show_window('identify')
+        self.identify.setRFIDlbl(player_rfid)
+        self.identify.sclIDs._update_display()
+        while self.current_window == 'identify':
+            if self.main_log == True:
+                self.wait_with_events(0.01)
             else:
-                print "No player name given, not updating lists"
-                self.name_not_given = True
-        else: # Not connected to arduino
-            if not self.connected_to_server:
-                print "Not connected to database"
-                return
+                time.sleep(0.01)
+        player_name = self.selected_player
+        if player_name != 'Register New Player' and player_name != '':
+            self.player_info.append([player_name, player_rfid])
             post_data = {"name":player_name, "playerID":player_rfid}
             requests.post(self.player_url, post_data)
-                
+            self.identify.sclIDs.ls.remove(player_name)
+            self.name_not_given = False
+        else:
+            print "No player name given, not updating lists"
+            self.name_not_given = True                
         
     def get_logged_in_user_string(self, current_users):
         """Get string containing names of loged in users"""
@@ -1164,12 +1206,14 @@ class WinMain(WahCade, threading.Thread):
                     break
             for mw_func in mw_functions:
                 # Which function?
-                if mw_func == 'ID_SHOW' and current_window != 'identify' and current_window != 'playerselect' and self.identify.ldap.LDAP_connected and self.connected_to_server:  # Show identify window any time
-                    if self.connected_to_arduino:
-                        self.register_new_player("New player")
-                    else:
-                        self.show_window('identify')
-                        self.identify.sclIDs._update_display()
+                if mw_func == 'ID_SHOW' and current_window == 'main' and self.identify.ldap.LDAP_connected and self.connected_to_server:  # Show identify window any time
+#                    if self.connected_to_arduino:
+                    self.main_log = True
+                    self.log_in("Manual Login")
+                    self.main_log = False
+#                    else:
+#                        self.show_window('identify')
+#                        self.identify.sclIDs._update_display()
                 if mw_func == 'BACK' and current_window != 'main':
                     self.hide_window(current_window)
                 if current_window == 'main':
@@ -1314,26 +1358,18 @@ class WinMain(WahCade, threading.Thread):
                         if self.current_players:
                             self.log_out()
                     elif mw_func == 'TOGGLE_VIDEO':
-                        self.remote_ip = self.local_IP #REMOVE THIS WHEN CONNECTING TO MULTIPLE MACHINES
-                        if self.video_chat.enabled and self.remote_ip:
-                            #TODO: find a way to pause and play the stream without the video becoming choppy
-                            #right now it just hides the gtk DrawingArea container
-                            if not self.video_chat.receiver_running:
-                                self.video_chat.remoteip = self.remote_ip[0]
-                                self.video_chat.remoteport = self.remote_ip[1]
-                                self.video_chat.setup_video_receiver()
-                            
-                            if self.vid_container.get_property("visible") == False:
-                                #print "Show video chat"
-                                self.start_video_chat()
-                                self.wait_with_events(0.01)
-                                self.vid_container.show()
+                        if self.connected_to_server and self.video_chat and self.video_chat.enabled:
+                            if self.remote_ip:
+                                if self.vid_container.get_property("visible") == False:
+                                    #print "Show video chat"
+                                    self.start_video_chat()
+                                else:
+                                    #print "Hide video chat"
+                                    self.stop_video_chat()
                             else:
-                                #print "Hide video chat"
-                                #self.stop_video_chat()
-                                self.vid_container.hide()
+                                print "Waiting for remote IP Address."
                         else:
-                            print "Video Chat is disabled."  
+                            print "Video Chat is disabled (you are not connected to the server)."
                 elif current_window == 'options':
                     # Options form
                     if mw_func == 'OP_UP_1_OPTION':
@@ -1425,8 +1461,6 @@ class WinMain(WahCade, threading.Thread):
                         self.hide_window('identify')
                     elif mw_func in ['ID_SELECT']:
                         self.selected_player = self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()]
-                        if not self.connected_to_arduino:
-                            self.log_in(self.selected_player)
                         self.hide_window('identify')
                     elif mw_func in ['ID_UP_1_NAME']:
                         self.identify.sclIDs.scroll((int(self.scroll_count / 20) * -1) - 1)
@@ -2798,24 +2832,46 @@ class WinMain(WahCade, threading.Thread):
                 return
             
     def on_connection_timer(self):
-        try:
-            data = fromstring(requests.get(self.connection_url, timeout=0.05).text)
-            for ipAddr in data.getiterator('connection'):
-                if ipAddr.find('ipAddress').text != self.local_IP:
+        data = fromstring(requests.get(self.connection_url).text)
+        print "Checking for IP Addresses: " + str(len(data.getiterator('connection'))) + " found"
+        for ipAddr in data.getiterator('connection'):
+            if not (ipAddr.find('ipAddress').text == self.video_chat.remoteip and ipAddr.find('port').text == self.video_chat.remoteport):
+                if len(data.getiterator('connection')) == 1 and ipAddr.find('ipAddress').text == self.video_chat.localip:
+                    #print "Show local video"
                     self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
+                    #if not self.video_chat.receiver_running:
+                    #self.change_video_chat_target(ipAddr.find('ipAddress').text, ipAddr.find('port').text)
+                    self.vc_caption.set_text("Showing local video: " + str(self.remote_ip))
+                    print "Showing local video: " + str(self.remote_ip)
+                    return True
+                elif ipAddr.find('ipAddress').text != self.video_chat.localip or ipAddr.find('port').text != self.video_chat.localport:
+                    #print "Showing remote video"
+                    #if not self.video_chat.receiver_running:
+                    self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
+                    #self.change_video_chat_target(ipAddr.find('ipAddress').text, ipAddr.find('port').text)
+                    self.stop_video_chat()
+                    #self.start_video_chat()
+                    self.vc_caption.set_text("Chatting with " + str(self.remote_ip))
+                    print "Found a computer to chat with: " + str(self.remote_ip)
+                    self.connection_time_running = False
                     return False #Stop the timer if connected
-        except:
-            print 'connection timed out'
-        return True
+            else:
+                pass
+                #print ipAddr.find('ipAddress').text + " " + self.video_chat.remoteip + " " + ipAddr.find('port').text + " " + self.video_chat.remoteport
+        return True 
     
-    def on_ping_timer(self):
-        try:
-            print 'ping timer'
-            post_data = {'ip':self.local_IP}
-            requests.post(self.ping_url, post_data)
-        except:
-            print 'bad stuff going down'
-        
+    def on_test_connect_timer(self):
+        found_local = False
+        data = fromstring(requests.get(self.connection_url).text)
+        for ipAddr in data.getiterator('connection'):
+            if ipAddr.find('ipAddress').text == self.video_chat.localip:
+                found_local = True
+                break
+        if not found_local:
+            print 'couldnt find local ip'
+            post_data = {"ipAddress":self.video_chat.localip, "port":self.video_chat.localport}
+            r = requests.post(self.connection_url, post_data)
+        return True
 
     def start_timer(self, timer_type):
         """Start given timer"""
@@ -2843,10 +2899,11 @@ class WinMain(WahCade, threading.Thread):
             if self.portal_time:
                 gobject.source_remove(self.portal_time)
             self.portal_time = gobject.timeout_add(2500, self.portal_timer)
-        elif timer_type == 'connection':
+        elif timer_type == 'connection' and not self.connection_time_running:
             self.connection_time = gobject.timeout_add(10000, self.on_connection_timer)
-        elif timer_type == 'ping_request':
-            self.ping_time = gobject.timeout_add(10000, self.on_ping_timer)
+            self.connection_time_running = True
+        elif timer_type == 'tstconnect':
+            self.test_connection_time = gobject.timeout_add(120000, self.on_test_connect_timer)
 
     def display_splash(self):
         """Show splash screen"""
@@ -3003,7 +3060,7 @@ class WinMain(WahCade, threading.Thread):
             child_win.show()
             try:
                 child_win.window.raise_()
-                #child_win.window.focus() #for bug #382247
+#                child_win.window.focus() #for bug #382247
             except AttributeError:
                 pass
             self.current_window = window_name
