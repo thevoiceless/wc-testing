@@ -155,19 +155,6 @@ class WinMain(WahCade, threading.Thread):
         except requests.exceptions.ConnectionError, e: # Any exception would mean some sort of failed server connection
             self.connected_to_server = False
             print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + ":", str(e)
-        #Send IP to server
-        self.local_IP = "" #Initialize local ip
-        if self.connected_to_server:
-            self.connection_time_running = False
-            import socket
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(('8.8.8.8', 80))
-            self.local_IP = s.getsockname()[0] #Get local ip address
-            s.close()
-            self.connection_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/"
-            self.start_timer('connection')
-            self.start_timer('tstconnect')
-
         
         ### SETUP WAHCADE INI FILE
         self.wahcade_ini = MameWahIni(os.path.join(CONFIG_DIR, 'wahcade.ini'))
@@ -565,8 +552,7 @@ class WinMain(WahCade, threading.Thread):
         if self.connected_to_server:
             self.connection_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/rcade/"
             self.setup_video_chat()
-            
-
+        
         if not self.showcursor:
             self.hide_mouse_cursor(self.winMain)
         self.screen = self.winMain.get_screen()
@@ -815,35 +801,37 @@ class WinMain(WahCade, threading.Thread):
             self.fixd.put(self.vid_container, 603, 140)
             
             self.connection_time_running = False
-
             self.on_connection_timer()
             self.start_timer('connection')
+            self.start_timer('tstconnect')
         else:
             print "Video chat is disabled because no camera was found."
-    
-    #def change_video_chat_target(self, ip, port):
-        #self.video_chat.change_remote_ip(ip, port)
         
+            
+    
     def start_video_chat(self):
-#        self.vid_container.show_all()
-#        self.imgArtwork1.hide()
         if not self.video_chat.receiver_running:
-            self.video_chat.remoteip = self.remote_ip[0]
-            self.video_chat.remoteport = self.remote_ip[1]
-            valid = self.video_chat.setup_video_receiver()
-        if valid:
-            self.vid_container.show_all()
-            self.imgArtwork1.hide()    
-            self.video_chat.start_receiver()
-            #self.on_connection_timer()
-            if not self.connection_time_running:
-                self.start_timer('connection')
+            self.video_chat.setup_video_receiver()
+
+        self.vid_container.show_all()
+        self.imgArtwork1.hide()    
+        self.video_chat.start_receiver()
+        if not self.connection_time_running:
+            self.start_timer('connection')
     
     def stop_video_chat(self):
         self.vid_container.hide_all()
         self.imgArtwork1.show()
         self.video_chat.stop_receiver()
-        
+    
+    def valid_remote_ip(self, remoteip, remoteport):
+        try:
+            import urllib2
+            urllib2.urlopen('http://' + remoteip + ":" + remoteport, timeout=1)
+            return True
+        except urllib2.URLError:
+            return False
+    
     def clean_up_video_chat(self):
         if self.connected_to_server and self.video_chat:
             self.video_chat.kill_pipelines()
@@ -2842,19 +2830,36 @@ class WinMain(WahCade, threading.Thread):
                 if len(data.getiterator('connection')) == 1 and ipAddr.find('ipAddress').text == self.video_chat.localip:
                     #print "Show local video"
                     self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
-                    #if not self.video_chat.receiver_running:
-                    #self.change_video_chat_target(ipAddr.find('ipAddress').text, ipAddr.find('port').text)
+                    self.video_chat.set_remote_info(ipAddr.find('ipAddress').text, ipAddr.find('port').text)
                     self.vc_caption.set_text("Showing local video: " + str(self.remote_ip))
                     print "Showing local video: " + str(self.remote_ip)
-                    return True
-                elif ipAddr.find('ipAddress').text != self.video_chat.localip or ipAddr.find('port').text != self.video_chat.localport:
-                    self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
+                    
                     was_running = self.video_chat.receiver_running
                     self.stop_video_chat()
                     if was_running:
                         self.start_video_chat()
+                    
+                    return True
+                elif ipAddr.find('ipAddress').text != self.video_chat.localip or ipAddr.find('port').text != self.video_chat.localport:
+                    self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
+                    #print self.valid_remote_ip(self.remote_ip[0], self.remote_ip[1])
+                    if not self.valid_remote_ip(*self.remote_ip):
+                        print 'could not connect to', self.remote_ip[0], self.remote_ip[1], '- removing it from server'
+                        requests.delete(self.connection_url + self.remote_ip[0])
+                        self.on_connection_timer()
+                        return True
+                        #TODO: go to the next video feed
+                        
+                    self.video_chat.set_remote_info(ipAddr.find('ipAddress').text, ipAddr.find('port').text)
                     self.vc_caption.set_text("Chatting with " + str(self.remote_ip))
                     print "Found a computer to chat with: " + str(self.remote_ip)
+                    
+                    was_running = self.video_chat.receiver_running
+                    self.stop_video_chat()
+                    if was_running:
+                        self.start_video_chat()
+                        return True
+                    
                     self.connection_time_running = False
                     return False #Stop the timer if connected
             else:
