@@ -551,7 +551,19 @@ class WinMain(WahCade, threading.Thread):
         self.video_chat = None
         if self.connected_to_server:
             self.connection_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/rcade/"
-            self.setup_video_chat()
+            self.video_chat = video_chat(self)
+             
+            self.vid_container = gtk.VBox(False, 10)
+            self.vc_box = gtk.DrawingArea()
+            self.vc_box.modify_bg(gtk.STATE_NORMAL, self.vid_container.style.black)
+            self.vc_box.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
+            self.vid_container.pack_start(self.vc_box)
+            self.vc_caption = gtk.Label("Waiting for another user to join...")
+            self.vc_caption.modify_fg(gtk.STATE_NORMAL, self.vc_caption.style.white)
+            self.vid_container.pack_start(self.vc_caption)
+            self.fixd.put(self.vid_container, 603, 140)
+            
+            #self.setup_video_chat()
         
         if not self.showcursor:
             self.hide_mouse_cursor(self.winMain)
@@ -775,7 +787,6 @@ class WinMain(WahCade, threading.Thread):
         gtk.gdk.pointer_ungrab()
     
     def setup_video_chat(self):
-        self.video_chat = video_chat(self)
         if self.video_chat.enabled:
             self.video_chat.setup_video_streamer()
             
@@ -784,40 +795,34 @@ class WinMain(WahCade, threading.Thread):
                 post_data = {"ipAddress":self.video_chat.localip, "port":self.video_chat.localport}
                 r = requests.post(self.connection_url, post_data)
             
-            #TODO: move this code to the layout file
-            self.vid_container = gtk.VBox(False, 10)
-            
-            self.vc_box = gtk.DrawingArea()
-            self.vc_box.modify_bg(gtk.STATE_NORMAL, self.vid_container.style.black)
-            self.vc_box.set_size_request(self.video_chat.video_width, self.video_chat.video_height)
-            self.vid_container.pack_start(self.vc_box)
-            self.vc_box.show()
-            self.vc_box.hide()
-            
-            self.vc_caption = gtk.Label("Waiting for another user to join...")
-            self.vc_caption.modify_fg(gtk.STATE_NORMAL, self.vc_caption.style.white)
-            self.vid_container.pack_start(self.vc_caption)
-            
-            self.fixd.put(self.vid_container, 603, 140)
-            
             self.connection_time_running = False
             self.on_connection_timer()
             self.start_timer('connection')
             self.start_timer('tstconnect')
         else:
             print "Video chat is disabled because no camera was found."
-        
-            
     
     def start_video_chat(self):
         if not self.video_chat.receiver_running:
             self.video_chat.setup_video_receiver()
-
+        
+        
+        
+        self.vc_caption.set_text("...Loading... ")
+        
         self.vid_container.show_all()
-        self.imgArtwork1.hide()    
+        self.imgArtwork1.hide()  
         self.video_chat.start_receiver()
+        
         if not self.connection_time_running:
             self.start_timer('connection')
+        
+        if self.video_chat.is_loopback():
+            self.vc_caption.set_text("Showing local video: " + str(self.remote_ip))
+            print "Showing local video: " + str(self.remote_ip)
+        else:
+            self.vc_caption.set_text("Chatting with " + str(self.remote_ip))
+            print "Chatting with: " + str(self.remote_ip)
     
     def stop_video_chat(self):
         self.vid_container.hide_all()
@@ -833,7 +838,7 @@ class WinMain(WahCade, threading.Thread):
             return False
     
     def clean_up_video_chat(self):
-        if self.connected_to_server and self.video_chat:
+        if self.connected_to_server and self.video_chat and self.video_chat.enabled:
             self.video_chat.kill_pipelines()
             requests.delete(self.connection_url + self.video_chat.localip)
        
@@ -1350,15 +1355,17 @@ class WinMain(WahCade, threading.Thread):
                             self.log_out()
                     elif mw_func == 'TOGGLE_VIDEO':
                         if self.connected_to_server and self.video_chat and self.video_chat.enabled:
-                            if self.remote_ip:
+                            #if self.remote_ip:
                                 if self.vid_container.get_property("visible") == False:
                                     #print "Show video chat"
+                                    self.setup_video_chat()
                                     self.start_video_chat()
                                 else:
                                     #print "Hide video chat"
                                     self.stop_video_chat()
-                            else:
-                                print "Waiting for remote IP Address."
+                                    self.clean_up_video_chat()
+                            #else:
+                                #print "Waiting for remote IP Address."
                         else:
                             print "Video Chat is disabled (you are not connected to the server or no camera was found)."
                 elif current_window == 'options':
@@ -2831,8 +2838,7 @@ class WinMain(WahCade, threading.Thread):
                     #print "Show local video"
                     self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
                     self.video_chat.set_remote_info(ipAddr.find('ipAddress').text, ipAddr.find('port').text)
-                    self.vc_caption.set_text("Showing local video: " + str(self.remote_ip))
-                    print "Showing local video: " + str(self.remote_ip)
+                    
                     
                     was_running = self.video_chat.receiver_running
                     self.stop_video_chat()
@@ -2851,8 +2857,7 @@ class WinMain(WahCade, threading.Thread):
                         #TODO: go to the next video feed
                         
                     self.video_chat.set_remote_info(ipAddr.find('ipAddress').text, ipAddr.find('port').text)
-                    self.vc_caption.set_text("Chatting with " + str(self.remote_ip))
-                    print "Found a computer to chat with: " + str(self.remote_ip)
+                    
                     
                     was_running = self.video_chat.receiver_running
                     self.stop_video_chat()

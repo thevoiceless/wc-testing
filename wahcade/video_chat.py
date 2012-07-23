@@ -23,6 +23,7 @@ class video_chat():
         self.enabled = True
         self.receiver_running = False
         
+        self.streampipe = None
         self.receivepipe = None
 
         self.video_width, self.video_height = 320, 240
@@ -31,7 +32,7 @@ class video_chat():
         #print self.localip + " " + self.localport 
         self.remoteip, self.remoteport = "", "" #self.localip, self.localport #do a video loopback initially
         
-        self.enabled = self.camera_available()
+        self.enabled = self.camera_available() #disables video chat if no cameras are found
     
     def setup_video_streamer(self):
         #webm video pipeline, optimized for video conferencing
@@ -74,7 +75,10 @@ class video_chat():
         if not self.receivepipe:
             return False
         return True
-            
+    
+    def is_loopback(self):
+        return (self.localip == self.remoteip and self.localport == self.remoteport)
+        
     def get_local_ip(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(('8.8.8.8', 80)) #connect to Google's DNS server
