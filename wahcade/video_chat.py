@@ -40,7 +40,7 @@ class video_chat():
                     
                     if self.localip != "" or self.localip != None:
                         post_data = {"ipAddress":self.localip, "port":self.localport}
-                        r = requests.post(self.WinMain.connection_url, post_data)
+                        requests.post(self.WinMain.connection_url, post_data)
             else:
                 print "The video chat configuration file was not found at: " + self.vc_file
                 self.enabled = False
@@ -64,7 +64,6 @@ class video_chat():
         command += "d. ! queue2 ! vorbisdec ! audioconvert ! audioresample ! alsasink sync=false"
         self.receivepipe = gst.parse_launch(command) 
         #self.receivepipe.set_state(gst.STATE_PLAYING)
-        
         self.sink = self.receivepipe.get_by_name("sink")
         bus = self.receivepipe.get_bus()
         bus.add_signal_watch()

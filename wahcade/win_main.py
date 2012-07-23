@@ -165,6 +165,8 @@ class WinMain(WahCade, threading.Thread):
             s.close()
             self.connection_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/"
             self.start_timer('connection')
+            self.start_timer('ping_request')
+            
         
         ### SETUP WAHCADE INI FILE
         self.wahcade_ini = MameWahIni(os.path.join(CONFIG_DIR, 'wahcade.ini'))
@@ -470,6 +472,7 @@ class WinMain(WahCade, threading.Thread):
         self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
         self.player_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/"
         self.score_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/score/"
+        self.ping_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/ping/"
 
         self.connected_to_arduino = False
         self.nameToRom = {}
@@ -487,9 +490,7 @@ class WinMain(WahCade, threading.Thread):
                         self.supported_games_name.append(romToName[game])
              
                 # Get a list of games already on the server
-                data = requests.get(self.game_url)
-#                self.check_connection(data.status_code)
-                data = fromstring(data.text)
+                data = fromstring(requests.get(self.game_url, timeout=1).text)
                 games_on_server = []
                 for game in data.getiterator('game'):
                     games_on_server.append(game.find('romName').text)
@@ -500,6 +501,11 @@ class WinMain(WahCade, threading.Thread):
                         post_data = {"romName":rom, "gameName":romToName[rom]}
                         r = requests.post(self.game_url, post_data)
 #                        self.check_connection(r.status_code)
+
+                post_data = {'ip':self.local_IP}
+                requests.post(self.ping_url, post_data)
+            
+            
             except e:
                 self.connected_to_server = False                    
 
@@ -535,8 +541,7 @@ class WinMain(WahCade, threading.Thread):
             if self.connected_to_arduino:
                 self.log_in_queue = Queue.Queue()
                 # Get players from server
-            r = requests.get(self.player_url)
-            data = fromstring(r.text)
+            data = fromstring(requests.get(self.player_url).text)
             for player in data.getiterator('player'):
                 self.player_info.append((player.find('name').text, player.find('playerID').text)) # parse player name and RFID from xml
             self.lblUsers.set_text("No Users Logged In")
@@ -832,7 +837,7 @@ class WinMain(WahCade, threading.Thread):
                                         post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.lblUsers.get_text()}                         
                                     else:
                                         post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.current_players[0]}
-                                    r = requests.post(self.score_url, post_data)
+                                    requests.post(self.score_url, post_data)
                         else: #TODO: handle multiple players scores coming back
                             for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
                                 high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
@@ -952,12 +957,9 @@ class WinMain(WahCade, threading.Thread):
         # If not connected to arduino
         else:
             # Get all players
-            r = requests.get(self.player_url)
-            players = []
-            data = fromstring(r.text)
-            
-            for player in data.getiterator('player'):
-                # Parse player name from xml
+            data = fromstring(requests.get(self.player_url).text)
+            players = []            
+            for player in data.getiterator('player'):  # Parse player name from xml
                 players.append(player.find('name').text)
                 
             # NOTE: player_rfid is actually player_name in the lines below
@@ -2674,8 +2676,7 @@ class WinMain(WahCade, threading.Thread):
         elif self.current_list_ini.get('list_type') == 'xml_remote':
             # XML remote-populated, so get the source URL
             sourceURL = self.props['host']+":"+self.props['port']+"/"+self.props['db']+self.current_list_ini.get('params')
-            list_source = requests.get(sourceURL)
-            data = fromstring(list_source.text)
+            data = fromstring(requests.get(sourceURL).text)
             gList = []
             # Use all games to gen list
             list_filename = os.path.join(
@@ -2797,12 +2798,23 @@ class WinMain(WahCade, threading.Thread):
                 return
             
     def on_connection_timer(self):
-        data = fromstring(requests.get(self.connection_url).text)
-        for ipAddr in data.getiterator('connection'):
-            if ipAddr.find('ipAddress').text != self.local_IP:
-                self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
-                return False #Stop the timer if connected
+        try:
+            data = fromstring(requests.get(self.connection_url, timeout=0.05).text)
+            for ipAddr in data.getiterator('connection'):
+                if ipAddr.find('ipAddress').text != self.local_IP:
+                    self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
+                    return False #Stop the timer if connected
+        except:
+            print 'connection timed out'
         return True
+    
+    def on_ping_timer(self):
+        try:
+            print 'ping timer'
+            post_data = {'ip':self.local_IP}
+            requests.post(self.ping_url, post_data)
+        except:
+            print 'bad stuff going down'
         
 
     def start_timer(self, timer_type):
@@ -2833,6 +2845,8 @@ class WinMain(WahCade, threading.Thread):
             self.portal_time = gobject.timeout_add(2500, self.portal_timer)
         elif timer_type == 'connection':
             self.connection_time = gobject.timeout_add(10000, self.on_connection_timer)
+        elif timer_type == 'ping_request':
+            self.ping_time = gobject.timeout_add(10000, self.on_ping_timer)
 
     def display_splash(self):
         """Show splash screen"""
