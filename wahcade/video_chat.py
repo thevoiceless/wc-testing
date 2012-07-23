@@ -151,12 +151,14 @@ class video_chat():
         t = message.type
         if t == gst.MESSAGE_EOS:
             self.receiver_running = False
-            self.kill_pipelines()
+            #self.kill_pipelines()
+            self.stop_receiver()
         elif t == gst.MESSAGE_ERROR:
             self.receiver_running = False
             err, debug = message.parse_error()
             print "Receiver Error: %s" % self.remoteip, self.remoteport, err, debug
-            self.kill_pipelines()
+            #self.kill_pipelines()
+            self.stop_receiver()
         elif t == gst.MESSAGE_STATE_CHANGED:
             #print 'Message: ' + str(message)
             old, new, pending = message.parse_state_changed()
@@ -184,7 +186,8 @@ class video_chat():
         if t == gst.MESSAGE_ERROR:
             err, debug = message.parse_error()
             print "Stream Error: %s" % err, debug
-            self.kill_pipelines()
+            #self.kill_pipelines()
+            self.stop_streamer()
         elif t == gst.MESSAGE_STATE_CHANGED:
             #print 'Stream Message: ' + str(message)
             old, new, pending = message.parse_state_changed()
