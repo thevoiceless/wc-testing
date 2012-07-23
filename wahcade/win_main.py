@@ -471,7 +471,7 @@ class WinMain(WahCade, threading.Thread):
                 
         # Get a list of games already on the server
         self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
-        self.player_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/"
+        self.player_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/rcade/"
         self.score_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/score/"
 
         self.connected_to_arduino = False
@@ -1785,7 +1785,7 @@ class WinMain(WahCade, threading.Thread):
         title = [g[0] for g in self.lsGames if g[1] == rom][0]
         # Show launch message
         self.message.display_message(
-            _('Starting...'),
+            _('Running...'),
             '%s: %s' % (rom, title))
         
         # Erase scores from hi score file of current game
