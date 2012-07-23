@@ -56,19 +56,6 @@ class video_chat():
     
     def setup_video_receiver(self):
         #webm encoded video receiver
-        #self.remoteip, self.remoteport = "127.0.0.1", self.localport #COMMENT THIS TO ALLOW MULTIPLE MACHINES
-        try:
-            import urllib2
-            urllib2.urlopen('http://' + self.remoteip + ":" + self.remoteport, timeout=1)
-        except urllib2.URLError:
-            print 'could not connect to', self.remoteip, self.remoteport, 'removing it from server'
-            requests.delete(self.WinMain.connection_url + self.remoteip)
-            self.WinMain.start_timer('connection')
-            self.remoteip, self.remoteport = "", ""
-            del self.WinMain.remote_ip[:]
-            self.WinMain.on_connection_timer()
-            return 0
-            
         command = "tcpclientsrc host=" + self.remoteip + " port=" + self.remoteport + " " 
         command += "! matroskademux name=d d. ! queue2 ! vp8dec ! ffmpegcolorspace ! xvimagesink name=sink sync=false " 
         command += "d. ! queue2 ! vorbisdec ! audioconvert ! audioresample ! alsasink sync=false"
@@ -81,12 +68,7 @@ class video_chat():
         bus.enable_sync_message_emission()
         bus.connect("sync-message::element", self.on_sync_message)
         self.receiver_running = True
-        print 'receiver running on', self.remoteip, self.remoteport
-        return 1
-        
-#        self.receivepipe.set_state(gst.STATE_PLAYING)
-        
-        #print "Video Chat Receiver started"
+        print 'Receiver running on', self.remoteip, self.remoteport
         
     def receiver_ready(self):
         if not self.receivepipe:
@@ -172,7 +154,7 @@ class video_chat():
             if was_running and hasattr(self.WinMain, 'start_video_chat'):
                 self.remoteip = self.localip
                 self.remoteport = self.localport
-                self.WinMain.start_video_chat(False)
+                self.WinMain.start_video_chat()
             #self.kill_pipelines()
         elif t == gst.MESSAGE_ERROR:
             self.receiver_running = False
