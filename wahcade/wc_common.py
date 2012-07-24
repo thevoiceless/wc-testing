@@ -145,8 +145,8 @@ class WahCade:
                     for filename in fnl:
                         if os.path.isfile(filename):
                             return filename
-            elif fp != '':
-                if file_formats != '':
+            elif fp:
+                if file_formats:
                     # Check if this is a layout
                     l = re.search(self.wahcade_ini.get('layout'),dirname)
                     if l is None:
@@ -193,6 +193,9 @@ class WahCade:
 
     def get_artwork_image(self, img_path, layout_path, game_info, emu_name, artwork_num):
         """check various permutations of file name and return img filename"""
+        #if we did not receive a rom name, return nothing
+        if not game_info['rom_name']:
+            return os.path.join(APP_PATH, 'pixmaps', 'empty.png')
         #list of files to check for
         image_files = [
             (img_path, game_info['rom_name']),

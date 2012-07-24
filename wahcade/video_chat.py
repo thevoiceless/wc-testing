@@ -29,8 +29,8 @@ class video_chat():
         self.video_width, self.video_height = 320, 240
         #self.localip, self.localport = self.WinMain.local_IP, str(self.get_open_port())
         self.localip, self.localport = str(self.get_local_ip()), str(self.get_open_port())
-        self.localip = "127.0.0.1" #manual override for testing on one machine
-        self.localip = "localhost" #manual override for testing on one machine
+        #self.localip = "127.0.0.1" #manual override for testing on one machine
+        #self.localip = "localhost" #manual override for testing on one machine
         #print self.localip + " " + self.localport 
         self.remoteip, self.remoteport = "", "" #self.localip, self.localport #do a video loopback initially
         
@@ -41,7 +41,7 @@ class video_chat():
         device = self.get_camera_name()
         #videosrc = "v4l2src device=" + device #specify a specific camera
         videoSrc = "autovideosrc" #auto detect the source
-        videoSrc = "videotestsrc" #test source
+        #videoSrc = "videotestsrc" #test source
         #v4l2src device=" + device + "
         command = videoSrc + " ! video/x-raw-rgb, width=" + str(self.video_width) + ", height=" + str(self.video_height) + " "
         command += "! ffmpegcolorspace ! vp8enc speed=2 max-latency=2 quality=10.0 max-keyframe-distance=3 threads=5 " 
