@@ -290,6 +290,7 @@ class WinMain(WahCade, threading.Thread):
         
         # Mark mame directory for HiToText calls
         self.mame_dir = os.path.expanduser('~/.mame/')
+        # Give absolute path to HiToText using mono
         # Set initial HiToText "read" command
         self.htt_read = "/usr/local/bin/HiToText.exe -r " + self.mame_dir
         # Set initial HiToText "erase" command
@@ -536,10 +537,10 @@ class WinMain(WahCade, threading.Thread):
 
         pygame.init()
         
-        sound_files = os.listdir('config.dist/sounds/')
+        sound_files = os.listdir(CONFIG_DIR + '/sounds/')
         self.sounds = []
         for sound in sound_files:
-            self.sounds.append('config.dist/sounds/' + sound)
+            self.sounds.append(CONFIG_DIR + '/sounds/' + sound)
 
         self.check_music_settings()
         
@@ -547,7 +548,7 @@ class WinMain(WahCade, threading.Thread):
         
         self.drwVideo.set_property('visible', False)
         
-        #Initialize video chat
+        # Initialize video chat
         self.video_chat = None
         if self.connected_to_server:
             self.connection_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/rcade/"
@@ -652,7 +653,7 @@ class WinMain(WahCade, threading.Thread):
         """Done, quit the application"""
         # Stop video playing if necessary
         self.stop_video()
-        #stop video streaming
+        # Stop video streaming
         if self.video_chat and self.video_chat.enabled:
             self.clean_up_video_chat()
         # Tells the arduino thread to terminate properly
@@ -785,7 +786,7 @@ class WinMain(WahCade, threading.Thread):
         if self.video_chat.enabled:
             self.video_chat.setup_video_streamer()
             
-            #Send the local IP to the server
+            # Send the local IP to the server
             if self.video_chat.localip != "" or self.video_chat.localip != None:
                 post_data = {"ipAddress":self.video_chat.localip, "port":self.video_chat.localport}
                 r = requests.post(self.connection_url, post_data, headers=self.authorization)
@@ -800,8 +801,6 @@ class WinMain(WahCade, threading.Thread):
     def start_video_chat(self):
         if not self.video_chat.receiver_running:
             self.video_chat.setup_video_receiver()
-        
-        
         
         self.vc_caption.set_text("...Loading... ")
         
@@ -2113,7 +2112,7 @@ class WinMain(WahCade, threading.Thread):
         self.gamesOverlayMarkupHead = ('<span color="%s" size="%s">' % (overlay_lay['text-col'], overlay_lay['font-size']))
         self.gamesOverlayMarkupTail = '</span>'
         
-        # Formatting for the IDs letters
+        # Formatting for the IDs overlay letters
         overlay_lay = layout_info['identify']['ScrollOverlay']
         self.IDsOverlayMarkupHead = ('<span color="%s" size="%s">' % (overlay_lay['text-col'], overlay_lay['font-size']))
         self.IDsOverlayMarkupTail = '</span>'
@@ -2306,7 +2305,7 @@ class WinMain(WahCade, threading.Thread):
                     if isinstance(widget, gtk.Widget):
                         self.player_select.winPlayers.move(widget, w_lay['x'], w_lay['y'])
                 else:
-                    print "Orphaned widget detected. Did not belong to one of [main/options/message/screensaver/identify]"
+                    print "Orphaned widget detected. Did not belong to one of [main/options/message/screensaver/identify/playerselect]"
         
         # Load histview and cpviewer layouts
         # Still in use?
