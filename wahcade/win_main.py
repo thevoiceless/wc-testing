@@ -106,7 +106,7 @@ class WinMain(WahCade, threading.Thread):
         
         # Begin the thread for reading from arduino
         threading.Thread.__init__(self)
-        
+        self.authorization = {"Authorization" : "Basic YWRtaW46cGFzc3dvcmQ="}
         #TODO: temporary
         self.videoCount = 0
         
@@ -290,6 +290,7 @@ class WinMain(WahCade, threading.Thread):
         
         # Mark mame directory for HiToText calls
         self.mame_dir = os.path.expanduser('~/.mame/')
+        # Give absolute path to HiToText using mono
         # Set initial HiToText "read" command
         self.htt_read = "/usr/local/bin/HiToText.exe -r " + self.mame_dir
         # Set initial HiToText "erase" command
@@ -458,7 +459,7 @@ class WinMain(WahCade, threading.Thread):
                 
         # Get a list of games already on the server
         self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
-        self.player_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/"
+        self.player_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/rcade/"
         self.score_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/score/"
 
         self.connected_to_arduino = False
@@ -477,7 +478,7 @@ class WinMain(WahCade, threading.Thread):
                         self.supported_games_name.append(romToName[game])
              
                 # Get a list of games already on the server
-                data = fromstring(requests.get(self.game_url, timeout=1).text)
+                data = fromstring(requests.get(self.game_url, headers=self.authorization, timeout=1).text)
                 games_on_server = []
                 for game in data.getiterator('game'):
                     games_on_server.append(game.find('romName').text)
@@ -526,7 +527,7 @@ class WinMain(WahCade, threading.Thread):
             if self.connected_to_arduino:
                 self.log_in_queue = Queue.Queue()
                 # Get players from server
-            data = fromstring(requests.get(self.player_url).text)
+            data = fromstring(requests.get(self.player_url, headers=self.authorization).text)
             for player in data.getiterator('player'):
                 self.player_info.append((player.find('name').text, player.find('playerID').text)) # parse player name and RFID from xml
             self.lblUsers.set_text("No Users Logged In")
@@ -536,10 +537,10 @@ class WinMain(WahCade, threading.Thread):
 
         pygame.init()
         
-        sound_files = os.listdir('config.dist/sounds/')
+        sound_files = os.listdir(CONFIG_DIR + '/sounds/')
         self.sounds = []
         for sound in sound_files:
-            self.sounds.append('config.dist/sounds/' + sound)
+            self.sounds.append(CONFIG_DIR + '/sounds/' + sound)
 
         self.check_music_settings()
         
@@ -547,7 +548,7 @@ class WinMain(WahCade, threading.Thread):
         
         self.drwVideo.set_property('visible', False)
         
-        #Initialize video chat
+        # Initialize video chat
         self.video_chat = None
         if self.connected_to_server:
             self.connection_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/rcade/"
@@ -652,7 +653,7 @@ class WinMain(WahCade, threading.Thread):
         """Done, quit the application"""
         # Stop video playing if necessary
         self.stop_video()
-        #stop video streaming
+        # Stop video streaming
         if self.video_chat and self.video_chat.enabled:
             self.clean_up_video_chat()
         # Tells the arduino thread to terminate properly
@@ -754,29 +755,24 @@ class WinMain(WahCade, threading.Thread):
                     self.main_log = True
                     self.log_in(self.log_in_queue.get())
                     self.main_log = False
-#                    print self.current_players
             # If the game supports high scores run the HiToText executions
             if self.current_rom in self.supported_games and len(self.current_players) != 0:
                 htt_command = self.htt_read
                 if not onWindows:
                     htt_command = "mono " + self.htt_read
-                #testString = commands.getoutput("wine HiToText.exe -r " + self.mame_dir + "hi" + sep + self.current_rom + ".hi 2>/dev/null")
-                #testString = commands.getoutput("mono HiToText.exe -r " + self.mame_dir + "hi" + sep + self.current_rom + ".hi")
-                testString = commands.getoutput(htt_command + "hi" + sep + self.current_rom + ".hi")
-                if 'Error' in testString:
-                    #testString = commands.getoutput("wine HiToText.exe -r " + self.mame_dir + "nvram" + sep + self.current_rom + ".nv 2>/dev/null")
-                    #testString = commands.getoutput("mono HiToText.exe -r " + self.mame_dir + "nvram" + sep + self.current_rom + ".nv")
-                    testString = commands.getoutput(htt_command + "nvram" + sep + self.current_rom + ".nv")
-                if not 'Error' in testString and testString != '' and not 'Exception' in testString:
+                high_score_string = commands.getoutput(htt_command + "hi" + sep + self.current_rom + ".hi")
+                if 'Error' in high_score_string: #'Error' indicates there is no .hi file but created .nv file instead
+                    high_score_string = commands.getoutput(htt_command + "nvram" + sep + self.current_rom + ".nv")
+                if not 'Error' in high_score_string and high_score_string != '' and not 'Exception' in high_score_string:
                     valid_string = ''
-                    for i in testString:
+                    for i in high_score_string: #Some games support their own encoding, this bypasses that by only accepting ascii characters
                         if (ord(i)<128 and ord(i)>31) or ord(i) == 13 or ord(i) == 10:
                             valid_string += i
                         else:
                             valid_string += '?'
-                    testString = valid_string
+                    high_score_string = valid_string
                     if self.connected_to_server:
-                        self.parse_high_score_text(testString)
+                        self.parse_high_score_text(high_score_string)
                 else:
                     print "Unable to read the high score using HiToText"
         self.on_sclGames_changed()
@@ -790,10 +786,10 @@ class WinMain(WahCade, threading.Thread):
         if self.video_chat.enabled:
             self.video_chat.setup_video_streamer()
             
-            #Send the local IP to the server
+            # Send the local IP to the server
             if self.video_chat.localip != "" or self.video_chat.localip != None:
                 post_data = {"ipAddress":self.video_chat.localip, "port":self.video_chat.localport}
-                r = requests.post(self.connection_url, post_data)
+                r = requests.post(self.connection_url, post_data, headers=self.authorization)
             
             self.connection_time_running = False
             self.on_connection_timer()
@@ -805,8 +801,6 @@ class WinMain(WahCade, threading.Thread):
     def start_video_chat(self):
         if not self.video_chat.receiver_running:
             self.video_chat.setup_video_receiver()
-        
-        
         
         self.vc_caption.set_text("...Loading... ")
         
@@ -840,39 +834,37 @@ class WinMain(WahCade, threading.Thread):
     def clean_up_video_chat(self):
         if self.connected_to_server and self.video_chat and self.video_chat.enabled:
             self.video_chat.kill_pipelines()
-            requests.delete(self.connection_url + self.video_chat.localip)
+            requests.delete(self.connection_url + self.video_chat.localip, headers=self.authorization)
        
     def parse_high_score_text(self, text_string):
         """Parse the text file for high scores. 0 scores are not sent"""
         if len(self.current_players) > 1:
             multiple_score_list = []
         high_score_table = {}
-        index = 1
-        # Go through each line of the the high score result
-        for line in iter(text_string.splitlines()):
+        in_table = False #Some high scores start with 1 or more random lines, this keeps track when we get to high scores
+        for line in iter(text_string.splitlines()): #Go through each line of the the high score result
             line = line.split('|')
-            if "RANK" in line or "SCORE" in line or "NAME" in line or "ROUND" in line or index != 1:
+            if "RANK" in line or "SCORE" in line or "NAME" in line or "ROUND" in line or in_table: #If we are in the table
                 if line[0] != '':
-                    # If it is the first line treat it as the format
-                    if index == 1:
+                    if not in_table: #First line of table is the format line
                         _format = line
-                        index += 1
+                        in_table = True
                         for column in line:
-                            high_score_table[column] = '' # Initialize dictionary values
-                    else: #not the first (heading) line
+                            high_score_table[column] = '' # Initialize dictionary values of table (eg. Rank, Name, Score)
+                    else: #not the first (formatting) line
                         if len(self.current_players) == 1:
                             for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
-                                high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
+                                high_score_table[_format[i]] = line[i].rstrip() #remove whitespace
                             if 'SCORE' in high_score_table: # If high score table has score
                                 if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB
                                     if 'NAME' in high_score_table:
                                         post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.lblUsers.get_text()}                         
                                     else:
                                         post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.current_players[0]}
-                                    requests.post(self.score_url, post_data)
-                        else: #TODO: handle multiple players scores coming back
+                                    requests.post(self.score_url, post_data, headers=self.authorization)
+                        else: #Handle multiple players
                             for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
-                                high_score_table[_format[i]] = line[i].rstrip() #Posible error when adding back in
+                                high_score_table[_format[i]] = line[i].rstrip()
                             if 'SCORE' in high_score_table: # If high score table has score
                                 if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB                                                                
                                     if 'NAME' in high_score_table:
@@ -881,7 +873,7 @@ class WinMain(WahCade, threading.Thread):
                                     else:
                                         post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":""}
                                         multiple_score_list.append(post_data)
-            else:
+            else: #Have not found the high score table yet
                 continue
 
         if len(self.current_players) > 1 and len(multiple_score_list) > 0:
@@ -899,7 +891,7 @@ class WinMain(WahCade, threading.Thread):
     def close_player_select(self, widget, data = None):
         """When the player select screen closes, this method starts"""
         if len(self.score_processing_queue) > 0:
-            if self.selected_player != '':
+            if self.selected_player != '': #Will be '' if user cancles the score
                 score_to_associate = self.score_processing_queue.pop()
                 score_to_associate['player'] = self.selected_player
                 self.upload_queue.append(score_to_associate)
@@ -929,8 +921,8 @@ class WinMain(WahCade, threading.Thread):
         """Post data for multiple players"""
         while self.upload_queue:
             to_upload = self.upload_queue.pop()            
-            r = requests.post(self.score_url, to_upload)
-            self.check_connection(r.status_code)
+            r = requests.post(self.score_url, to_upload, headers=self.authorization)
+        self.check_connection(r.status_code)
         self.current_window = 'main'
         self.winMain.present()
         self.score_processing_queue = []
@@ -947,12 +939,10 @@ class WinMain(WahCade, threading.Thread):
              
     def log_in(self, player_rfid):
         """Logs a player in"""
-        # resets self.selected_player for later use
-        self.selected_player = ''
+        self.selected_player = '' # resets self.selected_player for later use
         player_name = ''
-        # If the player logs in with backslash
-        if player_rfid == "Manual Login":
-            # Because we are using the identify window rather than creating a new onewe have to temporariy overwrite this list
+        if player_rfid == "Manual Login": # If the player logs in with backslash
+            # Because we are using the identify window rather than creating a new one we have to temporariy overwrite this list
             old_list = self.identify.sclIDs.ls
             self.identify.sclIDs.ls = []
             for v in self.player_info:
@@ -983,8 +973,7 @@ class WinMain(WahCade, threading.Thread):
             if player_rfid == "Manual Login":
                 print "No name selected, not logging in"
                 return
-        # Prevents the reader from logging someone in and then out immediately
-        if self.recent_log and self.last_log == player_rfid:
+        if self.recent_log and self.last_log == player_rfid: # Prevents the reader from logging someone in and then out immediately
             return
         if not self.timer_existing:
             self.timer_existing = True
@@ -993,13 +982,11 @@ class WinMain(WahCade, threading.Thread):
             if v[1] == player_rfid:
                 player_name = v[0]
                 break
-        # If player is logged in, log them out
-        if player_name in self.current_players:
+        if player_name in self.current_players: # If player is logged in, log them out
             self.recent_log = True
             self.last_log = player_rfid
             self.log_out(player_name)
-        # Log the player in
-        elif player_name != '':
+        elif player_name != '': # Log the player in
             self.recent_log = True
             self.last_log = player_rfid
             self.current_players.append(player_name)
@@ -1009,8 +996,7 @@ class WinMain(WahCade, threading.Thread):
             self.lblUsersLoggedIn.show()
             self.timeLoginShown = time.time()
             self.lblUsers.set_text(self.get_logged_in_user_string(self.current_players))
-        # If player doesn't exist then add them to DB
-        else:
+        else: # If player doesn't exist then add them to DB
             self.register_new_player(player_rfid)
             if self.name_not_given:
                 self.recent_log = True
@@ -1044,8 +1030,6 @@ class WinMain(WahCade, threading.Thread):
             
     def register_new_player(self, player_rfid):
         """Add a new player to the database"""
-#        if self.connected_to_arduino:
-        # Bring up new player list
         self.show_window('identify')
         self.identify.setRFIDlbl(player_rfid)
         self.identify.sclIDs._update_display()
@@ -1058,7 +1042,7 @@ class WinMain(WahCade, threading.Thread):
         if player_name != 'Register New Player' and player_name != '':
             self.player_info.append([player_name, player_rfid])
             post_data = {"name":player_name, "playerID":player_rfid}
-            requests.post(self.player_url, post_data)
+            requests.post(self.player_url, post_data, headers=self.authorization)
             self.identify.sclIDs.ls.remove(player_name)
             self.name_not_given = False
         else:
@@ -1369,7 +1353,6 @@ class WinMain(WahCade, threading.Thread):
                         else:
                             print "Video Chat is disabled (you are not connected to the server or no camera was found)."
                 elif current_window == 'options':
-                    # Options form
                     if mw_func == 'OP_UP_1_OPTION':
                         self.play_clip('OP_UP_1_OPTION')
                         self.options.sclOptions.scroll(-1)
@@ -1532,7 +1515,6 @@ class WinMain(WahCade, threading.Thread):
             game_info['colour_status'],
             game_info['sound_status']))
         self.lblCatVer.set_text(game_info['category'])
-
         # Get high score data and display it
         if self.scroll_count < self.showHighScoreThresh:    
             if not self.connected_to_server:
@@ -1566,51 +1548,38 @@ class WinMain(WahCade, threading.Thread):
         
     def get_score_string(self):
         """Parse Scores from DB into display string"""
-        r = requests.get(self.game_url + self.current_rom + "/highscore")
-        # String returned from server containing high scores
-        score_string = r.text
+        score_string = requests.get(self.game_url + self.current_rom + "/highscore", headers=self.authorization).text
         index = 1
-        
         if score_string != '[]' and "Could not find" not in score_string:
-            # Trim leading and trailing [] from string
-            score_string = score_string[1:-1]
+            score_string = score_string[1:-1] # Trim leading and trailing [] from string
             score_list = score_string.split(",")
-            #Check for off chance data didn't download properly
-            for s in score_list:
+            for s in score_list: #Check for off chance data didn't download properly
                 if ':' not in s:
                     return
-            # Split the list into name's and scores
-            score, name = zip(*(s.split(":") for s in score_list))
+            score, name = zip(*(s.split(":") for s in score_list)) # Split the list into name's and scores
             score_list[:]=[]
             score_string = ''
-            # Take each name and score and tuple them together
-            for pair in range(len(name)):
+            for pair in range(len(name)): # Take each name and score and tuple them together
                 paring = (name[pair].encode('utf8').strip(), score[pair].encode('utf8'))
                 score_list.append(paring)
-            
             score_list = sorted(score_list, key = lambda score: int(score[1]), reverse = True) 
-            
-            for name, score in score_list: # 42 characters in each line
-                # Format for leading spaces by numbers. Makes 1. match up with 10.
-                if index < 10:
+            for name, score in score_list:
+                if index < 10: # Format for leading spaces by numbers. Makes 1. match up with 10.
                     score_string += " " + str(index) + ". "
                     score_string += '{0:<21}'.format(name) + '{0:>21}\n'.format(score)
                 index += 1
-            # Fill in un-used score spots
-            while index <= 10:
+            while index <= 10: # Fill in un-used score spots
                 if index < 10:
                     score_string += " "
                 score_string += str(index) + ". " + '{0:<21}'.format("-"*12) + '{0:>21}\n'.format("-"*9)
                 index += 1
-        # No high scores recorded
-        else:
+        else: # No high scores recorded
             score_string = ''
             while index <= 10:
                 if index < 10:
                     score_string += " "
                 score_string += str(index) + ". " + '{0:<21}'.format("-"*12) + '{0:>21}\n'.format("-"*9)
                 index += 1
-                
         return score_string
     
     def portal_timer(self):
@@ -1780,26 +1749,19 @@ class WinMain(WahCade, threading.Thread):
         title = [g[0] for g in self.lsGames if g[1] == rom][0]
         # Show launch message
         self.message.display_message(
-            _('Starting...'),
+            _('Running...'),
             '%s: %s' % (rom, title))
-        
         # Erase scores from hi score file of current game
-        # Executable must be in same directory
         if rom in self.supported_games:
             htt_command = self.htt_erase
             if not onWindows:
                     htt_command = "mono " + self.htt_erase
             if os.path.exists(self.mame_dir + 'hi' + sep + rom + '.hi'):
-                #os.system('wine HiToText.exe -e ' + self.mame_dir + 'hi' + sep + rom + '.hi 2>/dev/null')
-                #os.system('mono HiToText.exe -e ' + self.mame_dir + 'hi' + sep + rom + '.hi')
                 os.system(htt_command + 'hi' + sep + rom + '.hi')
             elif os.path.exists(self.mame_dir + 'nvram' + sep + rom + '.nv'):
-                #os.system('wine HiToText.exe -e ' + self.mame_dir + 'nvram' + sep + rom + '.nv 2>/dev/null')
-                #os.system('mono HiToText.exe -e ' + self.mame_dir + 'nvram' + sep + rom + '.nv')
                 os.system(htt_command + 'nvram' + sep + rom + '.nv')
             else:
                 print rom, 'high score file not found'
-
         # Stop joystick poller
         if self.joy is not None:
             self.joy.joy_count('stop')
@@ -1827,7 +1789,6 @@ class WinMain(WahCade, threading.Thread):
             self.gstMusic.stop()    
         # Check emu exe
         emulator_executable = self.emu_ini.get('emulator_executable')
-        
         # CHECK FOR LAUNCHER PLUGINS
         rom_extension = os.path.splitext(game_opts['options'])[1]
         pass_check = False
@@ -2138,7 +2099,6 @@ class WinMain(WahCade, threading.Thread):
         self.layout_file = layout_file
         layout_info = yaml.load(open(self.layout_file, 'r'))
         
-        # TODO: Finalize this
         # Formatting for the high score labels
         hs_data_lay = layout_info['main']['HighScoreData']
         self.highScoreDataMarkupHead = ('<span color="%s" size="%s">' % (hs_data_lay['text-col'], hs_data_lay['font-size']))
@@ -2152,7 +2112,7 @@ class WinMain(WahCade, threading.Thread):
         self.gamesOverlayMarkupHead = ('<span color="%s" size="%s">' % (overlay_lay['text-col'], overlay_lay['font-size']))
         self.gamesOverlayMarkupTail = '</span>'
         
-        # Formatting for the IDs letters
+        # Formatting for the IDs overlay letters
         overlay_lay = layout_info['identify']['ScrollOverlay']
         self.IDsOverlayMarkupHead = ('<span color="%s" size="%s">' % (overlay_lay['text-col'], overlay_lay['font-size']))
         self.IDsOverlayMarkupTail = '</span>'
@@ -2243,7 +2203,6 @@ class WinMain(WahCade, threading.Thread):
         if not os.path.dirname(plyr_img):
             plyr_img = os.path.join(self.layout_path, plyr_img)
         plyr.imgBackground.set_from_file(plyr_img)
-        
         
         # Set up all Widgets
         for w_set_name in self._layout_items.keys():
@@ -2346,7 +2305,7 @@ class WinMain(WahCade, threading.Thread):
                     if isinstance(widget, gtk.Widget):
                         self.player_select.winPlayers.move(widget, w_lay['x'], w_lay['y'])
                 else:
-                    print "Orphaned widget detected. Did not belong to one of [main/options/message/screensaver/identify]"
+                    print "Orphaned widget detected. Did not belong to one of [main/options/message/screensaver/identify/playerselect]"
         
         # Load histview and cpviewer layouts
         # Still in use?
@@ -2708,7 +2667,7 @@ class WinMain(WahCade, threading.Thread):
         elif self.current_list_ini.get('list_type') == 'xml_remote':
             # XML remote-populated, so get the source URL
             sourceURL = self.props['host']+":"+self.props['port']+"/"+self.props['db']+self.current_list_ini.get('params')
-            data = fromstring(requests.get(sourceURL).text)
+            data = fromstring(requests.get(sourceURL, headers=self.authorization).text)
             gList = []
             # Use all games to gen list
             list_filename = os.path.join(
@@ -2830,7 +2789,7 @@ class WinMain(WahCade, threading.Thread):
                 return
             
     def on_connection_timer(self):
-        data = fromstring(requests.get(self.connection_url).text)
+        data = fromstring(requests.get(self.connection_url, headers=self.authorization).text)
         print "Checking for IP Addresses: " + str(len(data.getiterator('connection'))) + " found"
         for ipAddr in data.getiterator('connection'):
             if not (ipAddr.find('ipAddress').text == self.video_chat.remoteip and ipAddr.find('port').text == self.video_chat.remoteport):
@@ -2851,13 +2810,12 @@ class WinMain(WahCade, threading.Thread):
                     #print self.valid_remote_ip(self.remote_ip[0], self.remote_ip[1])
                     if not self.valid_remote_ip(*self.remote_ip):
                         print 'could not connect to', self.remote_ip[0], self.remote_ip[1], '- removing it from server'
-                        requests.delete(self.connection_url + self.remote_ip[0])
+                        requests.delete(self.connection_url + self.remote_ip[0], headers=self.authorization)
                         self.on_connection_timer()
                         return True
                         #TODO: go to the next video feed
                         
                     self.video_chat.set_remote_info(ipAddr.find('ipAddress').text, ipAddr.find('port').text)
-                    
                     
                     was_running = self.video_chat.receiver_running
                     self.stop_video_chat()
@@ -2874,7 +2832,7 @@ class WinMain(WahCade, threading.Thread):
     
     def on_test_connect_timer(self):
         found_local = False
-        data = fromstring(requests.get(self.connection_url).text)
+        data = fromstring(requests.get(self.connection_url, headers=self.authorization).text)
         for ipAddr in data.getiterator('connection'):
             if ipAddr.find('ipAddress').text == self.video_chat.localip:
                 found_local = True
@@ -2882,7 +2840,7 @@ class WinMain(WahCade, threading.Thread):
         if not found_local:
             print 'couldnt find local ip'
             post_data = {"ipAddress":self.video_chat.localip, "port":self.video_chat.localport}
-            r = requests.post(self.connection_url, post_data)
+            r = requests.post(self.connection_url, post_data, headers=self.authorization)
         return True
 
     def start_timer(self, timer_type):
