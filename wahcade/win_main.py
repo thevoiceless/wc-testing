@@ -1506,7 +1506,7 @@ class WinMain(WahCade, threading.Thread):
         # Set current game in ini file
         self.current_list_ini.set('current_game', self.sclGames.get_selected())
         # Get info to display in bottom right box
-        if len(self.lsGames) == 0: # Fixes error when switching lists with empty games
+        if not self.lsGames: # Fixes error when switching lists with empty games
             return
         game_info = filters.get_game_dict(self.lsGames[self.sclGames.get_selected()])
         self.current_rom = game_info['rom_name']
@@ -2721,7 +2721,7 @@ class WinMain(WahCade, threading.Thread):
                 self.lsGames = []
                 self.lsGames_len = 0
             # Extract data
-            if data.text != "":
+            if data.text:
                 for game in data.getiterator('game'):
                     try:
                         gList.append(next(gTuple for gTuple in self.lsGames if gTuple[1] == game.find("romName").text))
