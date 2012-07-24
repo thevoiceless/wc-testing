@@ -106,7 +106,7 @@ class WinMain(WahCade, threading.Thread):
         
         # Begin the thread for reading from arduino
         threading.Thread.__init__(self)
-        self.authorization = {"Authorization" : "Basic YWRtaW46cGFzc3dvcmQ="}
+        
         #TODO: temporary
         self.videoCount = 0
         
@@ -141,7 +141,15 @@ class WinMain(WahCade, threading.Thread):
             self.copy_user_config()
             # Now we've copied stuff, quit and tell the user
             self.log_msg("Wah!Cade updating user config files in: "+ self.userpath)
-        
+            
+        keyfile = CONFIG_DIR + "/confs/authkeys"
+        try:
+            with open(keyfile, 'r') as f:
+                key = f.readline()
+        except:
+            pass
+        self.authorization = {"Authorization" : ("Basic " + key.encode('base64', 'strict').strip())}
+        print self.authorization
         # Try connecting to a database, otherwise
         self.db_file = CONFIG_DIR + "/confs/DB-" + config_opts.db_config_file + ".txt"
         try:
@@ -443,7 +451,7 @@ class WinMain(WahCade, threading.Thread):
         self.winMain.add(self.fixd)
         # Add everything to the main Fixd object
         for w_set_name in self._layout_items:
-            for offset, widget, name in self._layout_items[w_set_name]:
+            for offset, widget, name in self._layout_items[w_set_name]: #@UnusedVariable
                 if widget.get_parent():
                     pass
                 elif not (type(widget) is ScrollList):
@@ -697,16 +705,16 @@ class WinMain(WahCade, threading.Thread):
             # Reboot
             self.log_msg('Reboot, exit mode selected')
             try:
-                rv = ck.Restart()
+                ck.Restart()
             except: 
-                rv = hal.Reboot()
+                hal.Reboot()
         elif exit_mode == 'shutdown':
             # Turn off
             self.log_msg('Shutdown, exit mode selected')
             try:
-                rv = ck.Stop()
+                ck.Stop() 
             except:
-                rv = hal.Shutdown()
+                hal.Shutdown()
         self.on_winMain_destroy()
         
 
@@ -789,7 +797,7 @@ class WinMain(WahCade, threading.Thread):
             # Send the local IP to the server
             if self.video_chat.localip != "" or self.video_chat.localip != None:
                 post_data = {"ipAddress":self.video_chat.localip, "port":self.video_chat.localport}
-                r = requests.post(self.connection_url, post_data, headers=self.authorization)
+                requests.post(self.connection_url, post_data, headers=self.authorization)
             
             self.connection_time_running = False
             self.on_connection_timer()
@@ -1639,7 +1647,7 @@ class WinMain(WahCade, threading.Thread):
             if os.path.isfile(vid_filename):
                 # Resize video vidget
                 self.video_playing = True
-                img_w, img_h = self.video_artwork_widget.get_size_request()
+                img_w, img_h = self.video_artwork_widget.get_size_request() #@UnusedVariable
                 xpos = (img_w - self.video_width) / 2
                 self.fixd.move(
                     self.drwVideo,
