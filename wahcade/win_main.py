@@ -792,6 +792,8 @@ class WinMain(WahCade, threading.Thread):
     
     def setup_video_chat(self):
         if self.video_chat.enabled:
+            self.vc_feeds = []
+            self.new_vc_feeds = []
             self.video_chat.setup_video_streamer()
             
             # Send the local IP to the server
@@ -800,9 +802,20 @@ class WinMain(WahCade, threading.Thread):
                 requests.post(self.connection_url, post_data, headers=self.authorization)
             
             self.connection_time_running = False
+            self.stop_test_connection_timers = False
+            
+            data = fromstring(requests.get(self.connection_url, headers=self.authorization).text)
+            self.vc_feeds = [(info.find('ipAddress').text, info.find('port').text) for info in data.getiterator('connection')]
+            self.new_vc_feed_updated = False
+            self.manualVCMode = False
+            print str(self.vc_feeds)
+            
             self.on_connection_timer()
             self.start_timer('connection')
             self.start_timer('tstconnect')
+            
+            
+            #self.vc_feeds.append((self.video_chat.localip, self.video_chat.localport))
         else:
             print "Video chat is disabled because no camera was found."
     
@@ -815,21 +828,22 @@ class WinMain(WahCade, threading.Thread):
         self.vid_container.show_all()
         self.imgArtwork1.hide()  
         self.video_chat.start_receiver()
-        
+
         if not self.connection_time_running:
             self.start_timer('connection')
         
         if self.video_chat.is_loopback():
-            self.vc_caption.set_text("Showing local video: " + str(self.remote_ip))
-            print "Showing local video: " + str(self.remote_ip)
+            self.vc_caption.set_text("Showing local video: " + str(self.video_chat.get_remote_info()))
+            print "Showing local video: " + str(self.video_chat.get_remote_info())
         else:
-            self.vc_caption.set_text("Chatting with " + str(self.remote_ip))
-            print "Chatting with: " + str(self.remote_ip)
+            self.vc_caption.set_text("Chatting with " + str(self.video_chat.get_remote_info()))
+            print "Chatting with: " + str(self.video_chat.get_remote_info())
     
     def stop_video_chat(self):
         self.vid_container.hide_all()
         self.imgArtwork1.show()
         self.video_chat.stop_receiver()
+        
     
     def valid_remote_ip(self, remoteip, remoteport):
         try:
@@ -839,10 +853,59 @@ class WinMain(WahCade, threading.Thread):
         except urllib2.URLError:
             return False
     
+    def next_video_feed(self):
+        #find the current IP in the list
+        current = self.find_in_feed_list(self.video_chat.remoteip)
+        if current == -1:
+            print "Couldn't find the current IP address in the current list. This shouldn't happen."
+            return -1, -1 #this should never happen
+        
+        
+        if self.new_vc_feed_updated:
+            self.new_vc_feed_updated = False
+            #find the current ip in the new list
+            new_feed = self.find_in_new_feed_list(self.video_chat.remoteip)
+            
+            #if the ip isn't in the new list, search for a reference ip that is in both lists
+            if new_feed == -1:
+                for index in range(current - 1,0,-1):
+                    ip = self.vc_feeds[index][0]
+                    new_feed = self.find_in_new_feed_list(ip)
+                    if new_feed != -1:
+                        break
+            
+            #all previous IPs were removed, show the first video on the list
+            if new_feed == -1:
+                new_feed = 0 
+            
+            #update the feed list
+            self.vc_feeds = self.new_vc_feeds
+            current = new_feed
+        
+        #return the current video index and the one after it in a circular queue
+        return current, ((current + 1) % len(self.vc_feeds))
+                
+    def find_in_new_feed_list(self, value):
+        new_feed = -1
+        for pos, info in enumerate(self.new_vc_feeds):
+            if info[0] == value:
+                new_feed = pos
+                break
+        return new_feed
+    
+    def find_in_feed_list(self, value):
+        current = -1
+        for pos, info in enumerate(self.vc_feeds):
+            if info[0] == value:
+                current = pos
+                break
+        return current
+        
     def clean_up_video_chat(self):
         if self.connected_to_server and self.video_chat and self.video_chat.enabled:
             self.video_chat.kill_pipelines()
             requests.delete(self.connection_url + self.video_chat.localip, headers=self.authorization)
+            self.stop_test_connection_timers = True
        
     def parse_high_score_text(self, text_string):
         """Parse the text file for high scores. 0 scores are not sent"""
@@ -1360,6 +1423,17 @@ class WinMain(WahCade, threading.Thread):
                                 #print "Waiting for remote IP Address."
                         else:
                             print "Video Chat is disabled (you are not connected to the server or no camera was found)."
+                    elif mw_func == 'NEXT_VIDEO':
+                        current, new_feed = self.next_video_feed()
+                        if new_feed == current: #there is only one video or an error occured
+                            self.manualVCMode = False
+                        else:
+                            info = self.vc_feeds[new_feed]
+                            self.manualVCMode = True
+                            self.video_chat.set_remote_info(info[0], info[1])
+                            self.stop_video_chat()
+                            self.start_video_chat()
+                        
                 elif current_window == 'options':
                     if mw_func == 'OP_UP_1_OPTION':
                         self.play_clip('OP_UP_1_OPTION')
@@ -1497,7 +1571,7 @@ class WinMain(WahCade, threading.Thread):
         # Set current game in ini file
         self.current_list_ini.set('current_game', self.sclGames.get_selected())
         # Get info to display in bottom right box
-        if len(self.lsGames) == 0: # Fixes error when switching lists with empty games
+        if not self.lsGames: # Fixes error when switching lists with empty games
             return
         game_info = filters.get_game_dict(self.lsGames[self.sclGames.get_selected()])
         self.current_rom = game_info['rom_name']
@@ -2688,7 +2762,7 @@ class WinMain(WahCade, threading.Thread):
                 self.lsGames = []
                 self.lsGames_len = 0
             # Extract data
-            if data.text != "":
+            if data.text:
                 for game in data.getiterator('game'):
                     try:
                         gList.append(next(gTuple for gTuple in self.lsGames if gTuple[1] == game.find("romName").text))
@@ -2797,8 +2871,22 @@ class WinMain(WahCade, threading.Thread):
                 return
             
     def on_connection_timer(self):
+        #stop the timer if needed
+        if self.stop_test_connection_timers:
+            return False
+
         data = fromstring(requests.get(self.connection_url, headers=self.authorization).text)
         print "Checking for IP Addresses: " + str(len(data.getiterator('connection'))) + " found"
+        
+        #update the local list of feeds if it has changed
+        feeds = [(info.find('ipAddress').text, info.find('port').text) for info in data.getiterator('connection')]
+        if self.new_vc_feeds != feeds:
+            self.new_vc_feeds = feeds
+            self.new_vc_feed_updated = True
+        else:
+            print "No Update"
+        
+        #switch to the first remote video that appears and back to the local video when no other videos are left
         for ipAddr in data.getiterator('connection'):
             if not (ipAddr.find('ipAddress').text == self.video_chat.remoteip and ipAddr.find('port').text == self.video_chat.remoteport):
                 if len(data.getiterator('connection')) == 1 and ipAddr.find('ipAddress').text == self.video_chat.localip:
@@ -2811,9 +2899,9 @@ class WinMain(WahCade, threading.Thread):
                     self.stop_video_chat()
                     if was_running:
                         self.start_video_chat()
-                    
+                    self.manualVCMode = False
                     return True
-                elif ipAddr.find('ipAddress').text != self.video_chat.localip or ipAddr.find('port').text != self.video_chat.localport:
+                elif not self.manualVCMode  and (ipAddr.find('ipAddress').text != self.video_chat.localip or ipAddr.find('port').text != self.video_chat.localport):
                     self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
                     #print self.valid_remote_ip(self.remote_ip[0], self.remote_ip[1])
                     if not self.valid_remote_ip(*self.remote_ip):
@@ -2825,6 +2913,8 @@ class WinMain(WahCade, threading.Thread):
                         
                     self.video_chat.set_remote_info(ipAddr.find('ipAddress').text, ipAddr.find('port').text)
                     
+                    self.vc_feeds = [(info.find('ipAddress').text, info.find('port').text) for info in data.getiterator('connection')]
+
                     was_running = self.video_chat.receiver_running
                     self.stop_video_chat()
                     if was_running:
@@ -2833,12 +2923,14 @@ class WinMain(WahCade, threading.Thread):
                     
                     self.connection_time_running = False
                     return False #Stop the timer if connected
-            else:
-                pass
-                #print ipAddr.find('ipAddress').text + " " + self.video_chat.remoteip + " " + ipAddr.find('port').text + " " + self.video_chat.remoteport
+            elif ipAddr.find('ipAddress').text == self.video_chat.remoteip and ipAddr.find('port').text == self.video_chat.remoteport and ipAddr.find('ipAddress').text != self.video_chat.localip and ipAddr.find('port').text != self.video_chat.localport:
+                break #if we find the current remote host and it isn't the local video feed, don't change it
         return True 
     
     def on_test_connect_timer(self):
+        if self.stop_test_connection_timers:
+            return False
+        
         found_local = False
         data = fromstring(requests.get(self.connection_url, headers=self.authorization).text)
         for ipAddr in data.getiterator('connection'):
