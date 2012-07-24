@@ -29,6 +29,8 @@ class video_chat():
         self.video_width, self.video_height = 320, 240
         #self.localip, self.localport = self.WinMain.local_IP, str(self.get_open_port())
         self.localip, self.localport = str(self.get_local_ip()), str(self.get_open_port())
+        self.localip = "127.0.0.1" #manual override for testing on one machine
+        self.localip = "localhost" #manual override for testing on one machine
         #print self.localip + " " + self.localport 
         self.remoteip, self.remoteport = "", "" #self.localip, self.localport #do a video loopback initially
         
@@ -39,7 +41,7 @@ class video_chat():
         device = self.get_camera_name()
         #videosrc = "v4l2src device=" + device #specify a specific camera
         videoSrc = "autovideosrc" #auto detect the source
-        #videoSrc = "videotestsrc" #test source
+        videoSrc = "videotestsrc" #test source
         #v4l2src device=" + device + "
         command = videoSrc + " ! video/x-raw-rgb, width=" + str(self.video_width) + ", height=" + str(self.video_height) + " "
         command += "! ffmpegcolorspace ! vp8enc speed=2 max-latency=2 quality=10.0 max-keyframe-distance=3 threads=5 " 
@@ -78,7 +80,7 @@ class video_chat():
     
     def is_loopback(self):
         return (self.localip == self.remoteip and self.localport == self.remoteport)
-        
+    
     def get_local_ip(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(('8.8.8.8', 80)) #connect to Google's DNS server
@@ -120,6 +122,9 @@ class video_chat():
         self.remoteip = ip
         self.remoteport = port
     
+    def get_remote_info(self):
+        return (self.remoteip, self.remoteport)
+    
     def video_is_streaming(self):
         if self.streampipe and self.streampipe.get_state()[1] == gst.STATE_PLAYING:
             return True
@@ -155,10 +160,11 @@ class video_chat():
             was_running = self.receiver_running
             self.receiver_running = False
             self.stop_receiver()
-            if was_running and hasattr(self.WinMain, 'start_video_chat'):
+            if was_running and hasattr(self.WinMain, 'start_video_chat') and hasattr(self.WinMain, 'manualVCMode'):
                 self.remoteip = self.localip
                 self.remoteport = self.localport
                 self.WinMain.start_video_chat()
+                self.WinMain.manualVCMode = False
             #self.kill_pipelines()
         elif t == gst.MESSAGE_ERROR:
             self.receiver_running = False
