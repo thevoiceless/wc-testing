@@ -14,6 +14,7 @@ from constants import CONFIG_DIR
 import requests
 import socket
 import gtk
+import inspect
 
 class video_chat():
     
@@ -22,13 +23,18 @@ class video_chat():
         self.enabled = True
         self.receiver_running = False
         
+        self.streampipe = None
         self.receivepipe = None
 
         self.video_width, self.video_height = 320, 240
         #self.localip, self.localport = self.WinMain.local_IP, str(self.get_open_port())
         self.localip, self.localport = str(self.get_local_ip()), str(self.get_open_port())
+        #self.localip = "127.0.0.1" #manual override for testing on one machine
+        #self.localip = "localhost" #manual override for testing on one machine
         #print self.localip + " " + self.localport 
         self.remoteip, self.remoteport = "", "" #self.localip, self.localport #do a video loopback initially
+        
+        self.enabled = self.camera_available() #disables video chat if no cameras are found
     
     def setup_video_streamer(self):
         #webm video pipeline, optimized for video conferencing
@@ -53,13 +59,11 @@ class video_chat():
     
     def setup_video_receiver(self):
         #webm encoded video receiver
-        #self.remoteip, self.remoteport = "127.0.0.1", self.localport #COMMENT THIS TO ALLOW MULTIPLE MACHINES
         command = "tcpclientsrc host=" + self.remoteip + " port=" + self.remoteport + " " 
         command += "! matroskademux name=d d. ! queue2 ! vp8dec ! ffmpegcolorspace ! xvimagesink name=sink sync=false " 
         command += "d. ! queue2 ! vorbisdec ! audioconvert ! audioresample ! alsasink sync=false"
         self.receivepipe = gst.parse_launch(command) 
         #self.receivepipe.set_state(gst.STATE_PLAYING)
-        
         self.sink = self.receivepipe.get_by_name("sink")
         bus = self.receivepipe.get_bus()
         bus.add_signal_watch()
@@ -67,15 +71,16 @@ class video_chat():
         bus.enable_sync_message_emission()
         bus.connect("sync-message::element", self.on_sync_message)
         self.receiver_running = True
-#        self.receivepipe.set_state(gst.STATE_PLAYING)
-        
-        #print "Video Chat Receiver started"
+        print 'Receiver running on', self.remoteip, self.remoteport
         
     def receiver_ready(self):
         if not self.receivepipe:
             return False
         return True
-            
+    
+    def is_loopback(self):
+        return (self.localip == self.remoteip and self.localport == self.remoteport)
+    
     def get_local_ip(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(('8.8.8.8', 80)) #connect to Google's DNS server
@@ -92,15 +97,20 @@ class video_chat():
         s.close()
         return port
     
+    def camera_available(self):
+        camNames = commands.getoutput("dir -format -1 /dev | grep 'video*'").strip()
+        if len(camNames) == 0:
+            return False
+        else:
+            return True
+    
     def get_camera_name(self, index = 0):
         #Get the first camera's device number
-        listOfCameras = commands.getoutput("dir -format -1 /dev | grep 'video*'").split("\n")
-        camCount = str(len(listOfCameras))
+        listOfCameras = commands.getoutput("dir -format -1 /dev | grep 'video*'").strip().split("\n")
+        camCount = len(listOfCameras)
         device = ""
-        if camCount == 0:
-            print "No cameras were detected.  You can't stream video, but you can receive it."
-        else:
-            if int(camCount) == 1: 
+        if self.camera_available():
+            if camCount == 1: 
                 print "There is 1 camera: " + ", ".join(listOfCameras)
             else:
                 print "There are", camCount, "cameras: " + ", ".join(listOfCameras)
@@ -108,15 +118,12 @@ class video_chat():
         
         return device
     
-    def change_remote_ip(self, ip, port):
-        #was_running = True 
-        was_running = self.receiver_running
+    def set_remote_info(self, ip, port):
         self.remoteip = ip
         self.remoteport = port
-        self.stop_receiver()
-        self.setup_video_receiver()
-        if was_running:
-            self.start_receiver()
+    
+    def get_remote_info(self):
+        return (self.remoteip, self.remoteport)
     
     def video_is_streaming(self):
         if self.streampipe and self.streampipe.get_state()[1] == gst.STATE_PLAYING:
@@ -151,9 +158,15 @@ class video_chat():
     def on_message(self, bus, message):
         t = message.type
         if t == gst.MESSAGE_EOS:
+            was_running = self.receiver_running
             self.receiver_running = False
-            #self.kill_pipelines()
             self.stop_receiver()
+            if was_running and hasattr(self.WinMain, 'start_video_chat') and hasattr(self.WinMain, 'manualVCMode'):
+                self.remoteip = self.localip
+                self.remoteport = self.localport
+                self.WinMain.start_video_chat()
+                self.WinMain.manualVCMode = False
+            #self.kill_pipelines()
         elif t == gst.MESSAGE_ERROR:
             self.receiver_running = False
             err, debug = message.parse_error()
@@ -221,6 +234,15 @@ class standalone_player():
         stopReceiveButton = gtk.Button("Stop Receiving")
         stopReceiveButton.connect("clicked", self.OnReceiveStop)
         
+        self.remoteip = gtk.Entry()
+        self.remoteip.set_text(self.vc.remoteip)
+        self.remoteport = gtk.Entry()
+        self.remoteport.set_text(self.vc.remoteport)
+        
+        remoteInfo = gtk.HBox()
+        remoteInfo.add(self.remoteip)
+        remoteInfo.add(self.remoteport)
+        
         buttonBox = gtk.HButtonBox()
         buttonBox.add(startStreamButton)
         buttonBox.add(stopStreamButton)
@@ -228,14 +250,15 @@ class standalone_player():
         buttonBox.add(stopReceiveButton)
         
         vbox.pack_start(self.vc_box)
-        
         vbox.pack_start(buttonBox)
+        vbox.pack_start(remoteInfo)
+        
         fixed.put(vbox, 0, 0)
         window.add(fixed)
         
         window.show_all()
         
-        
+        #print self.vc.camera_available()
     
     def OnStreamStart(self, widget):
         self.vc.setup_video_streamer()
@@ -243,6 +266,10 @@ class standalone_player():
         self.vc.stop_streamer()
     
     def OnReceiveStart(self, widget):
+        if not self.remoteip.get_text() == "":
+            self.vc.remoteip = self.remoteip.get_text()
+        if not self.remoteport.get_text() == "":
+            self.vc.remoteport = self.remoteport.get_text()
         self.vc.setup_video_receiver()
         self.vc.start_receiver()
     def OnReceiveStop(self, widget):

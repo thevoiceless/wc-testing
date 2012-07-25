@@ -95,6 +95,7 @@ class WinOptions(WahCade):
                 [_('Music Options'), 'music'],
                 [_('Video Recording Options'), 'record_video'],
                 [_('About'), 'about'],
+                [_('Change Cabinet Name'), 'change'],
                 [_('Exit Wah!Cade'), 'exit']],
                 #[_('Close Arcade'), 'shutdown']],
             'list_options':
@@ -322,6 +323,9 @@ class WinOptions(WahCade):
                 # About
                 self.show_about_dialog('Rcade', CONFIG_DIR)
                 self.WinMain.hide_window('options')
+            elif menu_item == 'change':
+                self.WinMain.ctrlr_ini.set('cabinet_name', self.WinMain.getText())
+                self.WinMain.ctrlr_ini.write()
             else:
                 # Show appropriate menu
                 self.set_menu(menu_item, menu_desc)
