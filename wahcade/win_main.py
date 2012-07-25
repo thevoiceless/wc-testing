@@ -147,9 +147,9 @@ class WinMain(WahCade, threading.Thread):
             with open(keyfile, 'r') as f:
                 key = f.readline()
         except:
-            pass
-        self.authorization = {"Authorization" : ("Basic " + key.encode('base64', 'strict').strip())}
-        print self.authorization
+            self.authorization = {"Authorization" : "Basic " + "user:pass".encode('base64', 'strict').strip()}
+        else:
+            self.authorization = {"Authorization" : "Basic " + key.encode('base64', 'strict').strip()}
         # Try connecting to a database, otherwise
         self.db_file = CONFIG_DIR + "/confs/DB-" + config_opts.db_config_file + ".txt"
         try:
@@ -206,6 +206,8 @@ class WinMain(WahCade, threading.Thread):
         self.joyint = self.ctrlr_ini.getint('joystick')
         self.dx_sensitivity = self.ctrlr_ini.getint('mouse_x_sensitivity',100) * 0.01
         self.dy_sensitivity = self.ctrlr_ini.getint('mouse_y_sensitivity',100) * 0.01
+        
+        self.cabinet_name = self.ctrlr_ini.get('cabinet_name')
 
         ### Command-line options (parsed after ini is read)
         self.check_params(config_opts)
@@ -228,6 +230,12 @@ class WinMain(WahCade, threading.Thread):
         self.lblGameListIndicator = gtk.Label()     # http://www.pygtk.org/docs/pygtk/class-gtklabel.html
         self.lblEmulatorName = gtk.Label()
         self.lblGameSelected = gtk.Label()
+        
+        #TODO: Do this
+        if self.cabinet_name == "":
+            self.ctrlr_ini.set('cabinet_name', self.getText())
+            self.ctrlr_ini.write()
+        
         if self.use_splash == 1:
             self.display_splash() 
         if gst_media_imported:
@@ -263,6 +271,7 @@ class WinMain(WahCade, threading.Thread):
         self.IDsOverlayBG = gtk.Image()
         self.lblIDsOverlayScrollLetters = gtk.Label()
         self.IDsScrollOverlay = ScrollOverlay(self.lblIDsOverlayScrollLetters, self.IDsOverlayBG)
+
 
         # Create scroll list widget
         self.scroll_selected_color = '#C5C5C5' # Default in case layout doesn't load
@@ -641,6 +650,8 @@ class WinMain(WahCade, threading.Thread):
             'UP_1_LETTER', 'DOWN_1_LETTER']
         self.scroll_count = 0
         
+        
+        
         self.fixd.show()
         
         #### Joystick setup
@@ -656,6 +667,36 @@ class WinMain(WahCade, threading.Thread):
         
         ### __INIT__ Complete
         self.init = False
+    
+    def responseToDialog(self, entry, dialog, response):
+        dialog.response(response)
+    
+    def getText(self):
+        #base this on a message dialog
+        dialog = gtk.MessageDialog(type=gtk.MESSAGE_INFO, buttons = gtk.BUTTONS_OK, parent=self.winMain)
+        dialog.set_markup('Please enter cabinet <b>name</b>:')
+        #create the text input field
+        entry = gtk.Entry()
+        #allow the user to press enter to do ok
+        entry.connect("activate", self.responseToDialog, dialog, gtk.RESPONSE_OK)
+        #create a horizontal box to pack the entry and a label
+        hbox = gtk.HBox()
+        hbox.pack_start(gtk.Label("Name:"), False, 5, 5)
+        hbox.pack_end(entry)
+        #some secondary text
+        dialog.format_secondary_markup("Leave blank for 'ReadyTalk'")
+        #add it and show it
+        dialog.vbox.pack_end(hbox, True, True, 0)
+        dialog.set_position(gtk.WIN_POS_CENTER_ON_PARENT)
+        dialog.set_keep_above(True)
+        dialog.show_all()
+        #go go go
+        dialog.run()
+        text = entry.get_text()
+        if text == "":
+            text = "ReadyTalk"
+        dialog.destroy()
+        return text
     
     def on_winMain_destroy(self, *args):
         """Done, quit the application"""
@@ -929,9 +970,9 @@ class WinMain(WahCade, threading.Thread):
                             if 'SCORE' in high_score_table: # If high score table has score
                                 if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB
                                     if 'NAME' in high_score_table:
-                                        post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.lblUsers.get_text()}                         
+                                        post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": self.cabinet_name, "game":self.current_rom, "player":self.lblUsers.get_text()}                         
                                     else:
-                                        post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":self.current_players[0]}
+                                        post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": self.cabinet_name, "game":self.current_rom, "player":self.current_players[0]}
                                     requests.post(self.score_url, post_data, headers=self.authorization)
                         else: #Handle multiple players
                             for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
@@ -939,10 +980,10 @@ class WinMain(WahCade, threading.Thread):
                             if 'SCORE' in high_score_table: # If high score table has score
                                 if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB                                                                
                                     if 'NAME' in high_score_table:
-                                        post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":""}                         
+                                        post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": self.cabinet_name, "game":self.current_rom, "player":""}                         
                                         multiple_score_list.append(post_data)
                                     else:
-                                        post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": 'Intern test CPU', "game":self.current_rom, "player":""}
+                                        post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": self.cabinet_name, "game":self.current_rom, "player":""}
                                         multiple_score_list.append(post_data)
             else: #Have not found the high score table yet
                 continue
