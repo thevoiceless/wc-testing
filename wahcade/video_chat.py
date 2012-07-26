@@ -60,8 +60,8 @@ class video_chat():
     def setup_video_receiver(self):
         #webm encoded video receiver
         command = "tcpclientsrc host=" + self.remoteip + " port=" + self.remoteport + " " 
-        command += "! matroskademux name=d d. ! queue2 ! vp8dec ! ffmpegcolorspace ! xvimagesink name=sink sync=false " 
-        command += "d. ! queue2 ! vorbisdec ! audioconvert ! audioresample ! alsasink sync=false"
+        command += "! matroskademux name=d d. ! queue2 ! vp8dec ! ffmpegcolorspace ! xvimagesink name=sink " 
+        command += "d. ! queue2 ! vorbisdec ! audioconvert ! audioresample ! alsasink"
         self.receivepipe = gst.parse_launch(command) 
         #self.receivepipe.set_state(gst.STATE_PLAYING)
         self.sink = self.receivepipe.get_by_name("sink")
