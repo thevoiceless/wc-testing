@@ -892,7 +892,6 @@ class WinMain(WahCade, threading.Thread):
             urllib2.urlopen('http://' + remoteip + ":" + remoteport, timeout=1)
             return True
         except:
-#        except urllib2.URLError:
             return False
     
     def next_video_feed(self):
@@ -1457,7 +1456,7 @@ class WinMain(WahCade, threading.Thread):
                         self.chat_key_count += 1
                         if self.connected_to_server and self.video_chat and self.video_chat.enabled:
                             if self.chat_key_count == 1:
-                                if self.vid_container.get_property("visible") == False: #TODO: limit
+                                if self.vid_container.get_property("visible") == False:
                                     #print "Show video chat"
                                     self.setup_video_chat()
                                     self.start_video_chat()
