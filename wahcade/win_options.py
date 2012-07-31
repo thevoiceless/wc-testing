@@ -5,7 +5,7 @@
 # Application: Rcade
 # File:        win_options.py
 # Description: options window
-# Copyright (c) 2005-2010   Andy Balcombe <http://www.anti-particle.com>
+# Created by Andy Balcombe. Extended by Zach McGaughey, Riley Moses, Devin Wilson, John Kelly and Terek Campbell of ReadyTalk
 ###
 #
 # This program is free software; you can redistribute it and/or modify
@@ -48,7 +48,6 @@ from wc_common import WahCade
 from scrolled_list import ScrollList
 import filters
 _ = gettext.gettext
-
 
 class WinOptions(WahCade):
     """Wah!Cade Options Window"""

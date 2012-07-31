@@ -4,7 +4,7 @@
 # Application: Rcade
 # File:        wahcade.py
 # Description: Main Window
-# Copyright (c) 2005-2010   Andy Balcombe <http://www.anti-particle.com>
+# Created by Andy Balcombe. Extended by Zach McGaughey, Riley Moses, Devin Wilson, John Kelly and Terek Campbell of ReadyTalk
 ###
 #
 # This program is free software; you can redistribute it and/or modify
@@ -53,7 +53,6 @@ import gtk
 import gobject                      # https://live.gnome.org/PyGObject
 gobject.threads_init()              # Initializes the the use of Python threading in the gobject module
 import pango                        # Library for rendering internationalized texts in high quality, http://zetcode.com/tutorials/pygtktutorial/pango/
-
 
 # Get system path separator
 sep = os.sep
@@ -158,7 +157,8 @@ class WinMain(WahCade, threading.Thread):
         except requests.exceptions.ConnectionError, e: # Any exception would mean some sort of failed server connection
             self.connected_to_server = False
             print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + ":", str(e)
-        
+        if self.connected_to_server:
+            print "Successfully connected to the server:", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
         ### SETUP WAHCADE INI FILE
         self.wahcade_ini = MameWahIni(os.path.join(CONFIG_DIR, 'wahcade.ini'))
         ## Read in options wahcade.ini, 
@@ -202,6 +202,7 @@ class WinMain(WahCade, threading.Thread):
         self.dx_sensitivity = self.ctrlr_ini.getint('mouse_x_sensitivity',100) * 0.01
         self.dy_sensitivity = self.ctrlr_ini.getint('mouse_y_sensitivity',100) * 0.01
         
+        ### SET CABINET NAME
         self.cabinet_name = self.ctrlr_ini.get('cabinet_name')
 
         ### Command-line options (parsed after ini is read)
@@ -450,7 +451,6 @@ class WinMain(WahCade, threading.Thread):
                               'playerselect' : self._player_select_items}
  
         # Initialize primary Fixd containers, and populate appropriately
-#        self.fixd.show()
         self.winMain.add(self.fixd)
         # Add everything to the main Fixd object
         for w_set_name in self._layout_items:
@@ -472,10 +472,8 @@ class WinMain(WahCade, threading.Thread):
         self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
         self.player_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/rcade/"
         self.score_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/score/"
-
         self.connected_to_arduino = False
         self.nameToRom = {}
-
         if self.connected_to_server:
             try:
                 # Map rom name to associated game name
@@ -538,20 +536,17 @@ class WinMain(WahCade, threading.Thread):
                 self.player_info.append((player.find('name').text, player.find('playerID').text)) # parse player name and RFID from xml
             self.lblUsers.set_text("No Users Logged In")
             self.lblUsers.show()
+       
         # Generate unregistered user list
         self.identify.Setup_IDs_list()
-
         pygame.init()
-        
         sound_files = os.listdir(CONFIG_DIR + '/sounds/')
         self.sounds = []
         for sound in sound_files:
             self.sounds.append(CONFIG_DIR + '/sounds/' + sound)
 
         self.check_music_settings()
-        
         self.winMain.show()
-        
         self.drwVideo.set_property('visible', False)
         
         # Initialize video chat
@@ -559,7 +554,6 @@ class WinMain(WahCade, threading.Thread):
         if self.connected_to_server:
             self.connection_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/rcade/"
             self.video_chat = video_chat(self)
-             
             self.vid_container = gtk.VBox(False, 10)
             self.vc_box = gtk.DrawingArea()
             self.vc_box.modify_bg(gtk.STATE_NORMAL, self.vid_container.style.black)
@@ -584,11 +578,9 @@ class WinMain(WahCade, threading.Thread):
             self.winMain.fullscreen()
         else:
             self.log_msg('Windowed mode')
-            pass
         
         # Show the window to the user
         self.winMain.present()
-        
         if self.use_splash == 1:
             ### Hide splash
             self.splash.destroy()
@@ -610,7 +602,6 @@ class WinMain(WahCade, threading.Thread):
         ### INPUT CONFIGURATION
         # Input defaults
         self.pointer_grabbed = False
-       
         # Get keyboard and mouse events
         self.sclGames.connect('update', self.on_sclGames_changed)           # scrolled_list.py
         self.sclGames.connect('mouse-left-click', self.on_sclGames_changed)
@@ -638,11 +629,7 @@ class WinMain(WahCade, threading.Thread):
             'UP_1_PAGE', 'DOWN_1_PAGE',
             'UP_1_LETTER', 'DOWN_1_LETTER']
         self.scroll_count = 0
-        
-        
-        
         self.fixd.show()
-        
         #### Joystick setup
         self.joy = None
         if (self.joyint == 1) and pygame_imported:
@@ -650,10 +637,7 @@ class WinMain(WahCade, threading.Thread):
             self.joy.use_ini_controls(self.ctrlr_ini)
             self.joy.joy_info()
             self.start_timer('joystick')
-    
         self.on_sclGames_changed()
-        
-        
         ### __INIT__ Complete
         self.init = False
     
@@ -838,16 +822,12 @@ class WinMain(WahCade, threading.Thread):
             self.vc_feeds = [(info.find('ipAddress').text, info.find('port').text) for info in data.getiterator('connection')]
             self.new_vc_feed_updated = False
             self.manualVCMode = False
-            print str(self.vc_feeds)
             
             self.on_connection_timer()
             self.start_timer('connection')
             self.start_timer('tstconnect')
-            
-            
-            #self.vc_feeds.append((self.video_chat.localip, self.video_chat.localport))
         else:
-            print "Video chat is disabled because no camera was found."
+            print "Video chat is disabled because no camera was found or connection issues."
     
     def start_video_chat(self):
         if not self.video_chat.receiver_running:
@@ -864,10 +844,10 @@ class WinMain(WahCade, threading.Thread):
         
         if self.video_chat.is_loopback():
             self.vc_caption.set_text("Showing local video: " + str(self.video_chat.get_remote_info()))
-            print "Showing local video: " + str(self.video_chat.get_remote_info())
+#            print "Showing local video: " + str(self.video_chat.get_remote_info())
         else:
             self.vc_caption.set_text("Chatting with " + str(self.video_chat.get_remote_info()))
-            print "Chatting with: " + str(self.video_chat.get_remote_info())
+#            print "Chatting with: " + str(self.video_chat.get_remote_info())
     
     def stop_video_chat(self):
         self.vid_container.hide_all()
@@ -889,8 +869,6 @@ class WinMain(WahCade, threading.Thread):
         if current == -1:
             print "Couldn't find the current IP address in the current list. This shouldn't happen."
             return -1, -1 #this should never happen
-        
-        
         if self.new_vc_feed_updated:
             self.new_vc_feed_updated = False
             #find the current ip in the new list
@@ -1033,10 +1011,10 @@ class WinMain(WahCade, threading.Thread):
     def check_connection(self, status_code):
         if ((status_code - 200) < 100 and (status_code - 200) >= 0) or status_code == 500:
             self.connected_to_server = True
-            print "Successfully connected to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
+#            print "Successfully connected to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
         else:
             self.connected_to_server = False
-            print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + ", Status Code:", status_code
+#            print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + ", Status Code:", status_code
              
     def log_in(self, player_rfid):
         """Logs a player in"""
@@ -1446,11 +1424,9 @@ class WinMain(WahCade, threading.Thread):
                         if self.connected_to_server and self.video_chat and self.video_chat.enabled:
                             if self.chat_key_count == 1:
                                 if self.vid_container.get_property("visible") == False:
-                                    #print "Show video chat"
                                     self.setup_video_chat()
                                     self.start_video_chat()
                                 else:
-                                    #print "Hide video chat"
                                     self.stop_video_chat()
                                     self.clean_up_video_chat()
                         else:
@@ -2713,15 +2689,13 @@ class WinMain(WahCade, threading.Thread):
             return False
 
         data = fromstring(requests.get(self.connection_url, headers=self.authorization).text)
-        print "Checking for IP Addresses: " + str(len(data.getiterator('connection'))) + " found"
+#        print "Checking for IP Addresses: " + str(len(data.getiterator('connection'))) + " found"
         
         #update the local list of feeds if it has changed
         feeds = [(info.find('ipAddress').text, info.find('port').text) for info in data.getiterator('connection')]
         if self.new_vc_feeds != feeds:
             self.new_vc_feeds = feeds
             self.new_vc_feed_updated = True
-        else:
-            print "No Update"
         
         #switch to the first remote video that appears and back to the local video when no other videos are left
         for ipAddr in data.getiterator('connection'):
@@ -3051,7 +3025,7 @@ class WinMain(WahCade, threading.Thread):
         while(self.running):
             # Checks if there is an RFID waiting in the output buffer of the arduino
             if self.rfid_reader.inWaiting() >= 12:
-                print "reading card"
+#                print "reading card"
                 self.scrsave_time = time.time()
                 if self.scrsaver.running:
                     self.scrsaver.stop_scrsaver()
@@ -3069,7 +3043,6 @@ class WinMain(WahCade, threading.Thread):
 
     def in_game(self):
         """Check if a game is running"""
-        print "Logging in"
         try:
             if self.p.poll() is None:
                 return True

@@ -4,7 +4,7 @@
 # Application: Rcade
 # File:        scrolled_list.py
 # Description: Transparent Scrolled List Widget
-# Copyright (c) 2005-2010   Andy Balcombe <http://www.anti-particle.com>
+# Created by Andy Balcombe. Extended by Zach McGaughey, Riley Moses, Devin Wilson, John Kelly and Terek Campbell of ReadyTalk
 ###
 #
 # This program is free software; you can redistribute it and/or modify

@@ -5,7 +5,7 @@
 # Application: wah!cade
 # File:        gst_video.py
 # Description: gstreamer video widget
-# Copyright (c) 2005-2010   Andy Balcombe <http://www.anti-particle.com>
+# Created by Andy Balcombe. Extended by Zach McGaughey, Riley Moses, Devin Wilson, John Kelly and Terek Campbell of ReadyTalk
 #       Taken from gstreamer docs example code
 ###
 #

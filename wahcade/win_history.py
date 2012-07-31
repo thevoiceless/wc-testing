@@ -4,7 +4,7 @@
 # Application: wah!cade
 # File:        win_history.py
 # Description: history viewer file
-# Copyright (c) 2005-2010   Andy Balcombe <http://www.anti-particle.com>
+# Created by Andy Balcombe. Extended by Zach McGaughey, Riley Moses, Devin Wilson, John Kelly and Terek Campbell of ReadyTalk
 ###
 #
 # This program is free software; you can redistribute it and/or modify

@@ -5,7 +5,7 @@
 # Application: wah!cade
 # File:        wc_common.py
 # Description: common code to wahcade windows
-# Copyright (c) 2005-2010   Andy Balcombe <http://www.anti-particle.com>
+# Created by Andy Balcombe. Extended by Zach McGaughey, Riley Moses, Devin Wilson, John Kelly and Terek Campbell of ReadyTalk
 ###
 #
 # This program is free software; you can redistribute it and/or modify
@@ -313,10 +313,10 @@ class WahCade:
         dlg.set_logo(gtk.gdk.pixbuf_new_from_file(
             os.path.join(APP_PATH, 'pixmaps', 'Rcade-logo.png')))
         gtk.about_dialog_set_url_hook(self.show_website, None)
-        dlg.set_website('http:///www.anti-particle.com/wahcade.shtml')
-        dlg.set_website_label('www.anti-particle.com/wahcade')
+        dlg.set_website('https://github.com/thevoiceless/wc-testing')
+        dlg.set_website_label('github source')
         dlg.set_authors([
-            'Andy Balcombe', '',
+            'Andy Balcombe', 'Zach McGaughey', 'Devin Wilson', 'Terek Campbell', 'Riley Moses', 'John Kelly',
             'Bug Reports and Patches:',
                 '  Sylvain Fauveau', '  Robbforce', '  Jim Merullo',
                 '  SeTTleR', '  Mike Crawford', '  Mike Schwartz',
@@ -333,9 +333,8 @@ class WahCade:
                 '  sv: Daniel Nylander', '',
             'bdist_debian.py: Gene Cash', '',
             ])
-        dlg.set_artists(['Andy Balcombe', 'Buks', 'Battlecat'])
-        dlg.set_copyright('%s 2005-2010 Andy Balcombe' % (
-            unichr(169)).encode("utf-8"))
+        dlg.set_artists(['Riley Moses', 'John Kelly', 'Andy Balcombe', 'Buks', 'Battlecat'])
+        dlg.set_copyright('ReadyTalk')
         dlg.set_comments('Thanks to:\nMinWah and also the Mame / xMame team')
         dlg.set_translator_credits(_('translator-credits'))
         dlg.set_license(open(os.path.join(APP_PATH, 'doc', 'COPYING')).read())
