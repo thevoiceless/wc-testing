@@ -389,65 +389,65 @@ class WinMain(WahCade, threading.Thread):
         
         # Collect all image & label lists
         self._main_items = [
-            (8, self.imgMainLogo, "MainLogo"),                          # Weird gray area at top of window
-            (21, self.lblGameListIndicator, "GameListIndicator"),       # Label above games list
-            (34, self.lblEmulatorName, "EmulatorName"),                 # Label above artwork
-            (60, self.lblGameSelected, "GameSelected"),                 # Label displaying selected game number out of the total
-            (73, self.imgArtwork1, "MainArtwork1"),                     # Large game image in top right
-            (86, self.imgArtwork2, "MainArtwork2"),                     # Smaller game image in the lower right
-            (99, self.imgArtwork3, "MainArtwork3"),                     # Large game image in top center
-            (112, self.imgArtwork4, "MainArtwork4"),                    # Large game image in top center
-            (125, self.imgArtwork5, "MainArtwork5"),                    # Large game image in top center
-            (138, self.imgArtwork6, "MainArtwork6"),                    # Large game image in top center with background
-            (151, self.imgArtwork7, "MainArtwork7"),                    # Large game image in top center
-            (164, self.imgArtwork8, "MainArtwork8"),                    # Large game image in top center
-            (177, self.imgArtwork9, "MainArtwork9"),                    # Large game image in top center
-            (190, self.imgArtwork10, "MainArtwork10"),                  # Large game image in top center
-            (47, self.sclGames, "GameList"),                            # Game list
-            (203, self.lblGameDescription, "GameDescription"),          # Which game is selected
-            (216, self.lblRomName, "RomName"),                          # Rom name
-            (229, self.lblYearManufacturer, "YearManufacturer"),        # Year
-            (242, self.lblScreenType, "ScreenType"),                    # Screen
-            (255, self.lblControllerType, "ControllerType"),            # Controller
-            (268, self.lblDriverStatus, "DriverStatus"),                # Driver
-            (281, self.lblCatVer, "CatVer"),
-            (-1, self.gamesScrollOverlay, "ScrollOverlay"),
-            (-1, self.lblHighScoreData, "HighScoreData"),               # High score data
-            (-1, self.lblUsers, "Users"),                               # Currently logged in users
-            (-1, self.lblUsersLoggedIn, "UsersLoggedIn"),               # Show when user(s) log in
-            (-1, self.lblUsersLoggedOut, "UsersLoggedOut")]             # Show when user(s) log out
+            (self.imgMainLogo, "MainLogo"),                          # Weird gray area at top of window
+            (self.lblGameListIndicator, "GameListIndicator"),       # Label above games list
+            (self.lblEmulatorName, "EmulatorName"),                 # Label above artwork
+            (self.lblGameSelected, "GameSelected"),                 # Label displaying selected game number out of the total
+            (self.imgArtwork1, "MainArtwork1"),                     # Large game image in top right
+            (self.imgArtwork2, "MainArtwork2"),                     # Smaller game image in the lower right
+            (self.imgArtwork3, "MainArtwork3"),                     # Large game image in top center
+            (self.imgArtwork4, "MainArtwork4"),                    # Large game image in top center
+            (self.imgArtwork5, "MainArtwork5"),                    # Large game image in top center
+            (self.imgArtwork6, "MainArtwork6"),                    # Large game image in top center with background
+            (self.imgArtwork7, "MainArtwork7"),                    # Large game image in top center
+            (self.imgArtwork8, "MainArtwork8"),                    # Large game image in top center
+            (self.imgArtwork9, "MainArtwork9"),                    # Large game image in top center
+            (self.imgArtwork10, "MainArtwork10"),                  # Large game image in top center
+            (self.sclGames, "GameList"),                            # Game list
+            (self.lblGameDescription, "GameDescription"),          # Which game is selected
+            (self.lblRomName, "RomName"),                          # Rom name
+            (self.lblYearManufacturer, "YearManufacturer"),        # Year
+            (self.lblScreenType, "ScreenType"),                    # Screen
+            (self.lblControllerType, "ControllerType"),            # Controller
+            (self.lblDriverStatus, "DriverStatus"),                # Driver
+            (self.lblCatVer, "CatVer"),
+            (self.gamesScrollOverlay, "ScrollOverlay"),
+            (self.lblHighScoreData, "HighScoreData"),               # High score data
+            (self.lblUsers, "Users"),                               # Currently logged in users
+            (self.lblUsersLoggedIn, "UsersLoggedIn"),               # Show when user(s) log in
+            (self.lblUsersLoggedOut, "UsersLoggedOut")]             # Show when user(s) log out
         self._options_items = [
-            (301, self.options.lblHeading, "OptHeading"),               # Options window title
-            (314, self.options.sclOptions, "OptionsList"),              # Options list
-            (327, self.options.lblSettingHeading, "SettingHeading"),    # "Current setting"
-            (340, self.options.lblSettingValue, "SettingValue")]        # Value of current setting
+            (self.options.lblHeading, "OptHeading"),               # Options window title
+            (self.options.sclOptions, "OptionsList"),              # Options list
+            (self.options.lblSettingHeading, "SettingHeading"),    # "Current setting"
+            (self.options.lblSettingValue, "SettingValue")]        # Value of current setting
         self._message_items = [      
-            (357, self.message.lblHeading, "MsgHeading"),               # Message window title
-            (370, self.message.lblMessage, "Message"),                  # Message displayed in message window
-            (383, self.message.lblPrompt, "Prompt")]
+            (self.message.lblHeading, "MsgHeading"),               # Message window title
+            (self.message.lblMessage, "Message"),                  # Message displayed in message window
+            (self.message.lblPrompt, "Prompt")]
         self._screensaver_items = [              
-            (396, self.scrsaver.imgArtwork1, "ScrArtwork1"),
-            (409, self.scrsaver.imgArtwork2, "ScrArtwork2"),
-            (422, self.scrsaver.imgArtwork3, "ScrArtwork3"),
-            (435, self.scrsaver.imgArtwork4, "ScrArtwork4"),
-            (448, self.scrsaver.imgArtwork5, "ScrArtwork5"),
-            (461, self.scrsaver.imgArtwork6, "ScrArtwork6"),
-            (474, self.scrsaver.imgArtwork7, "ScrArtwork7"),
-            (487, self.scrsaver.imgArtwork8, "ScrArtwork8"),
-            (500, self.scrsaver.imgArtwork9, "ScrArtwork9"),
-            (513, self.scrsaver.imgArtwork10, "ScrArtwork10"),
-            (526, self.scrsaver.lblGameDescription, "GameDescription"),
-            (539, self.scrsaver.lblMP3Name, "MP3Name")]
+            (self.scrsaver.imgArtwork1, "ScrArtwork1"),
+            (self.scrsaver.imgArtwork2, "ScrArtwork2"),
+            (self.scrsaver.imgArtwork3, "ScrArtwork3"),
+            (self.scrsaver.imgArtwork4, "ScrArtwork4"),
+            (self.scrsaver.imgArtwork5, "ScrArtwork5"),
+            (self.scrsaver.imgArtwork6, "ScrArtwork6"),
+            (self.scrsaver.imgArtwork7, "ScrArtwork7"),
+            (self.scrsaver.imgArtwork8, "ScrArtwork8"),
+            (self.scrsaver.imgArtwork9, "ScrArtwork9"),
+            (self.scrsaver.imgArtwork10, "ScrArtwork10"),
+            (self.scrsaver.lblGameDescription, "GameDescription"),
+            (self.scrsaver.lblMP3Name, "MP3Name")]
         self._identify_items = [
-            (-1, self.identify.lblPrompt, "Prompt"),
-            (-1, self.identify.lblPromptText, "PromptText"),
-            (-1, self.identify.lblRFID, "RFID"),
-            (-1, self.identify.sclIDs, "IDsList"),
-            (-1, self.IDsScrollOverlay, "ScrollOverlay")]
+            (self.identify.lblPrompt, "Prompt"),
+            (self.identify.lblPromptText, "PromptText"),
+            (self.identify.lblRFID, "RFID"),
+            (self.identify.sclIDs, "IDsList"),
+            (self.IDsScrollOverlay, "ScrollOverlay")]
         self._player_select_items = [
-            (-1, self.player_select.lblScore, "lblScore"),
-            (-1, self.player_select.lbl1, "lbl1"),
-            (-1, self.player_select.sclPlayers, "playersList")]
+            (self.player_select.lblScore, "lblScore"),
+            (self.player_select.lbl1, "lbl1"),
+            (self.player_select.sclPlayers, "playersList")]
         self._layout_items = {'main': self._main_items,
                               'options': self._options_items,
                               'message': self._message_items,
@@ -460,7 +460,7 @@ class WinMain(WahCade, threading.Thread):
         self.winMain.add(self.fixd)
         # Add everything to the main Fixd object
         for w_set_name in self._layout_items:
-            for offset, widget, name in self._layout_items[w_set_name]: #@UnusedVariable
+            for widget, name in self._layout_items[w_set_name]: #@UnusedVariable
                 if widget.get_parent():
                     pass
                 elif not (type(widget) is ScrollList):
@@ -2332,7 +2332,7 @@ class WinMain(WahCade, threading.Thread):
         # Set up all Widgets
         for w_set_name in self._layout_items.keys():
             wset_layout_info = layout_info[w_set_name]
-            for offset, widget, name in self._layout_items[w_set_name]:
+            for widget, name in self._layout_items[w_set_name]:
                 w_lay = wset_layout_info[name]
                 # Font
                 fontData = w_lay['font']
@@ -2434,205 +2434,6 @@ class WinMain(WahCade, threading.Thread):
         
         # Load histview and cpviewer layouts
         # Still in use?
-        self.histview.load_layout(self.histview.layout_filename)
-        self.cpviewer.load_layout(self.cpviewer.layout_filename)
-        # Build visible lists for displaying artwork images
-        self.rebuild_visible_lists()
- 
-    def load_legacy_layout_file(self, layout_file):
-        """DEPRECATED: Load legacy layout file"""
-        layout_path = os.path.join(CONFIG_DIR, 'layouts', self.layout)
-        #if layout_file == '':
-            #layout_file = self.get_layout_filename()
-        self.layout_path = layout_path
-        if layout_file == self.layout_file:
-            # Layout not changed, but emulator has, so build visible
-            # lists for displaying artwork images and exit
-            self.rebuild_visible_lists()
-            return
-        self.layout_file = layout_file
-        
-        # Read file & strip any whitespace
-        lines = open(self.layout_file, 'r').readlines()
-        lines = [s.strip() for s in lines]
-        lines.insert(0, '.')
-        
-        # Specific lines from the layout file
-        at = {
-              'main_width':1,
-              'main_height':2,
-              'opt_width':294,
-              'opt_height':295,
-              'msg_width':353,
-              'msg_height':354,
-              'main_bg':3,
-              'scroll_img':552,
-              'scroll_img_x':553,
-              'scroll_img_y':554,
-              'scroll_let_x':555,
-              'scroll_let_y':556,
-              'main_img':4,
-              'opt_bg':296,
-              'opt_img':297,
-              'games_bg_col':6,
-              'games_fg_col':7,
-              'opt_bg_col':299,
-              'opt_fg_col':300,
-              'msg_bg':355,
-              'msg_img':356}
-        
-        # Window sizes
-        main_width, main_height = int(lines[at['main_width']].split(';')[0]), int(lines[at['main_height']])
-        opt_width, opt_height = int(lines[at['opt_width']].split(';')[0]), int(lines[at['opt_height']])
-        msg_width, msg_height = int(lines[at['msg_width']].split(';')[0]), int(lines[at['msg_height']])
-        # Main window
-        self.winMain.set_size_request(main_width, main_height)
-        self.winMain.set_default_size(main_width, main_height)
-        bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['main_bg']]))) # Converts an integer value to a reversed hex value to a gtk color object
-        self.winMain.modify_bg(gtk.STATE_NORMAL, bg_col)
-        self.fixd.move(self.imgBackground, 0, 0)
-        self.imgBackground.set_size_request(main_width, main_height)
-        
-        # Overlay scroll letter background
-        bg_file = self.get_path(lines[at['scroll_img']])
-        if not os.path.dirname(bg_file):
-            bg_file = os.path.join(self.layout_path, bg_file)
-        self.gamesOverlayBG.set_from_file(bg_file)
-        self.fixd.put(self.gamesOverlayBG, int(lines[at['scroll_img_x']]), int(lines[at['scroll_img_y']]))
-        
-        # Display overlay letters on ROM list when scrolling quickly
-        self.lblGamesOverlayScrollLetters.hide()
-        self.fixd.put(self.lblGamesOverlayScrollLetters, int(lines[at['scroll_let_x']]), int(lines[at['scroll_let_y']]))
-        
-        # Background image file
-        img_file = self.get_path(lines[at['main_img']])
-        if not os.path.dirname(img_file):
-            img_file = os.path.join(self.layout_path, img_file)
-        self.imgBackground.set_data('layout-image', img_file)
-        
-        # Set options window
-        self.options.winOptions.set_size_request(opt_width, opt_height)
-        bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['opt_bg']]))) # Color of box surrounding the options window
-        self.options.winOptions.modify_bg(gtk.STATE_NORMAL, bg_col)
-        self.options.winOptions.move(self.options.imgBackground, 0, 0)
-        self.options.imgBackground.set_size_request(opt_width, opt_height)
-        img_file = self.get_path(lines[at['opt_img']])
-        if not os.path.dirname(img_file):
-            img_file = os.path.join(self.layout_path, img_file)
-        self.options.imgBackground.set_data('layout-image', img_file)
-        self.fixd.move(self.options.winOptions, ((main_width - opt_width) / 2), ((main_height - opt_height) / 2))
-        
-        # Games list highlight colours
-        hl_bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['games_bg_col']]))) # Colored bar
-        hl_fg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['games_fg_col']]))) # Text
-        self.sclGames.modify_highlight_bg(gtk.STATE_NORMAL, hl_bg_col)
-        self.sclGames.modify_highlight_fg(gtk.STATE_NORMAL, hl_fg_col)
-        
-        # Options list highlight colours
-        hl_bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['opt_bg_col']])))
-        hl_fg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['opt_fg_col']])))
-        self.options.sclOptions.modify_highlight_bg(gtk.STATE_NORMAL, hl_bg_col)
-        self.options.sclOptions.modify_highlight_fg(gtk.STATE_NORMAL, hl_fg_col)
-        
-        # Set message window
-        self.message.winMessage.set_size_request(msg_width, msg_height)
-        bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['msg_bg']])))
-        self.message.winMessage.modify_bg(gtk.STATE_NORMAL, bg_col)
-        self.message.winMessage.move(self.message.imgBackground, 0, 0)
-        self.message.imgBackground.set_size_request(msg_width, msg_height)
-        img_file = self.get_path(lines[at['msg_img']])
-        if not os.path.dirname(img_file):
-            img_file = os.path.join(self.layout_path, img_file)
-        self.message.imgBackground.set_data('layout-image', img_file)
-        self.fixd.move(self.message.winMessage, ((main_width - msg_width) / 2), ((main_height - msg_height) / 2))
-        
-        # Screen saver window
-        self.fixd.move(self.scrsaver.winScrSaver, 0, 0)
-        self.scrsaver.winScrSaver.set_size_request(main_width, main_height)
-        self.scrsaver.winScrSaver.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('black'))
-        self.scrsaver.drwVideo.set_size_request(main_width, main_height)
-        
-        # Set all window items
-        for offset, widget in self._layout_items:
-            # Get properties
-            data = self.get_layout_item_properties(lines, offset)
-            # Font
-            fontData = data['font']
-            if data['font-bold']:
-                fontData += ' Bold'
-            fontData += ' %s' % (data['font-size'])
-            font_desc = pango.FontDescription(fontData)
-            # Text color
-            fg_col = gtk.gdk.color_parse(data['text-col'])
-            widget.modify_font(font_desc)
-            widget.modify_fg(gtk.STATE_NORMAL, fg_col)
-            # Background colour & transparency
-            bg_col = gtk.gdk.color_parse(data['background-col'])
-            parent = widget.get_parent()
-            if parent.get_ancestor(gtk.EventBox):
-                if data['transparent']:
-                    parent.set_visible_window(False)
-                else:
-                    parent.set_visible_window(True)
-                    parent.modify_bg(gtk.STATE_NORMAL, bg_col)
-            # Alignment
-            if data['text-align'] == 2:
-                widget.set_property('xalign', .5)   # 0.5 -> Center alignment
-            else:
-                widget.set_property('xalign', data['text-align'])
-            # Rotation
-            widget.set_data('text-rotation', data['text-rotation'])
-            try:
-                widget.set_angle(data['text-rotation'])
-            except AttributeError:
-                pass
-            # Visible?
-            if not data['visible']:
-                widget.hide()
-                if parent.get_ancestor(gtk.EventBox):
-                    parent.hide()
-            else:
-                widget.show()
-                if parent.get_ancestor(gtk.EventBox):
-                    parent.show()
-                    
-            # Divide height of scroll list in half
-            if isinstance(widget, ScrollList):
-                widget.set_size_request(data['width'], (data['height']/2) + 38) # 38 is a magic number to make it look nice
-            else:
-                widget.set_size_request(data['width'], data['height'])
-                
-            # Position video widget
-            if self.emu_ini.getint('movie_artwork_no') > 0:
-                self.video_artwork_widget = self._main_images[(self.emu_ini.getint('movie_artwork_no') - 1)]
-                if widget == self.video_artwork_widget:
-                    self.fixd.move(self.drwVideo, data['x'], data['y'])
-                    self.drwVideo.set_size_request(data['width'], data['height'])
-            # Modify widget for lists
-            if widget == self.sclGames:
-                widget = self.sclGames.fixd
-            elif widget == self.options.sclOptions:
-                widget = self.options.sclOptions.fixd
-            elif parent.get_ancestor(gtk.EventBox):
-                widget = widget.get_parent()
-            # Add to fixed layout on correct window
-            if offset < 293:
-                # Main window
-                self.fixd.move(widget, data['x'], data['y'])
-            elif offset < 353:
-                # Options window
-                self.options.winOptions.move(widget, data['x'], data['y'])
-            elif offset < 396:
-                # Message window
-                self.message.winMessage.move(widget, data['x'], data['y'])
-            else:
-                # Screen saver window
-                self.scrsaver.winScrSaver.move(widget, data['x'], data['y'])
-        # Other stuff
-        self.options.lblHeading.set_text(_('Options'))
-        self.options.lblSettingHeading.set_text(_('Current Setting:'))
-        self.options.lblSettingValue.set_text('')
-        # Load histview and cpviewer layouts
         self.histview.load_layout(self.histview.layout_filename)
         self.cpviewer.load_layout(self.cpviewer.layout_filename)
         # Build visible lists for displaying artwork images
@@ -2789,7 +2590,7 @@ class WinMain(WahCade, threading.Thread):
                     self.log_msg("%s not in list" % (fav[FAV_ROM_NAME]))
             self.lsGames = flist_sorted
             self.lsGames_len = len(self.lsGames)
-        elif self.current_list_ini.get('list_type') == 'xml_remote':
+        elif self.current_list_ini.get('list_type') == 'xml_remote' and self.connected_to_server:
             # XML remote-populated, so get the source URL
             sourceURL = self.props['host']+":"+self.props['port']+"/"+self.props['db']+"/game/popular?renderXML=True"
             data = fromstring(requests.get(sourceURL, headers=self.authorization).text)
@@ -2818,6 +2619,10 @@ class WinMain(WahCade, threading.Thread):
                 gList.append(errorItem)
             self.lsGames = gList
             self.lsGames_len = len(gList)
+        else:
+            self.current_list_idx = self.get_next_list_in_cycle(+1)
+            self.load_list()
+            
         # Setup scroll list
         # "All Games" list is always the first list
         if self.current_list_idx == 0:
