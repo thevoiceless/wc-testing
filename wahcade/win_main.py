@@ -2791,7 +2791,7 @@ class WinMain(WahCade, threading.Thread):
             self.lsGames_len = len(self.lsGames)
         elif self.current_list_ini.get('list_type') == 'xml_remote':
             # XML remote-populated, so get the source URL
-            sourceURL = self.props['host']+":"+self.props['port']+"/"+self.props['db']+self.current_list_ini.get('params')
+            sourceURL = self.props['host']+":"+self.props['port']+"/"+self.props['db']+"/game/popular?renderXML=True"
             data = fromstring(requests.get(sourceURL, headers=self.authorization).text)
             gList = []
             # Use all games to gen list
@@ -2805,7 +2805,7 @@ class WinMain(WahCade, threading.Thread):
                 self.lsGames = []
                 self.lsGames_len = 0
             # Extract data
-            if data.text:
+            if data:
                 for game in data.getiterator('game'):
                     try:
                         gList.append(next(gTuple for gTuple in self.lsGames if gTuple[1] == game.find("romName").text))
@@ -2813,7 +2813,7 @@ class WinMain(WahCade, threading.Thread):
                         pass
             if not gList:
                 errorItem = ()
-                for i, entry in enumerate(self.lsGames[0]):
+                for i in enumerate(self.lsGames[0]):
                     errorItem += ("No Games Found",) if i==0 else ("",)
                 gList.append(errorItem)
             self.lsGames = gList
@@ -2826,7 +2826,7 @@ class WinMain(WahCade, threading.Thread):
             self.sclGames.ls = []
             for l in [l[0] for l in self.lsGames]:
                 # Remove "(bar)" from "foo (bar)" game description
-                if l[0] != '(':
+                if len(l) != 0 and l[0] != '(':
                     l = l.split('(')[0]
                 self.sclGames.ls.append(l)
         # Select game in list
@@ -2844,8 +2844,8 @@ class WinMain(WahCade, threading.Thread):
     def remove_current_game(self):
         """Remove currently selected game from the list"""
         if len(self.lsGames) != 0:
-            item = self.sclGames.ls.pop(self.sclGames.get_selected())
-            item = self.lsGames.pop(self.sclGames.get_selected())
+            self.sclGames.ls.pop(self.sclGames.get_selected())
+            self.lsGames.pop(self.sclGames.get_selected())
             filters.write_filtered_list(
                 os.path.join(CONFIG_DIR, 'files', '%s-%s.lst' % (
                     self.current_emu, self.current_list_idx)),
@@ -2983,7 +2983,7 @@ class WinMain(WahCade, threading.Thread):
         if not found_local:
             print 'couldnt find local ip'
             post_data = {"ipAddress":self.video_chat.localip, "port":self.video_chat.localport}
-            r = requests.post(self.connection_url, post_data, headers=self.authorization)
+            requests.post(self.connection_url, post_data, headers=self.authorization)
         return True
 
     def start_timer(self, timer_type):
@@ -3011,7 +3011,7 @@ class WinMain(WahCade, threading.Thread):
         elif timer_type == 'portal':
             if self.portal_time:
                 gobject.source_remove(self.portal_time)
-            self.portal_time = gobject.timeout_add(2500, self.portal_timer) #TODO: here
+            self.portal_time = gobject.timeout_add(2500, self.portal_timer)
         elif timer_type == 'connection' and not self.connection_time_running:
             self.connection_time = gobject.timeout_add(10000, self.on_connection_timer)
             self.connection_time_running = True
@@ -3235,9 +3235,9 @@ class WinMain(WahCade, threading.Thread):
             old_keyb_events = True
             self.log_msg("Old style keyboard events enabled")
     
-    def play_clip(self, file):
+    def play_clip(self, a_file):
         """Play sound"""
-        myclip = os.path.join(CONFIG_DIR, 'layouts', self.wahcade_ini.get('layout'), 'sounds', file.lower())
+        myclip = os.path.join(CONFIG_DIR, 'layouts', self.wahcade_ini.get('layout'), 'sounds', a_file.lower())
         for ext in MUSIC_FILESPEC_NEW:
             theclip = myclip + "." + ext
             if os.path.exists(theclip) and gst_media_imported and self.sound_enabled:
