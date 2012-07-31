@@ -126,6 +126,7 @@ class WinMain(WahCade, threading.Thread):
         self.showHighScoreThresh = 10
         self.listIndex = 0
         self.scroll_count = 0
+        self.chat_key_count = 0
         
         ### USER PROFILE
         self.userpath = os.path.expanduser(CONFIG_DIR)  # CONFIG_DIR comes from constants.py
@@ -231,7 +232,6 @@ class WinMain(WahCade, threading.Thread):
         self.lblEmulatorName = gtk.Label()
         self.lblGameSelected = gtk.Label()
         
-        #TODO: Do this
         if self.cabinet_name == "":
             self.ctrlr_ini.set('cabinet_name', self.getText())
             self.ctrlr_ini.write()
@@ -891,7 +891,7 @@ class WinMain(WahCade, threading.Thread):
             import urllib2
             urllib2.urlopen('http://' + remoteip + ":" + remoteport, timeout=1)
             return True
-        except urllib2.URLError:
+        except:
             return False
     
     def next_video_feed(self):
@@ -1222,6 +1222,7 @@ class WinMain(WahCade, threading.Thread):
                 self.scroll_count += int(abs(mm) / 10) + 1
                 if not mw_keys:
                     self.scroll_count = 0
+                    self.chat_key_count = 0
                     if widget == self.winMain:
                         self.sclGames.update()
                     return
@@ -1234,6 +1235,7 @@ class WinMain(WahCade, threading.Thread):
                 mw_keys = ['MOUSE_BUTTON%s' % (event.button - 1)]
             elif event.type == gtk.gdk.SCROLL:
                 self.scroll_count = 0
+                self.chat_key_count = 0
                 # Mouse scroll wheel
                 if event.direction in [gtk.gdk.SCROLL_UP, gtk.gdk.SCROLL_LEFT]:
                     mw_keys = ['MOUSE_SCROLLUP']
@@ -1259,6 +1261,7 @@ class WinMain(WahCade, threading.Thread):
                         return
             elif event.type == gtk.gdk.KEY_RELEASE:
                 self.scroll_count = 0
+                self.chat_key_count = 0
                 # Updates ROM image after scrolling stops
                 if len(self.lsGames) != 0:
                     game_info = filters.get_game_dict(self.lsGames[self.sclGames.get_selected()])
@@ -1450,8 +1453,9 @@ class WinMain(WahCade, threading.Thread):
                         if self.current_players:
                             self.log_out()
                     elif mw_func == 'TOGGLE_VIDEO':
+                        self.chat_key_count += 1
                         if self.connected_to_server and self.video_chat and self.video_chat.enabled:
-                            #if self.remote_ip:
+                            if self.chat_key_count == 1:
                                 if self.vid_container.get_property("visible") == False:
                                     #print "Show video chat"
                                     self.setup_video_chat()
@@ -1460,8 +1464,6 @@ class WinMain(WahCade, threading.Thread):
                                     #print "Hide video chat"
                                     self.stop_video_chat()
                                     self.clean_up_video_chat()
-                            #else:
-                                #print "Waiting for remote IP Address."
                         else:
                             print "Video Chat is disabled (you are not connected to the server or no camera was found)."
                     elif mw_func == 'NEXT_VIDEO':
@@ -1706,7 +1708,7 @@ class WinMain(WahCade, threading.Thread):
         return score_string
     
     def portal_timer(self):
-        sound_time = random.randint((5), (6))
+        sound_time = random.randint((5*60), (15*60))
         if int(time.time() - self.portal_time_last_played) >= sound_time:
             if len(self.sounds) != 0:
                 sound_file = self.sounds[random.randrange(0, len(self.sounds))]
@@ -3009,7 +3011,7 @@ class WinMain(WahCade, threading.Thread):
         elif timer_type == 'portal':
             if self.portal_time:
                 gobject.source_remove(self.portal_time)
-            self.portal_time = gobject.timeout_add(2500, self.portal_timer)
+            self.portal_time = gobject.timeout_add(2500, self.portal_timer) #TODO: here
         elif timer_type == 'connection' and not self.connection_time_running:
             self.connection_time = gobject.timeout_add(10000, self.on_connection_timer)
             self.connection_time_running = True
