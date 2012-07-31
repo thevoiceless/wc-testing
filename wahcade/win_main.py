@@ -103,13 +103,7 @@ class WinMain(WahCade, threading.Thread):
 
     def __init__(self, config_opts):
         """Initialize main Rcade window"""   # Docstring for this method
-        
-        # Begin the thread for reading from arduino
-        threading.Thread.__init__(self)
-        
-        #TODO: temporary
-        self.videoCount = 0
-        
+
         ### Set Global Variables
         global gst_media_imported, pygame_imported, old_keyb_events, debug_mode, log_filename
         self.init = True
@@ -488,26 +482,19 @@ class WinMain(WahCade, threading.Thread):
                 romToName = {}
                 for sublist in self.lsGames: 
                     romToName[sublist[1]] = sublist[0]
-                    
-                    
                 for game in romToName:
                     if game in self.supported_games:
                         self.supported_games_name.append(romToName[game])
-             
                 # Get a list of games already on the server
                 data = fromstring(requests.get(self.game_url, headers=self.authorization, timeout=1).text)
                 games_on_server = []
                 for game in data.getiterator('game'):
                     games_on_server.append(game.find('romName').text)
-        
                 # Add games to the server if not on the server
                 for rom in self.supported_games:
                     if rom not in games_on_server and rom in romToName:
                         post_data = {"romName":rom, "gameName":romToName[rom]}
                         r = requests.post(self.game_url, post_data)
-#                        self.check_connection(r.status_code)
-            
-            
             except e:
                 self.connected_to_server = False                    
 
@@ -535,6 +522,8 @@ class WinMain(WahCade, threading.Thread):
                 self.rfid_reader = serial.Serial(arduino_mount, 9600)
                 self.connected_to_arduino = True
                 print "Successfully connected to Arduino mounted at", arduino_mount
+                # Begin the thread for reading from arduino
+                threading.Thread.__init__(self)
                 self.start()
             except RuntimeError, e:
                 self.connected_to_arduino = False
@@ -2083,7 +2072,7 @@ class WinMain(WahCade, threading.Thread):
                 cmd = '%s %s' % (app_name, game_opts['options'])
                 self.p = Popen(cmd, shell=True)
                 if wait_for_finish:
-                    sts = self.p.wait()
+                    self.p.wait()
                     # Un-minimize
                     if game_opts['minimize_wahcade']:
                         self.winMain.present()
@@ -2738,11 +2727,8 @@ class WinMain(WahCade, threading.Thread):
         for ipAddr in data.getiterator('connection'):
             if not (ipAddr.find('ipAddress').text == self.video_chat.remoteip and ipAddr.find('port').text == self.video_chat.remoteport):
                 if len(data.getiterator('connection')) == 1 and ipAddr.find('ipAddress').text == self.video_chat.localip:
-                    #print "Show local video"
                     self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
                     self.video_chat.set_remote_info(ipAddr.find('ipAddress').text, ipAddr.find('port').text)
-                    
-                    
                     was_running = self.video_chat.receiver_running
                     self.stop_video_chat()
                     if was_running:
@@ -2751,24 +2737,18 @@ class WinMain(WahCade, threading.Thread):
                     return True
                 elif not self.manualVCMode  and (ipAddr.find('ipAddress').text != self.video_chat.localip or ipAddr.find('port').text != self.video_chat.localport):
                     self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
-                    #print self.valid_remote_ip(self.remote_ip[0], self.remote_ip[1])
                     if not self.valid_remote_ip(*self.remote_ip):
                         print 'could not connect to', self.remote_ip[0], self.remote_ip[1], '- removing it from server'
                         requests.delete(self.connection_url + self.remote_ip[0], headers=self.authorization)
                         self.on_connection_timer()
                         return True
-                        #TODO: go to the next video feed
-                        
                     self.video_chat.set_remote_info(ipAddr.find('ipAddress').text, ipAddr.find('port').text)
-                    
                     self.vc_feeds = [(info.find('ipAddress').text, info.find('port').text) for info in data.getiterator('connection')]
-
                     was_running = self.video_chat.receiver_running
                     self.stop_video_chat()
                     if was_running:
                         self.start_video_chat()
                         return True
-                    
                     self.connection_time_running = False
                     return False #Stop the timer if connected
             elif ipAddr.find('ipAddress').text == self.video_chat.remoteip and ipAddr.find('port').text == self.video_chat.remoteport and ipAddr.find('ipAddress').text != self.video_chat.localip and ipAddr.find('port').text != self.video_chat.localport:
@@ -2940,10 +2920,8 @@ class WinMain(WahCade, threading.Thread):
             layout_matched, layout_files = self.get_rotated_layouts(new_angle)
         # Load rotated layout(s)
         if layout_matched:
-            #print "switched to:", new_angle
             self.layout_orientation = new_angle
             if os.path.isfile(layout_files[0]):
-                #self.load_legacy_layout_file(layout_files[0])
                 self.load_layout_file(layout_files[0])
             if os.path.isfile(layout_files[1]):
                 self.histview.load_layout(layout_files[1])
@@ -3078,9 +3056,7 @@ class WinMain(WahCade, threading.Thread):
                 if self.scrsaver.running:
                     self.scrsaver.stop_scrsaver()
                     self.start_timer('scrsave')
-#                print "Before reading " + str(self.rfid_reader.inWaiting())
                 scannedRfid = self.rfid_reader.read(12)
-#                print "Scanned RFID before cut: " + scannedRfid
                 if len(scannedRfid) == 12 and scannedRfid.isalnum():
                     if self.in_game():
                         self.log_in_queue.put(scannedRfid)
@@ -3088,9 +3064,7 @@ class WinMain(WahCade, threading.Thread):
                         self.log_in(scannedRfid)
                 else:
                     print "Error during read, please rescan your card"
-#                print "After register, before flush " + str(self.rfid_reader.inWaiting())
                 self.rfid_reader.flushInput()
-#                print "After flush " + str(self.rfid_reader.inWaiting()) + "\n"
             time.sleep(0.125)
 
     def in_game(self):
