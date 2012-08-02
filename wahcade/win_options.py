@@ -184,20 +184,20 @@ class WinOptions(WahCade):
         if menu_level == 'emu_list':
             # Show all emulators
             self.lblSettingValue.set_text(self.WinMain.emu_ini.get('emulator_title'))
-            for emu_title, emu_name, e in self.WinMain.emu_lists:
+            for emu_title, emu_name, e in self.WinMain.emu_lists: #@UnusedVariable
                 self.lsOptions.append([emu_title, emu_name])
                 self.sclOptions.set_selected(0)
         elif menu_level == 'game_list':
             # Show all game lists
             self.lblSettingValue.set_text(self.WinMain.current_list_ini.get('list_title'))
-            for list_name, idx, cycle_list, type in self.WinMain.game_lists:
+            for list_name, idx, cycle_list, e in self.WinMain.game_lists: #@UnusedVariable
                 self.lsOptions.append([list_name, idx]) # The lines selectable, list names
                 self.sclOptions.set_selected(self.WinMain.current_list_idx) # Which option is currently highlighted when list is opened
         elif menu_level == 'add_to_list':
             # Show "normal" game lists
             self.lblSettingValue.set_text(self.WinMain.current_list_ini.get('list_title'))
-            for list_name, idx, cycle_list, type in self.WinMain.game_lists_normal:
-                if list_name != self.WinMain.current_list_ini.get('list_title') and type != 'xml_remote':
+            for list_name, idx, cycle_list, type1 in self.WinMain.game_lists_normal: #@UnusedVariable
+                if list_name != self.WinMain.current_list_ini.get('list_title') and type1 != 'xml_remote':
                     self.lsOptions.append([list_name, idx])
             self.sclOptions.set_selected(0)
         elif menu_level == 'find':
@@ -323,7 +323,7 @@ class WinOptions(WahCade):
                 self.show_about_dialog('Rcade', CONFIG_DIR)
                 self.WinMain.hide_window('options')
             elif menu_item == 'change':
-                self.WinMain.ctrlr_ini.set('cabinet_name', self.WinMain.getText())
+                self.WinMain.ctrlr_ini.set('cabinet_name', self.WinMain.set_name_dialog())
                 self.WinMain.ctrlr_ini.write()
             else:
                 # Show appropriate menu

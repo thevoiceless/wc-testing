@@ -79,7 +79,7 @@ class ScrollOverlay(object):
     def get_parent(self):
         return self
     
-    def get_ancestor(self, type):
+    def get_ancestor(self, type1):
         return None
     
     def set_property(self, key, value):

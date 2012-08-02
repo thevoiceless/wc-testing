@@ -228,7 +228,7 @@ class WinMain(WahCade, threading.Thread):
         self.lblGameSelected = gtk.Label()
         
         if self.cabinet_name == "":
-            self.ctrlr_ini.set('cabinet_name', self.getText())
+            self.ctrlr_ini.set('cabinet_name', self.set_name_dialog())
             self.ctrlr_ini.write()
         
         if self.use_splash == 1:
@@ -584,7 +584,7 @@ class WinMain(WahCade, threading.Thread):
         if self.use_splash == 1:
             ### Hide splash
             self.splash.destroy()
-        self.do_events()                # wc_common.py
+        self.do_events()
         self.on_winMain_focus_in()
 
         #### Start intro movie
@@ -603,7 +603,7 @@ class WinMain(WahCade, threading.Thread):
         # Input defaults
         self.pointer_grabbed = False
         # Get keyboard and mouse events
-        self.sclGames.connect('update', self.on_sclGames_changed)           # scrolled_list.py
+        self.sclGames.connect('update', self.on_sclGames_changed)
         self.sclGames.connect('mouse-left-click', self.on_sclGames_changed)
         self.sclGames.connect('mouse-right-click', self.on_winMain_key_press)
         self.sclGames.connect('mouse-double-click', self.launch_auto_apps_then_game)
@@ -644,7 +644,7 @@ class WinMain(WahCade, threading.Thread):
     def responseToDialog(self, entry, dialog, response):
         dialog.response(response)
     
-    def getText(self):
+    def set_name_dialog(self):
         #base this on a message dialog
         dialog = gtk.MessageDialog(type=gtk.MESSAGE_INFO, buttons = gtk.BUTTONS_OK, parent=self.winMain)
         dialog.set_markup('Please enter cabinet <b>name</b>:')
@@ -663,9 +663,9 @@ class WinMain(WahCade, threading.Thread):
         dialog.set_position(gtk.WIN_POS_CENTER_ON_PARENT)
         dialog.set_keep_above(True)
         dialog.show_all()
-        #go go go
+
         dialog.run()
-        text = entry.get_text()
+        text = entry.get_text().strip()
         if text == "":
             text = "ReadyTalk"
         dialog.destroy()
@@ -730,7 +730,6 @@ class WinMain(WahCade, threading.Thread):
             except:
                 hal.Shutdown()
         self.on_winMain_destroy()
-        
 
     def on_winMain_focus_in(self, *args):
         """Window received focus"""
@@ -977,7 +976,8 @@ class WinMain(WahCade, threading.Thread):
                 self.selected_player = ''
                 if len(self.score_processing_queue) > 0:
                     self.player_select.lbl1.set_text(self.score_processing_queue[len(self.score_processing_queue)-1]['score'] + "   " + self.score_processing_queue[len(self.score_processing_queue)-1]['arcadeName'])               
-                    self.show_window('playerselect')
+                    self.show_window('playerselect') #TODO: CHECK
+                    self.player_select.sclPlayers._update_display()
             else:
                 if len(self.score_processing_queue) > 1:
                     self.score_processing_queue.pop()
@@ -1608,7 +1608,7 @@ class WinMain(WahCade, threading.Thread):
         # Get high score data and display it
         if self.scroll_count < self.showHighScoreThresh:    
             if not self.connected_to_server:
-                self.lblHighScoreData.set_markup(_('%s%s%s') % (self.highScoreDataMarkupHead, " NOT CONNECTED TO A DATABASE", self.highScoreDataMarkupTail))
+                self.lblHighScoreData.set_markup(_('%s%s%s') % (self.highScoreDataMarkupHead, " NOT CONNECTED TO A SERVER", self.highScoreDataMarkupTail))
             elif game_info['rom_name'] in self.supported_games:
                 highScoreInfo = self.get_score_string()
                 self.lblHighScoreData.modify_font(pango.FontDescription(self.highScoreDataLayout['font-name']))#TODO
@@ -1638,7 +1638,11 @@ class WinMain(WahCade, threading.Thread):
         
     def get_score_string(self):
         """Parse Scores from DB into display string"""
-        score_string = requests.get(self.game_url + self.current_rom + "/highscore", headers=self.authorization).text
+        try:
+            score_string = requests.get(self.game_url + self.current_rom + "/highscore", headers=self.authorization).text
+        except:
+            self.connected_to_server = False
+            return " NOT CONNECTED TO A SERVER "
         index = 1
         if score_string != '[]' and "Could not find" not in score_string:
             score_string = score_string[1:-1] # Trim leading and trailing [] from string
@@ -1678,11 +1682,11 @@ class WinMain(WahCade, threading.Thread):
             if len(self.sounds) != 0:
                 sound_file = self.sounds[random.randrange(0, len(self.sounds))]
                 if str(sound_file).endswith(".wav") or str(sound_file).endswith(".mp3") or str(sound_file).endswith(".mp4"):
-                    pygame.mixer.init()
+                    pygame.mixer.init() #Safe to call multiple times
                     pygame.mixer.music.load(sound_file)
                     pygame.mixer.music.play()
                     self.portal_time_last_played = time.time()
-                    #pygame.mixer.quit If you want to re-initialize mixer with different args
+                    #pygame.mixer.quit #Use if you want to re-initialize mixer with different args
         return True
             
     def on_scrsave_timer(self):
@@ -2921,7 +2925,6 @@ class WinMain(WahCade, threading.Thread):
             child_win = self.identify.winID
         elif window_name == 'playerselect':
             self.player_select.populate_list()
-            self.player_select.sclPlayers._update_display()
             child_win = self.player_select.winPlayers
             self.player_select.sclPlayers.set_selected(0)
         # Show given child window

@@ -117,7 +117,7 @@ class bdist_debian(Command):
 
         # find out how much space it takes
         installed_size=0
-        for root, dirs, files in os.walk('build'):
+        for root, dirs, files in os.walk('build'): #@UnusedVariable
             for name in files:
                 fname=os.path.join(root, name)
                 installed_size += os.path.getsize(fname)

@@ -41,7 +41,6 @@ class LoadLDAP:
     
     def loadCreds(self):
         # Load LDAP credentials from local file
-#        self.LDAP_file = str(os.environ['HOME']) + "/Documents/LDAP.txt"
         self.LDAP_file = CONFIG_DIR + "/confs/LDAP.txt" if os.path.isfile(CONFIG_DIR + "/confs/LDAP.txt") else CONFIG_DIR + "/confs/LDAP-default.txt"
         try:
             with open(self.LDAP_file, "rt") as f:
@@ -85,19 +84,12 @@ class LoadLDAP:
                                                        serverctrls = self.serverctrls)
                 except ldap.LDAPError, e:
                     print "Error performing paged search: " + str(e)
-                    
-                #print "msgid:", msgid
                 
                 try:
                     unused_code, self.results, unused_msgid, self.serverctrls = self.ldap_connection.result3(self.msgid)
                 except ldap.LDAPError, e:
                     print "Error getting user paged search results: " + str(e)
-                    
-                #print "unused_code:", unused_code
-                #print "results:", results
-                #print results
-                #print "unused_msgid:", unused_msgid
-                
+
                 for result in self.results:
                     self.pages += 1
                     self.accounts.append(result)
@@ -121,8 +113,6 @@ class LoadLDAP:
         # List of real names
         self.user_names = []
         for entry in self.accounts:
-            #print entry
-            #print entry[1]
             if entry[1].has_key('cn') and entry[1].has_key('sAMAccountName'):
                 self.user_map[entry[1]['cn'][0]] = entry[1]['sAMAccountName'][0]
                 self.user_names.append(entry[1]['cn'][0])

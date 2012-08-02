@@ -415,7 +415,7 @@ class ScrollList(object):
             else:
                 idx_to_select = len_ls - 1
         # Calc direction and gap
-        gap = idx_to_select - self._selectedIndex
+#        gap = idx_to_select - self._selectedIndex
         self._selectedIndex = idx_to_select
         if self._selectedIndex != self._oldIndex:
             self._update_display()
