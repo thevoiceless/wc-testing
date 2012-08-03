@@ -4,7 +4,7 @@
 # Application: Rcade
 # File:        wahcade.py
 # Description: Main Window
-# Copyright (c) 2005-2010   Andy Balcombe <http://www.anti-particle.com>
+# Created by Andy Balcombe. Extended by Zach McGaughey, Riley Moses, Devin Wilson, John Kelly and Terek Campbell of ReadyTalk
 ###
 #
 # This program is free software; you can redistribute it and/or modify
@@ -54,7 +54,6 @@ import gobject                      # https://live.gnome.org/PyGObject
 gobject.threads_init()              # Initializes the the use of Python threading in the gobject module
 import pango                        # Library for rendering internationalized texts in high quality, http://zetcode.com/tutorials/pygtktutorial/pango/
 
-
 # Get system path separator
 sep = os.sep
 
@@ -103,13 +102,7 @@ class WinMain(WahCade, threading.Thread):
 
     def __init__(self, config_opts):
         """Initialize main Rcade window"""   # Docstring for this method
-        
-        # Begin the thread for reading from arduino
-        threading.Thread.__init__(self)
-        
-        #TODO: temporary
-        self.videoCount = 0
-        
+
         ### Set Global Variables
         global gst_media_imported, pygame_imported, old_keyb_events, debug_mode, log_filename
         self.init = True
@@ -164,7 +157,8 @@ class WinMain(WahCade, threading.Thread):
         except requests.exceptions.ConnectionError, e: # Any exception would mean some sort of failed server connection
             self.connected_to_server = False
             print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + ":", str(e)
-        
+        if self.connected_to_server:
+            print "Successfully connected to the server:", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
         ### SETUP WAHCADE INI FILE
         self.wahcade_ini = MameWahIni(os.path.join(CONFIG_DIR, 'wahcade.ini'))
         ## Read in options wahcade.ini, 
@@ -208,6 +202,7 @@ class WinMain(WahCade, threading.Thread):
         self.dx_sensitivity = self.ctrlr_ini.getint('mouse_x_sensitivity',100) * 0.01
         self.dy_sensitivity = self.ctrlr_ini.getint('mouse_y_sensitivity',100) * 0.01
         
+        ### SET CABINET NAME
         self.cabinet_name = self.ctrlr_ini.get('cabinet_name')
 
         ### Command-line options (parsed after ini is read)
@@ -233,7 +228,7 @@ class WinMain(WahCade, threading.Thread):
         self.lblGameSelected = gtk.Label()
         
         if self.cabinet_name == "":
-            self.ctrlr_ini.set('cabinet_name', self.getText())
+            self.ctrlr_ini.set('cabinet_name', self.set_name_dialog())
             self.ctrlr_ini.write()
         
         if self.use_splash == 1:
@@ -389,65 +384,65 @@ class WinMain(WahCade, threading.Thread):
         
         # Collect all image & label lists
         self._main_items = [
-            (8, self.imgMainLogo, "MainLogo"),                          # Weird gray area at top of window
-            (21, self.lblGameListIndicator, "GameListIndicator"),       # Label above games list
-            (34, self.lblEmulatorName, "EmulatorName"),                 # Label above artwork
-            (60, self.lblGameSelected, "GameSelected"),                 # Label displaying selected game number out of the total
-            (73, self.imgArtwork1, "MainArtwork1"),                     # Large game image in top right
-            (86, self.imgArtwork2, "MainArtwork2"),                     # Smaller game image in the lower right
-            (99, self.imgArtwork3, "MainArtwork3"),                     # Large game image in top center
-            (112, self.imgArtwork4, "MainArtwork4"),                    # Large game image in top center
-            (125, self.imgArtwork5, "MainArtwork5"),                    # Large game image in top center
-            (138, self.imgArtwork6, "MainArtwork6"),                    # Large game image in top center with background
-            (151, self.imgArtwork7, "MainArtwork7"),                    # Large game image in top center
-            (164, self.imgArtwork8, "MainArtwork8"),                    # Large game image in top center
-            (177, self.imgArtwork9, "MainArtwork9"),                    # Large game image in top center
-            (190, self.imgArtwork10, "MainArtwork10"),                  # Large game image in top center
-            (47, self.sclGames, "GameList"),                            # Game list
-            (203, self.lblGameDescription, "GameDescription"),          # Which game is selected
-            (216, self.lblRomName, "RomName"),                          # Rom name
-            (229, self.lblYearManufacturer, "YearManufacturer"),        # Year
-            (242, self.lblScreenType, "ScreenType"),                    # Screen
-            (255, self.lblControllerType, "ControllerType"),            # Controller
-            (268, self.lblDriverStatus, "DriverStatus"),                # Driver
-            (281, self.lblCatVer, "CatVer"),
-            (-1, self.gamesScrollOverlay, "ScrollOverlay"),
-            (-1, self.lblHighScoreData, "HighScoreData"),               # High score data
-            (-1, self.lblUsers, "Users"),                               # Currently logged in users
-            (-1, self.lblUsersLoggedIn, "UsersLoggedIn"),               # Show when user(s) log in
-            (-1, self.lblUsersLoggedOut, "UsersLoggedOut")]             # Show when user(s) log out
+            (self.imgMainLogo, "MainLogo"),                          # Weird gray area at top of window
+            (self.lblGameListIndicator, "GameListIndicator"),       # Label above games list
+            (self.lblEmulatorName, "EmulatorName"),                 # Label above artwork
+            (self.lblGameSelected, "GameSelected"),                 # Label displaying selected game number out of the total
+            (self.imgArtwork1, "MainArtwork1"),                     # Large game image in top right
+            (self.imgArtwork2, "MainArtwork2"),                     # Smaller game image in the lower right
+            (self.imgArtwork3, "MainArtwork3"),                     # Large game image in top center
+            (self.imgArtwork4, "MainArtwork4"),                    # Large game image in top center
+            (self.imgArtwork5, "MainArtwork5"),                    # Large game image in top center
+            (self.imgArtwork6, "MainArtwork6"),                    # Large game image in top center with background
+            (self.imgArtwork7, "MainArtwork7"),                    # Large game image in top center
+            (self.imgArtwork8, "MainArtwork8"),                    # Large game image in top center
+            (self.imgArtwork9, "MainArtwork9"),                    # Large game image in top center
+            (self.imgArtwork10, "MainArtwork10"),                  # Large game image in top center
+            (self.sclGames, "GameList"),                            # Game list
+            (self.lblGameDescription, "GameDescription"),          # Which game is selected
+            (self.lblRomName, "RomName"),                          # Rom name
+            (self.lblYearManufacturer, "YearManufacturer"),        # Year
+            (self.lblScreenType, "ScreenType"),                    # Screen
+            (self.lblControllerType, "ControllerType"),            # Controller
+            (self.lblDriverStatus, "DriverStatus"),                # Driver
+            (self.lblCatVer, "CatVer"),
+            (self.gamesScrollOverlay, "ScrollOverlay"),
+            (self.lblHighScoreData, "HighScoreData"),               # High score data
+            (self.lblUsers, "Users"),                               # Currently logged in users
+            (self.lblUsersLoggedIn, "UsersLoggedIn"),               # Show when user(s) log in
+            (self.lblUsersLoggedOut, "UsersLoggedOut")]             # Show when user(s) log out
         self._options_items = [
-            (301, self.options.lblHeading, "OptHeading"),               # Options window title
-            (314, self.options.sclOptions, "OptionsList"),              # Options list
-            (327, self.options.lblSettingHeading, "SettingHeading"),    # "Current setting"
-            (340, self.options.lblSettingValue, "SettingValue")]        # Value of current setting
+            (self.options.lblHeading, "OptHeading"),               # Options window title
+            (self.options.sclOptions, "OptionsList"),              # Options list
+            (self.options.lblSettingHeading, "SettingHeading"),    # "Current setting"
+            (self.options.lblSettingValue, "SettingValue")]        # Value of current setting
         self._message_items = [      
-            (357, self.message.lblHeading, "MsgHeading"),               # Message window title
-            (370, self.message.lblMessage, "Message"),                  # Message displayed in message window
-            (383, self.message.lblPrompt, "Prompt")]
+            (self.message.lblHeading, "MsgHeading"),               # Message window title
+            (self.message.lblMessage, "Message"),                  # Message displayed in message window
+            (self.message.lblPrompt, "Prompt")]
         self._screensaver_items = [              
-            (396, self.scrsaver.imgArtwork1, "ScrArtwork1"),
-            (409, self.scrsaver.imgArtwork2, "ScrArtwork2"),
-            (422, self.scrsaver.imgArtwork3, "ScrArtwork3"),
-            (435, self.scrsaver.imgArtwork4, "ScrArtwork4"),
-            (448, self.scrsaver.imgArtwork5, "ScrArtwork5"),
-            (461, self.scrsaver.imgArtwork6, "ScrArtwork6"),
-            (474, self.scrsaver.imgArtwork7, "ScrArtwork7"),
-            (487, self.scrsaver.imgArtwork8, "ScrArtwork8"),
-            (500, self.scrsaver.imgArtwork9, "ScrArtwork9"),
-            (513, self.scrsaver.imgArtwork10, "ScrArtwork10"),
-            (526, self.scrsaver.lblGameDescription, "GameDescription"),
-            (539, self.scrsaver.lblMP3Name, "MP3Name")]
+            (self.scrsaver.imgArtwork1, "ScrArtwork1"),
+            (self.scrsaver.imgArtwork2, "ScrArtwork2"),
+            (self.scrsaver.imgArtwork3, "ScrArtwork3"),
+            (self.scrsaver.imgArtwork4, "ScrArtwork4"),
+            (self.scrsaver.imgArtwork5, "ScrArtwork5"),
+            (self.scrsaver.imgArtwork6, "ScrArtwork6"),
+            (self.scrsaver.imgArtwork7, "ScrArtwork7"),
+            (self.scrsaver.imgArtwork8, "ScrArtwork8"),
+            (self.scrsaver.imgArtwork9, "ScrArtwork9"),
+            (self.scrsaver.imgArtwork10, "ScrArtwork10"),
+            (self.scrsaver.lblGameDescription, "GameDescription"),
+            (self.scrsaver.lblMP3Name, "MP3Name")]
         self._identify_items = [
-            (-1, self.identify.lblPrompt, "Prompt"),
-            (-1, self.identify.lblPromptText, "PromptText"),
-            (-1, self.identify.lblRFID, "RFID"),
-            (-1, self.identify.sclIDs, "IDsList"),
-            (-1, self.IDsScrollOverlay, "ScrollOverlay")]
+            (self.identify.lblPrompt, "Prompt"),
+            (self.identify.lblPromptText, "PromptText"),
+            (self.identify.lblRFID, "RFID"),
+            (self.identify.sclIDs, "IDsList"),
+            (self.IDsScrollOverlay, "ScrollOverlay")]
         self._player_select_items = [
-            (-1, self.player_select.lblScore, "lblScore"),
-            (-1, self.player_select.lbl1, "lbl1"),
-            (-1, self.player_select.sclPlayers, "playersList")]
+            (self.player_select.lblScore, "lblScore"),
+            (self.player_select.lbl1, "lbl1"),
+            (self.player_select.sclPlayers, "playersList")]
         self._layout_items = {'main': self._main_items,
                               'options': self._options_items,
                               'message': self._message_items,
@@ -456,11 +451,10 @@ class WinMain(WahCade, threading.Thread):
                               'playerselect' : self._player_select_items}
  
         # Initialize primary Fixd containers, and populate appropriately
-#        self.fixd.show()
         self.winMain.add(self.fixd)
         # Add everything to the main Fixd object
         for w_set_name in self._layout_items:
-            for offset, widget, name in self._layout_items[w_set_name]: #@UnusedVariable
+            for widget, name in self._layout_items[w_set_name]: #@UnusedVariable
                 if widget.get_parent():
                     pass
                 elif not (type(widget) is ScrollList):
@@ -478,36 +472,27 @@ class WinMain(WahCade, threading.Thread):
         self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
         self.player_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/rcade/"
         self.score_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/score/"
-
         self.connected_to_arduino = False
         self.nameToRom = {}
-
         if self.connected_to_server:
             try:
                 # Map rom name to associated game name
                 romToName = {}
                 for sublist in self.lsGames: 
                     romToName[sublist[1]] = sublist[0]
-                    
-                    
                 for game in romToName:
                     if game in self.supported_games:
                         self.supported_games_name.append(romToName[game])
-             
                 # Get a list of games already on the server
                 data = fromstring(requests.get(self.game_url, headers=self.authorization, timeout=1).text)
                 games_on_server = []
                 for game in data.getiterator('game'):
                     games_on_server.append(game.find('romName').text)
-        
                 # Add games to the server if not on the server
                 for rom in self.supported_games:
                     if rom not in games_on_server and rom in romToName:
                         post_data = {"romName":rom, "gameName":romToName[rom]}
                         r = requests.post(self.game_url, post_data)
-#                        self.check_connection(r.status_code)
-            
-            
             except e:
                 self.connected_to_server = False                    
 
@@ -535,6 +520,8 @@ class WinMain(WahCade, threading.Thread):
                 self.rfid_reader = serial.Serial(arduino_mount, 9600)
                 self.connected_to_arduino = True
                 print "Successfully connected to Arduino mounted at", arduino_mount
+                # Begin the thread for reading from arduino
+                threading.Thread.__init__(self)
                 self.start()
             except RuntimeError, e:
                 self.connected_to_arduino = False
@@ -549,20 +536,17 @@ class WinMain(WahCade, threading.Thread):
                 self.player_info.append((player.find('name').text, player.find('playerID').text)) # parse player name and RFID from xml
             self.lblUsers.set_text("No Users Logged In")
             self.lblUsers.show()
+       
         # Generate unregistered user list
         self.identify.Setup_IDs_list()
-
         pygame.init()
-        
         sound_files = os.listdir(CONFIG_DIR + '/sounds/')
         self.sounds = []
         for sound in sound_files:
             self.sounds.append(CONFIG_DIR + '/sounds/' + sound)
 
         self.check_music_settings()
-        
         self.winMain.show()
-        
         self.drwVideo.set_property('visible', False)
         
         # Initialize video chat
@@ -570,7 +554,6 @@ class WinMain(WahCade, threading.Thread):
         if self.connected_to_server:
             self.connection_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/connection/rcade/"
             self.video_chat = video_chat(self)
-             
             self.vid_container = gtk.VBox(False, 10)
             self.vc_box = gtk.DrawingArea()
             self.vc_box.modify_bg(gtk.STATE_NORMAL, self.vid_container.style.black)
@@ -595,15 +578,13 @@ class WinMain(WahCade, threading.Thread):
             self.winMain.fullscreen()
         else:
             self.log_msg('Windowed mode')
-            pass
         
         # Show the window to the user
         self.winMain.present()
-        
         if self.use_splash == 1:
             ### Hide splash
             self.splash.destroy()
-        self.do_events()                # wc_common.py
+        self.do_events()
         self.on_winMain_focus_in()
 
         #### Start intro movie
@@ -621,9 +602,8 @@ class WinMain(WahCade, threading.Thread):
         ### INPUT CONFIGURATION
         # Input defaults
         self.pointer_grabbed = False
-       
         # Get keyboard and mouse events
-        self.sclGames.connect('update', self.on_sclGames_changed)           # scrolled_list.py
+        self.sclGames.connect('update', self.on_sclGames_changed)
         self.sclGames.connect('mouse-left-click', self.on_sclGames_changed)
         self.sclGames.connect('mouse-right-click', self.on_winMain_key_press)
         self.sclGames.connect('mouse-double-click', self.launch_auto_apps_then_game)
@@ -649,11 +629,7 @@ class WinMain(WahCade, threading.Thread):
             'UP_1_PAGE', 'DOWN_1_PAGE',
             'UP_1_LETTER', 'DOWN_1_LETTER']
         self.scroll_count = 0
-        
-        
-        
         self.fixd.show()
-        
         #### Joystick setup
         self.joy = None
         if (self.joyint == 1) and pygame_imported:
@@ -661,17 +637,14 @@ class WinMain(WahCade, threading.Thread):
             self.joy.use_ini_controls(self.ctrlr_ini)
             self.joy.joy_info()
             self.start_timer('joystick')
-    
         self.on_sclGames_changed()
-        
-        
         ### __INIT__ Complete
         self.init = False
     
     def responseToDialog(self, entry, dialog, response):
         dialog.response(response)
     
-    def getText(self):
+    def set_name_dialog(self):
         #base this on a message dialog
         dialog = gtk.MessageDialog(type=gtk.MESSAGE_INFO, buttons = gtk.BUTTONS_OK, parent=self.winMain)
         dialog.set_markup('Please enter cabinet <b>name</b>:')
@@ -690,9 +663,9 @@ class WinMain(WahCade, threading.Thread):
         dialog.set_position(gtk.WIN_POS_CENTER_ON_PARENT)
         dialog.set_keep_above(True)
         dialog.show_all()
-        #go go go
+
         dialog.run()
-        text = entry.get_text()
+        text = entry.get_text().strip()
         if text == "":
             text = "ReadyTalk"
         dialog.destroy()
@@ -757,7 +730,6 @@ class WinMain(WahCade, threading.Thread):
             except:
                 hal.Shutdown()
         self.on_winMain_destroy()
-        
 
     def on_winMain_focus_in(self, *args):
         """Window received focus"""
@@ -849,16 +821,12 @@ class WinMain(WahCade, threading.Thread):
             self.vc_feeds = [(info.find('ipAddress').text, info.find('port').text) for info in data.getiterator('connection')]
             self.new_vc_feed_updated = False
             self.manualVCMode = False
-            print str(self.vc_feeds)
             
             self.on_connection_timer()
             self.start_timer('connection')
             self.start_timer('tstconnect')
-            
-            
-            #self.vc_feeds.append((self.video_chat.localip, self.video_chat.localport))
         else:
-            print "Video chat is disabled because no camera was found."
+            print "Video chat is disabled because no camera was found or connection issues."
     
     def start_video_chat(self):
         if not self.video_chat.receiver_running:
@@ -875,10 +843,10 @@ class WinMain(WahCade, threading.Thread):
         
         if self.video_chat.is_loopback():
             self.vc_caption.set_text("Showing local video: " + str(self.video_chat.get_remote_info()))
-            print "Showing local video: " + str(self.video_chat.get_remote_info())
+#            print "Showing local video: " + str(self.video_chat.get_remote_info())
         else:
             self.vc_caption.set_text("Chatting with " + str(self.video_chat.get_remote_info()))
-            print "Chatting with: " + str(self.video_chat.get_remote_info())
+#            print "Chatting with: " + str(self.video_chat.get_remote_info())
     
     def stop_video_chat(self):
         self.vid_container.hide_all()
@@ -900,8 +868,6 @@ class WinMain(WahCade, threading.Thread):
         if current == -1:
             print "Couldn't find the current IP address in the current list. This shouldn't happen."
             return -1, -1 #this should never happen
-        
-        
         if self.new_vc_feed_updated:
             self.new_vc_feed_updated = False
             #find the current ip in the new list
@@ -1010,7 +976,8 @@ class WinMain(WahCade, threading.Thread):
                 self.selected_player = ''
                 if len(self.score_processing_queue) > 0:
                     self.player_select.lbl1.set_text(self.score_processing_queue[len(self.score_processing_queue)-1]['score'] + "   " + self.score_processing_queue[len(self.score_processing_queue)-1]['arcadeName'])               
-                    self.show_window('playerselect')
+                    self.show_window('playerselect') #TODO: CHECK
+                    self.player_select.sclPlayers._update_display()
             else:
                 if len(self.score_processing_queue) > 1:
                     self.score_processing_queue.pop()
@@ -1044,10 +1011,10 @@ class WinMain(WahCade, threading.Thread):
     def check_connection(self, status_code):
         if ((status_code - 200) < 100 and (status_code - 200) >= 0) or status_code == 500:
             self.connected_to_server = True
-            print "Successfully connected to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
+#            print "Successfully connected to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
         else:
             self.connected_to_server = False
-            print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + ", Status Code:", status_code
+#            print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + ", Status Code:", status_code
              
     def log_in(self, player_rfid):
         """Logs a player in"""
@@ -1457,11 +1424,9 @@ class WinMain(WahCade, threading.Thread):
                         if self.connected_to_server and self.video_chat and self.video_chat.enabled:
                             if self.chat_key_count == 1:
                                 if self.vid_container.get_property("visible") == False:
-                                    #print "Show video chat"
                                     self.setup_video_chat()
                                     self.start_video_chat()
                                 else:
-                                    #print "Hide video chat"
                                     self.stop_video_chat()
                                     self.clean_up_video_chat()
                         else:
@@ -1643,7 +1608,7 @@ class WinMain(WahCade, threading.Thread):
         # Get high score data and display it
         if self.scroll_count < self.showHighScoreThresh:    
             if not self.connected_to_server:
-                self.lblHighScoreData.set_markup(_('%s%s%s') % (self.highScoreDataMarkupHead, " NOT CONNECTED TO A DATABASE", self.highScoreDataMarkupTail))
+                self.lblHighScoreData.set_markup(_('%s%s%s') % (self.highScoreDataMarkupHead, " NOT CONNECTED TO A SERVER", self.highScoreDataMarkupTail))
             elif game_info['rom_name'] in self.supported_games:
                 highScoreInfo = self.get_score_string()
                 self.lblHighScoreData.modify_font(pango.FontDescription(self.highScoreDataLayout['font-name']))#TODO
@@ -1673,7 +1638,11 @@ class WinMain(WahCade, threading.Thread):
         
     def get_score_string(self):
         """Parse Scores from DB into display string"""
-        score_string = requests.get(self.game_url + self.current_rom + "/highscore", headers=self.authorization).text
+        try:
+            score_string = requests.get(self.game_url + self.current_rom + "/highscore", headers=self.authorization).text
+        except:
+            self.connected_to_server = False
+            return " NOT CONNECTED TO A SERVER "
         index = 1
         if score_string != '[]' and "Could not find" not in score_string:
             score_string = score_string[1:-1] # Trim leading and trailing [] from string
@@ -1713,11 +1682,11 @@ class WinMain(WahCade, threading.Thread):
             if len(self.sounds) != 0:
                 sound_file = self.sounds[random.randrange(0, len(self.sounds))]
                 if str(sound_file).endswith(".wav") or str(sound_file).endswith(".mp3") or str(sound_file).endswith(".mp4"):
-                    pygame.mixer.init()
+                    pygame.mixer.init() #Safe to call multiple times
                     pygame.mixer.music.load(sound_file)
                     pygame.mixer.music.play()
                     self.portal_time_last_played = time.time()
-                    #pygame.mixer.quit If you want to re-initialize mixer with different args
+                    #pygame.mixer.quit #Use if you want to re-initialize mixer with different args
         return True
             
     def on_scrsave_timer(self):
@@ -2083,7 +2052,7 @@ class WinMain(WahCade, threading.Thread):
                 cmd = '%s %s' % (app_name, game_opts['options'])
                 self.p = Popen(cmd, shell=True)
                 if wait_for_finish:
-                    sts = self.p.wait()
+                    self.p.wait()
                     # Un-minimize
                     if game_opts['minimize_wahcade']:
                         self.winMain.present()
@@ -2332,7 +2301,7 @@ class WinMain(WahCade, threading.Thread):
         # Set up all Widgets
         for w_set_name in self._layout_items.keys():
             wset_layout_info = layout_info[w_set_name]
-            for offset, widget, name in self._layout_items[w_set_name]:
+            for widget, name in self._layout_items[w_set_name]:
                 w_lay = wset_layout_info[name]
                 # Font
                 fontData = w_lay['font']
@@ -2434,205 +2403,6 @@ class WinMain(WahCade, threading.Thread):
         
         # Load histview and cpviewer layouts
         # Still in use?
-        self.histview.load_layout(self.histview.layout_filename)
-        self.cpviewer.load_layout(self.cpviewer.layout_filename)
-        # Build visible lists for displaying artwork images
-        self.rebuild_visible_lists()
- 
-    def load_legacy_layout_file(self, layout_file):
-        """DEPRECATED: Load legacy layout file"""
-        layout_path = os.path.join(CONFIG_DIR, 'layouts', self.layout)
-        #if layout_file == '':
-            #layout_file = self.get_layout_filename()
-        self.layout_path = layout_path
-        if layout_file == self.layout_file:
-            # Layout not changed, but emulator has, so build visible
-            # lists for displaying artwork images and exit
-            self.rebuild_visible_lists()
-            return
-        self.layout_file = layout_file
-        
-        # Read file & strip any whitespace
-        lines = open(self.layout_file, 'r').readlines()
-        lines = [s.strip() for s in lines]
-        lines.insert(0, '.')
-        
-        # Specific lines from the layout file
-        at = {
-              'main_width':1,
-              'main_height':2,
-              'opt_width':294,
-              'opt_height':295,
-              'msg_width':353,
-              'msg_height':354,
-              'main_bg':3,
-              'scroll_img':552,
-              'scroll_img_x':553,
-              'scroll_img_y':554,
-              'scroll_let_x':555,
-              'scroll_let_y':556,
-              'main_img':4,
-              'opt_bg':296,
-              'opt_img':297,
-              'games_bg_col':6,
-              'games_fg_col':7,
-              'opt_bg_col':299,
-              'opt_fg_col':300,
-              'msg_bg':355,
-              'msg_img':356}
-        
-        # Window sizes
-        main_width, main_height = int(lines[at['main_width']].split(';')[0]), int(lines[at['main_height']])
-        opt_width, opt_height = int(lines[at['opt_width']].split(';')[0]), int(lines[at['opt_height']])
-        msg_width, msg_height = int(lines[at['msg_width']].split(';')[0]), int(lines[at['msg_height']])
-        # Main window
-        self.winMain.set_size_request(main_width, main_height)
-        self.winMain.set_default_size(main_width, main_height)
-        bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['main_bg']]))) # Converts an integer value to a reversed hex value to a gtk color object
-        self.winMain.modify_bg(gtk.STATE_NORMAL, bg_col)
-        self.fixd.move(self.imgBackground, 0, 0)
-        self.imgBackground.set_size_request(main_width, main_height)
-        
-        # Overlay scroll letter background
-        bg_file = self.get_path(lines[at['scroll_img']])
-        if not os.path.dirname(bg_file):
-            bg_file = os.path.join(self.layout_path, bg_file)
-        self.gamesOverlayBG.set_from_file(bg_file)
-        self.fixd.put(self.gamesOverlayBG, int(lines[at['scroll_img_x']]), int(lines[at['scroll_img_y']]))
-        
-        # Display overlay letters on ROM list when scrolling quickly
-        self.lblGamesOverlayScrollLetters.hide()
-        self.fixd.put(self.lblGamesOverlayScrollLetters, int(lines[at['scroll_let_x']]), int(lines[at['scroll_let_y']]))
-        
-        # Background image file
-        img_file = self.get_path(lines[at['main_img']])
-        if not os.path.dirname(img_file):
-            img_file = os.path.join(self.layout_path, img_file)
-        self.imgBackground.set_data('layout-image', img_file)
-        
-        # Set options window
-        self.options.winOptions.set_size_request(opt_width, opt_height)
-        bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['opt_bg']]))) # Color of box surrounding the options window
-        self.options.winOptions.modify_bg(gtk.STATE_NORMAL, bg_col)
-        self.options.winOptions.move(self.options.imgBackground, 0, 0)
-        self.options.imgBackground.set_size_request(opt_width, opt_height)
-        img_file = self.get_path(lines[at['opt_img']])
-        if not os.path.dirname(img_file):
-            img_file = os.path.join(self.layout_path, img_file)
-        self.options.imgBackground.set_data('layout-image', img_file)
-        self.fixd.move(self.options.winOptions, ((main_width - opt_width) / 2), ((main_height - opt_height) / 2))
-        
-        # Games list highlight colours
-        hl_bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['games_bg_col']]))) # Colored bar
-        hl_fg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['games_fg_col']]))) # Text
-        self.sclGames.modify_highlight_bg(gtk.STATE_NORMAL, hl_bg_col)
-        self.sclGames.modify_highlight_fg(gtk.STATE_NORMAL, hl_fg_col)
-        
-        # Options list highlight colours
-        hl_bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['opt_bg_col']])))
-        hl_fg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['opt_fg_col']])))
-        self.options.sclOptions.modify_highlight_bg(gtk.STATE_NORMAL, hl_bg_col)
-        self.options.sclOptions.modify_highlight_fg(gtk.STATE_NORMAL, hl_fg_col)
-        
-        # Set message window
-        self.message.winMessage.set_size_request(msg_width, msg_height)
-        bg_col = gtk.gdk.color_parse(self.get_colour(int(lines[at['msg_bg']])))
-        self.message.winMessage.modify_bg(gtk.STATE_NORMAL, bg_col)
-        self.message.winMessage.move(self.message.imgBackground, 0, 0)
-        self.message.imgBackground.set_size_request(msg_width, msg_height)
-        img_file = self.get_path(lines[at['msg_img']])
-        if not os.path.dirname(img_file):
-            img_file = os.path.join(self.layout_path, img_file)
-        self.message.imgBackground.set_data('layout-image', img_file)
-        self.fixd.move(self.message.winMessage, ((main_width - msg_width) / 2), ((main_height - msg_height) / 2))
-        
-        # Screen saver window
-        self.fixd.move(self.scrsaver.winScrSaver, 0, 0)
-        self.scrsaver.winScrSaver.set_size_request(main_width, main_height)
-        self.scrsaver.winScrSaver.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('black'))
-        self.scrsaver.drwVideo.set_size_request(main_width, main_height)
-        
-        # Set all window items
-        for offset, widget in self._layout_items:
-            # Get properties
-            data = self.get_layout_item_properties(lines, offset)
-            # Font
-            fontData = data['font']
-            if data['font-bold']:
-                fontData += ' Bold'
-            fontData += ' %s' % (data['font-size'])
-            font_desc = pango.FontDescription(fontData)
-            # Text color
-            fg_col = gtk.gdk.color_parse(data['text-col'])
-            widget.modify_font(font_desc)
-            widget.modify_fg(gtk.STATE_NORMAL, fg_col)
-            # Background colour & transparency
-            bg_col = gtk.gdk.color_parse(data['background-col'])
-            parent = widget.get_parent()
-            if parent.get_ancestor(gtk.EventBox):
-                if data['transparent']:
-                    parent.set_visible_window(False)
-                else:
-                    parent.set_visible_window(True)
-                    parent.modify_bg(gtk.STATE_NORMAL, bg_col)
-            # Alignment
-            if data['text-align'] == 2:
-                widget.set_property('xalign', .5)   # 0.5 -> Center alignment
-            else:
-                widget.set_property('xalign', data['text-align'])
-            # Rotation
-            widget.set_data('text-rotation', data['text-rotation'])
-            try:
-                widget.set_angle(data['text-rotation'])
-            except AttributeError:
-                pass
-            # Visible?
-            if not data['visible']:
-                widget.hide()
-                if parent.get_ancestor(gtk.EventBox):
-                    parent.hide()
-            else:
-                widget.show()
-                if parent.get_ancestor(gtk.EventBox):
-                    parent.show()
-                    
-            # Divide height of scroll list in half
-            if isinstance(widget, ScrollList):
-                widget.set_size_request(data['width'], (data['height']/2) + 38) # 38 is a magic number to make it look nice
-            else:
-                widget.set_size_request(data['width'], data['height'])
-                
-            # Position video widget
-            if self.emu_ini.getint('movie_artwork_no') > 0:
-                self.video_artwork_widget = self._main_images[(self.emu_ini.getint('movie_artwork_no') - 1)]
-                if widget == self.video_artwork_widget:
-                    self.fixd.move(self.drwVideo, data['x'], data['y'])
-                    self.drwVideo.set_size_request(data['width'], data['height'])
-            # Modify widget for lists
-            if widget == self.sclGames:
-                widget = self.sclGames.fixd
-            elif widget == self.options.sclOptions:
-                widget = self.options.sclOptions.fixd
-            elif parent.get_ancestor(gtk.EventBox):
-                widget = widget.get_parent()
-            # Add to fixed layout on correct window
-            if offset < 293:
-                # Main window
-                self.fixd.move(widget, data['x'], data['y'])
-            elif offset < 353:
-                # Options window
-                self.options.winOptions.move(widget, data['x'], data['y'])
-            elif offset < 396:
-                # Message window
-                self.message.winMessage.move(widget, data['x'], data['y'])
-            else:
-                # Screen saver window
-                self.scrsaver.winScrSaver.move(widget, data['x'], data['y'])
-        # Other stuff
-        self.options.lblHeading.set_text(_('Options'))
-        self.options.lblSettingHeading.set_text(_('Current Setting:'))
-        self.options.lblSettingValue.set_text('')
-        # Load histview and cpviewer layouts
         self.histview.load_layout(self.histview.layout_filename)
         self.cpviewer.load_layout(self.cpviewer.layout_filename)
         # Build visible lists for displaying artwork images
@@ -2789,9 +2559,9 @@ class WinMain(WahCade, threading.Thread):
                     self.log_msg("%s not in list" % (fav[FAV_ROM_NAME]))
             self.lsGames = flist_sorted
             self.lsGames_len = len(self.lsGames)
-        elif self.current_list_ini.get('list_type') == 'xml_remote':
+        elif self.current_list_ini.get('list_type') == 'xml_remote' and self.connected_to_server:
             # XML remote-populated, so get the source URL
-            sourceURL = self.props['host']+":"+self.props['port']+"/"+self.props['db']+self.current_list_ini.get('params')
+            sourceURL = self.props['host']+":"+self.props['port']+"/"+self.props['db']+"/game/popular?renderXML=True"
             data = fromstring(requests.get(sourceURL, headers=self.authorization).text)
             gList = []
             # Use all games to gen list
@@ -2805,7 +2575,7 @@ class WinMain(WahCade, threading.Thread):
                 self.lsGames = []
                 self.lsGames_len = 0
             # Extract data
-            if data.text:
+            if data:
                 for game in data.getiterator('game'):
                     try:
                         gList.append(next(gTuple for gTuple in self.lsGames if gTuple[1] == game.find("romName").text))
@@ -2813,11 +2583,15 @@ class WinMain(WahCade, threading.Thread):
                         pass
             if not gList:
                 errorItem = ()
-                for i, entry in enumerate(self.lsGames[0]):
+                for i in enumerate(self.lsGames[0]):
                     errorItem += ("No Games Found",) if i==0 else ("",)
                 gList.append(errorItem)
             self.lsGames = gList
             self.lsGames_len = len(gList)
+        else:
+            self.current_list_idx = self.get_next_list_in_cycle(+1)
+            self.load_list()
+            
         # Setup scroll list
         # "All Games" list is always the first list
         if self.current_list_idx == 0:
@@ -2826,7 +2600,7 @@ class WinMain(WahCade, threading.Thread):
             self.sclGames.ls = []
             for l in [l[0] for l in self.lsGames]:
                 # Remove "(bar)" from "foo (bar)" game description
-                if l[0] != '(':
+                if len(l) != 0 and l[0] != '(':
                     l = l.split('(')[0]
                 self.sclGames.ls.append(l)
         # Select game in list
@@ -2844,8 +2618,8 @@ class WinMain(WahCade, threading.Thread):
     def remove_current_game(self):
         """Remove currently selected game from the list"""
         if len(self.lsGames) != 0:
-            item = self.sclGames.ls.pop(self.sclGames.get_selected())
-            item = self.lsGames.pop(self.sclGames.get_selected())
+            self.sclGames.ls.pop(self.sclGames.get_selected())
+            self.lsGames.pop(self.sclGames.get_selected())
             filters.write_filtered_list(
                 os.path.join(CONFIG_DIR, 'files', '%s-%s.lst' % (
                     self.current_emu, self.current_list_idx)),
@@ -2919,25 +2693,20 @@ class WinMain(WahCade, threading.Thread):
             return False
 
         data = fromstring(requests.get(self.connection_url, headers=self.authorization).text)
-        print "Checking for IP Addresses: " + str(len(data.getiterator('connection'))) + " found"
+#        print "Checking for IP Addresses: " + str(len(data.getiterator('connection'))) + " found"
         
         #update the local list of feeds if it has changed
         feeds = [(info.find('ipAddress').text, info.find('port').text) for info in data.getiterator('connection')]
         if self.new_vc_feeds != feeds:
             self.new_vc_feeds = feeds
             self.new_vc_feed_updated = True
-        else:
-            print "No Update"
         
         #switch to the first remote video that appears and back to the local video when no other videos are left
         for ipAddr in data.getiterator('connection'):
             if not (ipAddr.find('ipAddress').text == self.video_chat.remoteip and ipAddr.find('port').text == self.video_chat.remoteport):
                 if len(data.getiterator('connection')) == 1 and ipAddr.find('ipAddress').text == self.video_chat.localip:
-                    #print "Show local video"
                     self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
                     self.video_chat.set_remote_info(ipAddr.find('ipAddress').text, ipAddr.find('port').text)
-                    
-                    
                     was_running = self.video_chat.receiver_running
                     self.stop_video_chat()
                     if was_running:
@@ -2946,24 +2715,18 @@ class WinMain(WahCade, threading.Thread):
                     return True
                 elif not self.manualVCMode  and (ipAddr.find('ipAddress').text != self.video_chat.localip or ipAddr.find('port').text != self.video_chat.localport):
                     self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
-                    #print self.valid_remote_ip(self.remote_ip[0], self.remote_ip[1])
                     if not self.valid_remote_ip(*self.remote_ip):
                         print 'could not connect to', self.remote_ip[0], self.remote_ip[1], '- removing it from server'
                         requests.delete(self.connection_url + self.remote_ip[0], headers=self.authorization)
                         self.on_connection_timer()
                         return True
-                        #TODO: go to the next video feed
-                        
                     self.video_chat.set_remote_info(ipAddr.find('ipAddress').text, ipAddr.find('port').text)
-                    
                     self.vc_feeds = [(info.find('ipAddress').text, info.find('port').text) for info in data.getiterator('connection')]
-
                     was_running = self.video_chat.receiver_running
                     self.stop_video_chat()
                     if was_running:
                         self.start_video_chat()
                         return True
-                    
                     self.connection_time_running = False
                     return False #Stop the timer if connected
             elif ipAddr.find('ipAddress').text == self.video_chat.remoteip and ipAddr.find('port').text == self.video_chat.remoteport and ipAddr.find('ipAddress').text != self.video_chat.localip and ipAddr.find('port').text != self.video_chat.localport:
@@ -2983,7 +2746,7 @@ class WinMain(WahCade, threading.Thread):
         if not found_local:
             print 'couldnt find local ip'
             post_data = {"ipAddress":self.video_chat.localip, "port":self.video_chat.localport}
-            r = requests.post(self.connection_url, post_data, headers=self.authorization)
+            requests.post(self.connection_url, post_data, headers=self.authorization)
         return True
 
     def start_timer(self, timer_type):
@@ -3011,7 +2774,7 @@ class WinMain(WahCade, threading.Thread):
         elif timer_type == 'portal':
             if self.portal_time:
                 gobject.source_remove(self.portal_time)
-            self.portal_time = gobject.timeout_add(2500, self.portal_timer) #TODO: here
+            self.portal_time = gobject.timeout_add(2500, self.portal_timer)
         elif timer_type == 'connection' and not self.connection_time_running:
             self.connection_time = gobject.timeout_add(10000, self.on_connection_timer)
             self.connection_time_running = True
@@ -3135,10 +2898,8 @@ class WinMain(WahCade, threading.Thread):
             layout_matched, layout_files = self.get_rotated_layouts(new_angle)
         # Load rotated layout(s)
         if layout_matched:
-            #print "switched to:", new_angle
             self.layout_orientation = new_angle
             if os.path.isfile(layout_files[0]):
-                #self.load_legacy_layout_file(layout_files[0])
                 self.load_layout_file(layout_files[0])
             if os.path.isfile(layout_files[1]):
                 self.histview.load_layout(layout_files[1])
@@ -3164,7 +2925,6 @@ class WinMain(WahCade, threading.Thread):
             child_win = self.identify.winID
         elif window_name == 'playerselect':
             self.player_select.populate_list()
-            self.player_select.sclPlayers._update_display()
             child_win = self.player_select.winPlayers
             self.player_select.sclPlayers.set_selected(0)
         # Show given child window
@@ -3235,9 +2995,9 @@ class WinMain(WahCade, threading.Thread):
             old_keyb_events = True
             self.log_msg("Old style keyboard events enabled")
     
-    def play_clip(self, file):
+    def play_clip(self, a_file):
         """Play sound"""
-        myclip = os.path.join(CONFIG_DIR, 'layouts', self.wahcade_ini.get('layout'), 'sounds', file.lower())
+        myclip = os.path.join(CONFIG_DIR, 'layouts', self.wahcade_ini.get('layout'), 'sounds', a_file.lower())
         for ext in MUSIC_FILESPEC_NEW:
             theclip = myclip + "." + ext
             if os.path.exists(theclip) and gst_media_imported and self.sound_enabled:
@@ -3268,14 +3028,12 @@ class WinMain(WahCade, threading.Thread):
         while(self.running):
             # Checks if there is an RFID waiting in the output buffer of the arduino
             if self.rfid_reader.inWaiting() >= 12:
-                print "reading card"
+#                print "reading card"
                 self.scrsave_time = time.time()
                 if self.scrsaver.running:
                     self.scrsaver.stop_scrsaver()
                     self.start_timer('scrsave')
-#                print "Before reading " + str(self.rfid_reader.inWaiting())
                 scannedRfid = self.rfid_reader.read(12)
-#                print "Scanned RFID before cut: " + scannedRfid
                 if len(scannedRfid) == 12 and scannedRfid.isalnum():
                     if self.in_game():
                         self.log_in_queue.put(scannedRfid)
@@ -3283,14 +3041,11 @@ class WinMain(WahCade, threading.Thread):
                         self.log_in(scannedRfid)
                 else:
                     print "Error during read, please rescan your card"
-#                print "After register, before flush " + str(self.rfid_reader.inWaiting())
                 self.rfid_reader.flushInput()
-#                print "After flush " + str(self.rfid_reader.inWaiting()) + "\n"
             time.sleep(0.125)
 
     def in_game(self):
         """Check if a game is running"""
-        print "Logging in"
         try:
             if self.p.poll() is None:
                 return True

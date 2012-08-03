@@ -4,7 +4,7 @@
 # Application: Rcade
 # File:        scrolled_list.py
 # Description: Transparent Scrolled List Widget
-# Copyright (c) 2005-2010   Andy Balcombe <http://www.anti-particle.com>
+# Created by Andy Balcombe. Extended by Zach McGaughey, Riley Moses, Devin Wilson, John Kelly and Terek Campbell of ReadyTalk
 ###
 #
 # This program is free software; you can redistribute it and/or modify
@@ -415,7 +415,7 @@ class ScrollList(object):
             else:
                 idx_to_select = len_ls - 1
         # Calc direction and gap
-        gap = idx_to_select - self._selectedIndex
+#        gap = idx_to_select - self._selectedIndex
         self._selectedIndex = idx_to_select
         if self._selectedIndex != self._oldIndex:
             self._update_display()

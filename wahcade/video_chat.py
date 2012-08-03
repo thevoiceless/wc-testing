@@ -38,7 +38,7 @@ class video_chat():
     
     def setup_video_streamer(self):
         #webm video pipeline, optimized for video conferencing
-        device = self.get_camera_name()
+#        device = self.get_camera_name()
         #videosrc = "v4l2src device=" + device #specify a specific camera
         videoSrc = "autovideosrc" #auto detect the source
         #videoSrc = "videotestsrc" #test source
@@ -173,9 +173,9 @@ class video_chat():
             print "Receiver Error: %s" % self.remoteip, self.remoteport, err, debug
             #self.kill_pipelines()
             self.stop_receiver()
-        elif t == gst.MESSAGE_STATE_CHANGED:
-            #print 'Message: ' + str(message)
-            old, new, pending = message.parse_state_changed()
+#        elif t == gst.MESSAGE_STATE_CHANGED:
+#            #print 'Message: ' + str(message)
+#            old, new, pending = message.parse_state_changed()
             #print "Receiver State: " + str(new)
     
     def on_sync_message(self, bus, message):
@@ -202,9 +202,9 @@ class video_chat():
             print "Stream Error: %s" % err, debug
             #self.kill_pipelines()
             self.stop_streamer()
-        elif t == gst.MESSAGE_STATE_CHANGED:
-            #print 'Stream Message: ' + str(message)
-            old, new, pending = message.parse_state_changed()
+#        elif t == gst.MESSAGE_STATE_CHANGED:
+#            #print 'Stream Message: ' + str(message)
+#            old, new, pending = message.parse_state_changed()
             #print "Stream State: " + str(new)
 
 #Creates a stand alone version of video chat

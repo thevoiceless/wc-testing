@@ -5,7 +5,7 @@
 # Application: wah!cade
 # File:        filters.py
 # Description: routines to read / write mamewah filters and lists
-# Copyright (c) 2005-2010   Andy Balcombe <http://www.anti-particle.com>
+# Created by Andy Balcombe. Extended by Zach McGaughey, Riley Moses, Devin Wilson, John Kelly and Terek Campbell of ReadyTalk
 ###
 #
 # This program is free software; you can redistribute it and/or modify
@@ -142,7 +142,7 @@ def get_dat_game_item(dat_filename):
     """read dat file"""
     #needs to be an iterator returning next item in file each time
     #f = codecs.open(dat_filename, mode='r', encoding='utf-8')
-    f, file_enc = open_file(dat_filename)
+    f, file_enc = open_file(dat_filename) #@UnusedVariable
     for line in f:
         line = line.strip()
         #look for start of item
@@ -222,7 +222,7 @@ def get_dat_game_item(dat_filename):
 def get_xml_game_item(xml_filename):
     """get game bits"""
     #mame version
-    for event, mame_element in ET.iterparse(xml_filename, events=('start', 'end')):
+    for event, mame_element in ET.iterparse(xml_filename, events=('start', 'end')): #@UnusedVariable
         #get mame version element
         if mame_element.tag == 'mame' or mame_element.tag == 'mess':
             if 'build' not in mame_element.attrib:
@@ -235,7 +235,7 @@ def get_xml_game_item(xml_filename):
             mame_element.clear()
             break
     #games
-    for event, game_element in ET.iterparse(xml_filename):
+    for event, game_element in ET.iterparse(xml_filename): #@UnusedVariable
         #for each game
         if game_element.tag == 'game' or game_element.tag == 'machine':
             d = {'rom_name': '',
@@ -329,7 +329,7 @@ def create_initial_filter(info_filename, filter_filename, list_filename, emu_ini
     for s in _sections[1:]:
         mwfilter[s] = []
     #open new list file
-    f, file_enc = open_file(list_filename, 'w')
+    f, file_enc = open_file(list_filename, 'w') #@UnusedVariable
     #get rom path & ext, etc
     rom_path = emu_ini.get('rom_path')
     if not os.path.exists(rom_path):
@@ -377,7 +377,7 @@ def create_initial_filter(info_filename, filter_filename, list_filename, emu_ini
     #check info file
     if os.path.exists(info_filename):
         #create iterator for game info
-        r, ext = os.path.splitext(info_filename)
+        r, ext = os.path.splitext(info_filename) #@UnusedVariable
         if ext == '.xml':
             mi = get_xml_game_item(info_filename)
         else:
@@ -435,7 +435,7 @@ def read_filter(filter_file):
     l=[]
     #open file
     try:
-        f, file_enc = open_file(filter_file, 'r')
+        f, file_enc = open_file(filter_file, 'r') #@UnusedVariable
     except IOError:
         print _('Error: filter file: [%s] does not exist' % (filter_file))
         return {}
@@ -473,7 +473,7 @@ def read_filter(filter_file):
 
 def write_filter(filter_spec, filter_filename):
     """write a filter file from a given spec"""
-    f, file_enc = open_file(filter_filename, 'w')
+    f, file_enc = open_file(filter_filename, 'w') #@UnusedVariable
     #write filter type
     f.write('%s\n\n' % filter_spec[_sections[0]])
     #write other sections
@@ -490,9 +490,9 @@ def write_filter(filter_spec, filter_filename):
 def create_filtered_list(original_list_filename, filter_spec, list_filename):
     """create a mamewah .lst file from <emu>-0.lst and the given spec"""
     #open empty list file
-    f, file_enc = open_file(list_filename, 'w')
+    f, file_enc = open_file(list_filename, 'w') #@UnusedVariable
     #get all games
-    all_games, len_all_games = read_filtered_list(original_list_filename)
+    all_games, len_all_games = read_filtered_list(original_list_filename) #@UnusedVariable
     all_games_roms = [l[1] for l in all_games]
     #for each item in iterator
     for game_item in all_games:
@@ -537,7 +537,7 @@ def read_filtered_list(list_filename):
     l = []
     #create an empty file if necessary
     if not os.path.isfile(list_filename):
-        f, file_enc = open_file(list_filename, 'w')
+        f, file_enc = open_file(list_filename, 'w') #@UnusedVariable
         f.close()
 
     #open file
@@ -566,7 +566,7 @@ def add_game_to_filtered_list(gd, file_obj=None, list_filename=None):
     """add game info in given dictionary to specified file or .lst file"""
     if list_filename is not None:
         #open file for appending if necessary
-        file_obj, file_enc = open_file(list_filename, 'a')
+        file_obj, file_enc = open_file(list_filename, 'a') #@UnusedVariable
     #write dictionary to file
     file_obj.writelines([
         '%s\n' % gd['rom_name'],
@@ -590,7 +590,7 @@ def add_game_to_filtered_list(gd, file_obj=None, list_filename=None):
 def write_filtered_list(list_filename, list_items):
     """write the given list items into the specified .lst file"""
     #f= codecs.open(list_filename, mode='w', encoding='utf-8')
-    f, file_enc = open_file(list_filename, 'w')
+    f, file_enc = open_file(list_filename, 'w') #@UnusedVariable
     for game_info in list_items:
         f.writelines([
             '%s\n' % game_info[GL_ROM_NAME],
@@ -613,7 +613,7 @@ def write_filtered_list(list_filename, list_items):
 def read_fav_list(favlist_filename):
     """reads a .fav list"""
     d = {}
-    f, file_enc = open_file(favlist_filename, 'r')
+    f, file_enc = open_file(favlist_filename, 'r') #@UnusedVariable
     lines = f.readlines()
     f.close()
     lines = [s.strip() for s in lines]
@@ -634,7 +634,7 @@ def read_fav_list(favlist_filename):
 
 def write_fav_list(favlist_filename, favs):
     """writes a .fav list"""
-    f, file_enc = open_file(favlist_filename, 'w')
+    f, file_enc = open_file(favlist_filename, 'w') #@UnusedVariable
     for fav_key in favs.keys():
         f.writelines([
             '%s\n' % fav_key,
@@ -670,7 +670,7 @@ def read_nms_file(nms_filename):
         return d
     #read file
     try:
-        f, file_enc = open_file(nms_filename, 'r')
+        f, file_enc = open_file(nms_filename, 'r') #@UnusedVariable
         nms_lines = f.readlines()
         f.close()
     except IOError:
@@ -706,7 +706,7 @@ def walk_dir(root, recurse=False, pattern='*', return_folders=False):
 #                pat = '*'
 #            else:
 #                pat = '*.%s' % (pat)
-            file, ext = os.path.splitext(name)
+            file1, ext = os.path.splitext(name) #@UnusedVariable
             ext = ext.lstrip('.')
             if fnmatch.fnmatch(ext, pat):
 #                if os.path.isfile(fullname) or (return_folders and os.path.isdir(fullname)):
@@ -745,7 +745,7 @@ if __name__ == '__main__':
 
 #write filter file
 def wrtFilterFile(filter_filename,mwfilter):
-    f, file_enc = open_file(filter_filename, 'w')
+    f, file_enc = open_file(filter_filename, 'w') #@UnusedVariable
     f.write('1\n\n')
     for key in _sections[1:]:
         l = mwfilter[key]
