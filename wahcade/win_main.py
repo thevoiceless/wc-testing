@@ -139,7 +139,7 @@ class WinMain(WahCade, threading.Thread):
         keyfile = CONFIG_DIR + "/confs/authkeys"
         try:
             with open(keyfile, 'r') as f:
-                key = f.readline()
+                key = f.readline().strip()             
         except:
             self.authorization = {"Authorization" : "Basic " + "user:pass".encode('base64', 'strict').strip()}
         else:
@@ -485,6 +485,7 @@ class WinMain(WahCade, threading.Thread):
                         self.supported_games_name.append(romToName[game])
                 # Get a list of games already on the server
                 data = fromstring(requests.get(self.game_url, headers=self.authorization, timeout=1).text)
+
                 games_on_server = []
                 for game in data.getiterator('game'):
                     games_on_server.append(game.find('romName').text)
@@ -493,7 +494,8 @@ class WinMain(WahCade, threading.Thread):
                     if rom not in games_on_server and rom in romToName:
                         post_data = {"romName":rom, "gameName":romToName[rom]}
                         r = requests.post(self.game_url, post_data)
-            except e:
+            except :
+                print 'Problem with server. Check connection and server credentials and try again.'
                 self.connected_to_server = False                    
 
         # Setup login
