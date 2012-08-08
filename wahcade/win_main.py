@@ -1047,19 +1047,20 @@ class WinMain(WahCade, threading.Thread):
             self.identify.sclIDs.ls.sort()
             if not self.connected_to_arduino:
                 # Add an option to register a new player
-                self.identify.sclIDs.ls.insert(0, "Register New Player") #TODO: Is this neccessary?
+                self.identify.sclIDs.ls.insert(0, "Register New Player")
             self.show_window('identify')
-            self.identify.setRFIDlbl(player_rfid)
             self.identify.sclIDs.set_selected(1)
             self.identify.sclIDs._update_display()
-            self.identify.set_lbls("", "Manually Logging In")
+            self.identify.set_lbls("Manually Logging In", "Select your name", "or register" )
             while self.current_window == 'identify':
                 self.wait_with_events(0.01)
             self.identify.set_lbls()
             if not self.connected_to_arduino:
                 if self.selected_player == "Register New Player":
                     self.identify.sclIDs.ls = old_list
+                    self.identify.set_lbls("Manually Logging In", "Select your name", "to register" )
                     self.register_new_player(str(1)) #Register new player with ID of 1 to keep track of nonRFID users
+                    self.identify.set_lbls()
 
             for v in self.player_info:
                 if v[0] == self.selected_player:
@@ -1128,9 +1129,7 @@ class WinMain(WahCade, threading.Thread):
     def register_new_player(self, player_rfid):
         """Add a new player to the database"""
         self.show_window('identify')
-        if player_rfid == "1":
-            self.identify.setRFIDlbl("Manually Logging In")
-        else:
+        if not self.selected_player == "Register New Player":
             self.identify.setRFIDlbl(player_rfid)
         self.identify.sclIDs._update_display()
         while self.current_window == 'identify':

@@ -149,10 +149,11 @@ class video_chat():
             self.receiver_running = False
 
     def kill_pipelines(self):
-        if self.receivepipe:
-            self.stop_receiver()
         if self.streampipe:
             self.stop_streamer()
+        if self.receivepipe:
+            self.stop_receiver()
+        
     
     def on_message(self, bus, message):
         t = message.type
@@ -181,10 +182,10 @@ class video_chat():
         if message.structure is None:
             return False
         name = message.structure.get_name()
+        print name
         if name == "prepare-xwindow-id":
             gtk.gdk.threads_enter()
             gtk.gdk.display_get_default().sync()
-            
             videooutput = message.src
             videooutput.set_property("force-aspect-ratio", True)
             self.WinMain.vc_box.show()
