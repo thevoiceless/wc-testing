@@ -94,7 +94,7 @@ class WinIdentify(WahCade):
         self.sclIDs.ls.sort()
         # Exclude IDs already matched to RFID values
         for v in self.WinMain.player_info:
-            if v[0] in self.sclIDs.ls:
+            if v[1] != "1" and v[0] in self.sclIDs.ls:
                 self.sclIDs.ls.remove(v[0])
 
     def set_lbls(self, lblPrompt = "Unknown RFID:", lblRFID = "____________", lblPromptText = "Select your name from the list."):

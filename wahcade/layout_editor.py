@@ -1251,7 +1251,7 @@ class WinLayout(GladeSupport, WahCade):
         #setup empty layout
         lines = [''] * 552
         #window widgets
-        for offset, widget, name in self._layout_windows:
+        for offset, widget, name in self._layout_windows: #@UnusedVariable
             if offset < 0:
                 break
             d = self.dLayout[widget]
@@ -1267,7 +1267,7 @@ class WinLayout(GladeSupport, WahCade):
                 lines[offset + 3] = ' '
             lines[offset + 4] = ' 1'
         #item widgets
-        for offset, widget, name in self._layout_items:
+        for offset, widget, name in self._layout_items: #@UnusedVariable
             d = self.dLayout[widget]
             lines[offset] = str(d['visible'])
             lines[offset + 1] = ' %s' % int(d['transparent'])
@@ -1312,7 +1312,7 @@ class WinLayout(GladeSupport, WahCade):
             d['text-col'] = '#FF0000'
             d['background-col'] = '#FFFFFF'
             d['visible'] = False
-            d['text-align'] = 2 # TODO: Change to .5 default?
+            d['text-align'] = 2
             d['width'] = 100
             d['height'] = 20
             d['x'] = 0

@@ -484,7 +484,11 @@ class WinMain(WahCade, threading.Thread):
                     if game in self.supported_games:
                         self.supported_games_name.append(romToName[game])
                 # Get a list of games already on the server
-                data = fromstring(requests.get(self.game_url, headers=self.authorization, timeout=1).text)
+                r = requests.get(self.game_url, headers=self.authorization, timeout=1)
+                if r.status_code == 401:
+                    print 'Not authorized to connect to server. Check confs/authkeys for server admin credentials'
+                    raise Exception("Not authorized to connect to server")
+                data = fromstring(r.text)
 
                 games_on_server = []
                 for game in data.getiterator('game'):
@@ -494,8 +498,7 @@ class WinMain(WahCade, threading.Thread):
                     if rom not in games_on_server and rom in romToName:
                         post_data = {"romName":rom, "gameName":romToName[rom]}
                         r = requests.post(self.game_url, post_data)
-            except :
-                print 'Problem with server. Check connection and server credentials and try again.'
+            except:
                 self.connected_to_server = False                    
 
         # Setup login
@@ -533,7 +536,10 @@ class WinMain(WahCade, threading.Thread):
             if self.connected_to_arduino:
                 self.log_in_queue = Queue.Queue()
                 # Get players from server
-            data = fromstring(requests.get(self.player_url, headers=self.authorization).text)
+            try:
+                data = fromstring(requests.get(self.player_url, headers=self.authorization).text)
+            except:
+                self.connected_to_server = False
             for player in data.getiterator('player'):
                 self.player_info.append((player.find('name').text, player.find('playerID').text)) # parse player name and RFID from xml
             self.lblUsers.set_text("No Users Logged In")
@@ -810,23 +816,25 @@ class WinMain(WahCade, threading.Thread):
             self.vc_feeds = []
             self.new_vc_feeds = []
             self.video_chat.setup_video_streamer()
-            
-            # Send the local IP to the server
-            if self.video_chat.localip != "" or self.video_chat.localip != None:
-                post_data = {"ipAddress":self.video_chat.localip, "port":self.video_chat.localport}
-                requests.post(self.connection_url, post_data, headers=self.authorization)
-            
-            self.connection_time_running = False
-            self.stop_test_connection_timers = False
-            
-            data = fromstring(requests.get(self.connection_url, headers=self.authorization).text)
-            self.vc_feeds = [(info.find('ipAddress').text, info.find('port').text) for info in data.getiterator('connection')]
-            self.new_vc_feed_updated = False
-            self.manualVCMode = False
-            
-            self.on_connection_timer()
-            self.start_timer('connection')
-            self.start_timer('tstconnect')
+            try:
+                # Send the local IP to the server
+                if self.video_chat.localip != "" or self.video_chat.localip != None:
+                    post_data = {"ipAddress":self.video_chat.localip, "port":self.video_chat.localport}
+                    requests.post(self.connection_url, post_data, headers=self.authorization)
+                
+                self.connection_time_running = False
+                self.stop_test_connection_timers = False
+                
+                data = fromstring(requests.get(self.connection_url, headers=self.authorization).text)
+                self.vc_feeds = [(info.find('ipAddress').text, info.find('port').text) for info in data.getiterator('connection')]
+                self.new_vc_feed_updated = False
+                self.manualVCMode = False
+                
+                self.on_connection_timer()
+                self.start_timer('connection')
+                self.start_timer('tstconnect')
+            except:
+                self.connected_to_server = False
         else:
             print "Video chat is disabled because no camera was found or connection issues."
     
@@ -913,7 +921,10 @@ class WinMain(WahCade, threading.Thread):
     def clean_up_video_chat(self):
         if self.connected_to_server and self.video_chat and self.video_chat.enabled:
             self.video_chat.kill_pipelines()
-            requests.delete(self.connection_url + self.video_chat.localip, headers=self.authorization)
+            try:
+                requests.delete(self.connection_url + self.video_chat.localip, headers=self.authorization)
+            except:
+                self.connected_to_server = False
             self.stop_test_connection_timers = True
        
     def parse_high_score_text(self, text_string):
@@ -941,7 +952,10 @@ class WinMain(WahCade, threading.Thread):
                                         post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": self.cabinet_name, "game":self.current_rom, "player":self.lblUsers.get_text()}                         
                                     else:
                                         post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": self.cabinet_name, "game":self.current_rom, "player":self.current_players[0]}
-                                    requests.post(self.score_url, post_data, headers=self.authorization)
+                                    try:
+                                        requests.post(self.score_url, post_data, headers=self.authorization)
+                                    except:
+                                        self.connected_to_server = False
                         else: #Handle multiple players
                             for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
                                 high_score_table[_format[i]] = line[i].rstrip()
@@ -978,7 +992,7 @@ class WinMain(WahCade, threading.Thread):
                 self.selected_player = ''
                 if len(self.score_processing_queue) > 0:
                     self.player_select.lbl1.set_text(self.score_processing_queue[len(self.score_processing_queue)-1]['score'] + "   " + self.score_processing_queue[len(self.score_processing_queue)-1]['arcadeName'])               
-                    self.show_window('playerselect') #TODO: CHECK
+                    self.show_window('playerselect')
                     self.player_select.sclPlayers._update_display()
             else:
                 if len(self.score_processing_queue) > 1:
@@ -1000,14 +1014,16 @@ class WinMain(WahCade, threading.Thread):
         
     def post_upload(self):
         """Post data for multiple players"""
-        while self.upload_queue:
-            to_upload = self.upload_queue.pop()            
-            r = requests.post(self.score_url, to_upload, headers=self.authorization)
-        self.check_connection(r.status_code)
-        self.current_window = 'main'
-        self.winMain.present()
-        self.score_processing_queue = []
-        self.upload_queue = []
+        try:
+            while self.upload_queue:
+                to_upload = self.upload_queue.pop()            
+                requests.post(self.score_url, to_upload, headers=self.authorization)
+            self.current_window = 'main'
+            self.winMain.present()
+            self.score_processing_queue = []
+            self.upload_queue = []
+        except:
+            self.connected_to_server = False
 
              
     def check_connection(self, status_code):
@@ -1031,7 +1047,7 @@ class WinMain(WahCade, threading.Thread):
             self.identify.sclIDs.ls.sort()
             if not self.connected_to_arduino:
                 # Add an option to register a new player
-                self.identify.sclIDs.ls.insert(0, "Register New Player")
+                self.identify.sclIDs.ls.insert(0, "Register New Player") #TODO: Is this neccessary?
             self.show_window('identify')
             self.identify.setRFIDlbl(player_rfid)
             self.identify.sclIDs.set_selected(1)
@@ -1043,7 +1059,7 @@ class WinMain(WahCade, threading.Thread):
             if not self.connected_to_arduino:
                 if self.selected_player == "Register New Player":
                     self.identify.sclIDs.ls = old_list
-                    self.register_new_player(str(random.randint(100000, 10000000000)))
+                    self.register_new_player(str(1)) #Register new player with ID of 1 to keep track of nonRFID users
 
             for v in self.player_info:
                 if v[0] == self.selected_player:
@@ -1112,7 +1128,10 @@ class WinMain(WahCade, threading.Thread):
     def register_new_player(self, player_rfid):
         """Add a new player to the database"""
         self.show_window('identify')
-        self.identify.setRFIDlbl(player_rfid)
+        if player_rfid == "1":
+            self.identify.setRFIDlbl("Manually Logging In")
+        else:
+            self.identify.setRFIDlbl(player_rfid)
         self.identify.sclIDs._update_display()
         while self.current_window == 'identify':
             if self.main_log == True:
@@ -1120,10 +1139,24 @@ class WinMain(WahCade, threading.Thread):
             else:
                 time.sleep(0.01)
         player_name = self.selected_player
+        
+        #If user originally registered manually, change their ID to their RFID
+        if (player_name, '1') in self.player_info and player_rfid != '1':
+            post_data = {"playerId":1, "name":player_name, "player.playerID": player_rfid}
+            try:
+                requests.put(self.player_url, post_data, headers=self.authorization)
+            except:
+                self.connected_to_server = False
+            return
+        
         if player_name != 'Register New Player' and player_name != '':
             self.player_info.append([player_name, player_rfid])
             post_data = {"name":player_name, "playerID":player_rfid}
-            requests.post(self.player_url, post_data, headers=self.authorization)
+            try:
+                requests.post(self.player_url, post_data, headers=self.authorization)
+            except:
+                self.connected_to_server = False
+                return
             self.identify.sclIDs.ls.remove(player_name)
             self.name_not_given = False
         else:
@@ -1434,6 +1467,8 @@ class WinMain(WahCade, threading.Thread):
                         else:
                             print "Video Chat is disabled (you are not connected to the server or no camera was found)."
                     elif mw_func == 'NEXT_VIDEO':
+                        if not self.video_chat_enabled:
+                            return
                         current, new_feed = self.next_video_feed()
                         if new_feed == current: #there is only one video or an error occured
                             self.manualVCMode = False
@@ -1613,7 +1648,7 @@ class WinMain(WahCade, threading.Thread):
                 self.lblHighScoreData.set_markup(_('%s%s%s') % (self.highScoreDataMarkupHead, " NOT CONNECTED TO A SERVER", self.highScoreDataMarkupTail))
             elif game_info['rom_name'] in self.supported_games:
                 highScoreInfo = self.get_score_string()
-                self.lblHighScoreData.modify_font(pango.FontDescription(self.highScoreDataLayout['font-name']))#TODO
+                self.lblHighScoreData.modify_font(pango.FontDescription(self.highScoreDataLayout['font-name']))
                 self.lblHighScoreData.set_text(highScoreInfo)
                 self.lblHighScoreData.set_markup(_('%s%s%s') % (self.highScoreDataMarkupHead, highScoreInfo, self.highScoreDataMarkupTail))
             else:
@@ -1636,7 +1671,6 @@ class WinMain(WahCade, threading.Thread):
                     self.current_emu,
                     (i + 1))
                 self.display_scaled_image(img, img_filename, self.keep_aspect, img.get_data('text-rotation'))
-        self.sclGames.truncate()
         
     def get_score_string(self):
         """Parse Scores from DB into display string"""
@@ -2564,7 +2598,10 @@ class WinMain(WahCade, threading.Thread):
         elif self.current_list_ini.get('list_type') == 'xml_remote' and self.connected_to_server:
             # XML remote-populated, so get the source URL
             sourceURL = self.props['host']+":"+self.props['port']+"/"+self.props['db']+"/game/popular?renderXML=True"
-            data = fromstring(requests.get(sourceURL, headers=self.authorization).text)
+            try:
+                data = fromstring(requests.get(sourceURL, headers=self.authorization).text)
+            except:
+                self.connected_to_server = False
             gList = []
             # Use all games to gen list
             list_filename = os.path.join(
@@ -2693,8 +2730,11 @@ class WinMain(WahCade, threading.Thread):
         #stop the timer if needed
         if self.stop_test_connection_timers:
             return False
-
-        data = fromstring(requests.get(self.connection_url, headers=self.authorization).text)
+        try:
+            data = fromstring(requests.get(self.connection_url, headers=self.authorization).text)
+        except:
+            self.connected_to_server = False
+            return False
 #        print "Checking for IP Addresses: " + str(len(data.getiterator('connection'))) + " found"
         
         #update the local list of feeds if it has changed
@@ -2719,7 +2759,11 @@ class WinMain(WahCade, threading.Thread):
                     self.remote_ip = [ipAddr.find('ipAddress').text, ipAddr.find('port').text]
                     if not self.valid_remote_ip(*self.remote_ip):
                         print 'could not connect to', self.remote_ip[0], self.remote_ip[1], '- removing it from server'
-                        requests.delete(self.connection_url + self.remote_ip[0], headers=self.authorization)
+                        try:
+                            requests.delete(self.connection_url + self.remote_ip[0], headers=self.authorization)
+                        except:
+                            self.connected_to_server = False
+                            return False
                         self.on_connection_timer()
                         return True
                     self.video_chat.set_remote_info(ipAddr.find('ipAddress').text, ipAddr.find('port').text)
@@ -2740,16 +2784,21 @@ class WinMain(WahCade, threading.Thread):
             return False
         
         found_local = False
-        data = fromstring(requests.get(self.connection_url, headers=self.authorization).text)
-        for ipAddr in data.getiterator('connection'):
-            if ipAddr.find('ipAddress').text == self.video_chat.localip:
-                found_local = True
-                break
-        if not found_local:
-            print 'couldnt find local ip'
-            post_data = {"ipAddress":self.video_chat.localip, "port":self.video_chat.localport}
-            requests.post(self.connection_url, post_data, headers=self.authorization)
-        return True
+        try:
+            data = fromstring(requests.get(self.connection_url, headers=self.authorization).text)
+        
+            for ipAddr in data.getiterator('connection'):
+                if ipAddr.find('ipAddress').text == self.video_chat.localip:
+                    found_local = True
+                    break
+            if not found_local:
+                print 'couldnt find local ip'
+                post_data = {"ipAddress":self.video_chat.localip, "port":self.video_chat.localport}
+                requests.post(self.connection_url, post_data, headers=self.authorization)
+            return True
+        except:
+            self.connected_to_server = False
+            return False
 
     def start_timer(self, timer_type):
         """Start given timer"""

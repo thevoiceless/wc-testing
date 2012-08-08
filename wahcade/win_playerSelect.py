@@ -66,10 +66,7 @@ class WinPlayerSelect(WahCade):
         self.sclPlayers.connect('mouse-double-click', self.player_selected)
         # Set up IDs
         self.sclPlayers.ls = [l for l in self.lsPlayers]
-        self.sclPlayers.ls.sort()
-        
-        ## TODO: Exclude IDs already matched to RFID values
-        
+        self.sclPlayers.ls.sort()        
         # Init window
         self.lblScore.set_text("Who's score was this?")
         self.lbl1.set_text("-------------")
@@ -85,7 +82,6 @@ class WinPlayerSelect(WahCade):
         """Selected user identity changed"""
         # Update list widget
         self.sclPlayers._update_display()
-        #print self.sclIDs.ls[self.sclIDs.get_selected()]
         return
     
     def player_selected(self, *args):
