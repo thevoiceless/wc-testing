@@ -536,17 +536,12 @@ class WinMain(WahCade, threading.Thread):
             if self.connected_to_arduino:
                 self.log_in_queue = Queue.Queue()
                 # Get players from server
-            try:
-                data = fromstring(requests.get(self.player_url, headers=self.authorization).text)
-            except:
-                self.connected_to_server = False
-            for player in data.getiterator('player'):
-                self.player_info.append((player.find('name').text, player.find('playerID').text)) # parse player name and RFID from xml
+            self.player_info = self.get_player_info()
             self.lblUsers.set_text("No Users Logged In")
             self.lblUsers.show()
        
         # Generate unregistered user list
-        self.identify.Setup_IDs_list()
+        self.identify.Setup_IDs_list() #TODO: Pull from server
         pygame.init()
         sound_files = os.listdir(CONFIG_DIR + '/sounds/')
         self.sounds = []
@@ -648,6 +643,16 @@ class WinMain(WahCade, threading.Thread):
         self.on_sclGames_changed()
         ### __INIT__ Complete
         self.init = False
+    
+    def get_player_info(self):
+        players = []
+        try:
+            data = fromstring(requests.get(self.player_url, headers=self.authorization).text)
+        except:
+            self.connected_to_server = False
+        for player in data.getiterator('player'):
+            players.append((player.find('name').text, player.find('playerID').text)) # parse player name and RFID from xml
+        return players
     
     def responseToDialog(self, entry, dialog, response):
         dialog.response(response)
@@ -1029,25 +1034,31 @@ class WinMain(WahCade, threading.Thread):
     def check_connection(self, status_code):
         if ((status_code - 200) < 100 and (status_code - 200) >= 0) or status_code == 500:
             self.connected_to_server = True
-#            print "Successfully connected to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db']
         else:
             self.connected_to_server = False
-#            print "Failed to connect to", self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + ", Status Code:", status_code
-             
+    def log_user_in(self, player_name):
+        self.current_players.append(player_name)
+        if self.lblUsersLoggedOut.get_visible():
+            self.lblUsersLoggedOut.hide()
+        self.lblUsersLoggedIn.set_text(player_name + " has logged in.")
+        self.lblUsersLoggedIn.show()
+        self.timeLoginShown = time.time()
+        self.lblUsers.set_text(self.get_logged_in_user_string(self.current_players))
+    
     def log_in(self, player_rfid):
         """Logs a player in"""
+        self.identify.Setup_IDs_list()
         self.selected_player = '' # resets self.selected_player for later use
         player_name = ''
         if player_rfid == "Manual Login": # If the player logs in with backslash
             # Because we are using the identify window rather than creating a new one we have to temporariy overwrite this list
-            old_list = self.identify.sclIDs.ls
+            old_list = self.identify.sclIDs.ls 
             self.identify.sclIDs.ls = []
+            #Add all registered plays to the list
             for v in self.player_info:
                 self.identify.sclIDs.ls.append(v[0])
             self.identify.sclIDs.ls.sort()
-            if not self.connected_to_arduino:
-                # Add an option to register a new player
-                self.identify.sclIDs.ls.insert(0, "Register New Player")
+            self.identify.sclIDs.ls.insert(0, "Register New Player")
             self.show_window('identify')
             self.identify.sclIDs.set_selected(1)
             self.identify.sclIDs._update_display()
@@ -1055,47 +1066,53 @@ class WinMain(WahCade, threading.Thread):
             while self.current_window == 'identify':
                 self.wait_with_events(0.01)
             self.identify.set_lbls()
-            if not self.connected_to_arduino:
-                if self.selected_player == "Register New Player":
-                    self.identify.sclIDs.ls = old_list
-                    self.identify.set_lbls("Manually Logging In", "Select your name", "to register" )
-                    self.register_new_player(str(1)) #Register new player with ID of 1 to keep track of nonRFID users
-                    self.identify.set_lbls()
-
-            for v in self.player_info:
-                if v[0] == self.selected_player:
-                    player_rfid = v[1]
-                    break
+            #If logging out return out of function
+            if self.selected_player in self.current_players:
+                self.log_out(self.selected_player)
+                self.identify.sclIDs.ls = old_list #Reset list
+                return
+            if self.selected_player == "Register New Player":
+                self.identify.sclIDs.ls = old_list
+                self.identify.sclIDs.set_selected(0) #Put pointer at top of list
+                self.identify.set_lbls("Manually Logging In", "Select your name", "to register" )
+                self.register_new_player(str(1)) #Register new player with ID of 1 to keep track of nonRFID users
+                self.identify.set_lbls()
+                return
+            player_name = self.selected_player
+            #Find ID for player
+            player_rfid = next((v[1] for v in self.player_info if v[0] == self.selected_player), "")
+            #Reset the items
             self.selected_player = ''
             self.identify.sclIDs.ls = old_list
+            #Operation was cancelled
             if player_rfid == "Manual Login":
                 print "No name selected, not logging in"
                 return
-        if self.recent_log and self.last_log == player_rfid: # Prevents the reader from logging someone in and then out immediately
+            self.log_user_in(player_name)
             return
-        if not self.timer_existing:
+        #End manual log in specific tasks
+        #Prevent the reader from logging someone in and then out immediately
+        if self.recent_log and self.last_log == player_rfid:
+            return
+        if not self.timer_existing: #TODO: Back here
             self.timer_existing = True
             self.start_timer('login')
-        for v in self.player_info:
-            if v[1] == player_rfid:
-                player_name = v[0]
-                break
-        if player_name in self.current_players: # If player is logged in, log them out
+        if player_name == "":
+            player_name = next((v[0] for v in self.player_info if v[1] == player_rfid), "")
+        # If player is logged in, log them out
+        if player_name in self.current_players: 
             self.recent_log = True
             self.last_log = player_rfid
             self.log_out(player_name)
-        elif player_name != '': # Log the player in
+        # Log the player in
+        elif player_name != '': 
             self.recent_log = True
             self.last_log = player_rfid
-            self.current_players.append(player_name)
-            if self.lblUsersLoggedOut.get_visible():
-                self.lblUsersLoggedOut.hide()
-            self.lblUsersLoggedIn.set_text(player_name + " has logged in.")
-            self.lblUsersLoggedIn.show()
-            self.timeLoginShown = time.time()
-            self.lblUsers.set_text(self.get_logged_in_user_string(self.current_players))
-        else: # If player doesn't exist then add them to DB
+            self.log_user_in(player_name)
+        # If player doesn't exist then add them to DB
+        else:
             self.register_new_player(player_rfid)
+            self.identify.sclIDs.set_selected(0)
             if self.name_not_given:
                 self.recent_log = True
                 self.last_log = player_rfid
@@ -1103,12 +1120,11 @@ class WinMain(WahCade, threading.Thread):
                     self.timer_existing = True
                     self.start_timer('login')
                 return
-            self.log_in(player_rfid)
             
     def log_out(self, player_name = "All"):
         """Logs a player out"""
         if player_name == "All":
-            self.current_players = []
+            del self.current_players[:]
             if self.lblUsersLoggedIn.get_visible():
                 self.lblUsersLoggedIn.hide()
             self.lblUsersLoggedOut.set_text("All users have been logged out.")
@@ -1129,7 +1145,7 @@ class WinMain(WahCade, threading.Thread):
     def register_new_player(self, player_rfid):
         """Add a new player to the database"""
         self.show_window('identify')
-        if not self.selected_player == "Register New Player":
+        if self.selected_player != "Register New Player":
             self.identify.setRFIDlbl(player_rfid)
         self.identify.sclIDs._update_display()
         while self.current_window == 'identify':
@@ -1138,16 +1154,22 @@ class WinMain(WahCade, threading.Thread):
             else:
                 time.sleep(0.01)
         player_name = self.selected_player
-        
         #If user originally registered manually, change their ID to their RFID
         if (player_name, '1') in self.player_info and player_rfid != '1':
             post_data = {"playerId":1, "name":player_name, "player.playerID": player_rfid}
             try:
                 requests.put(self.player_url, post_data, headers=self.authorization)
+                self.name_not_given = True
+                if player_name not in self.current_players:
+                    self.log_user_in(player_name) 
+                #Update player info               
+                self.player_info.remove((player_name, '1'))
+                self.player_info.append([player_name, player_rfid])
+                self.identify.sclIDs.ls.remove(player_name)
             except:
-                self.connected_to_server = False
+                self.connected_to_server = True
+                self.name_not_given = False
             return
-        
         if player_name != 'Register New Player' and player_name != '':
             self.player_info.append([player_name, player_rfid])
             post_data = {"name":player_name, "playerID":player_rfid}
@@ -1158,6 +1180,9 @@ class WinMain(WahCade, threading.Thread):
                 return
             self.identify.sclIDs.ls.remove(player_name)
             self.name_not_given = False
+            self.log_user_in(player_name)
+            self.hide_window('identify')
+            return
         else:
             print "No player name given, not updating lists"
             self.name_not_given = True                
@@ -1301,6 +1326,7 @@ class WinMain(WahCade, threading.Thread):
                 if mw_functions:
                     break
             for mw_func in mw_functions:
+#                print mw_func
                 # Which function?
                 if mw_func == 'ID_SHOW' and current_window == 'main' and self.identify.ldap.LDAP_connected and self.connected_to_server:  # Show identify window any time
 #                    if self.connected_to_arduino:
@@ -1567,7 +1593,10 @@ class WinMain(WahCade, threading.Thread):
                         self.selected_player = ''
                         self.hide_window('identify')
                     elif mw_func in ['ID_SELECT']:
-                        self.selected_player = self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()]
+                        try:
+                            self.selected_player = self.identify.sclIDs.ls[self.identify.sclIDs.get_selected()]
+                        except:
+                            pass
                         self.hide_window('identify')
                     elif mw_func in ['ID_UP_1_NAME']:
                         self.identify.sclIDs.scroll((int(self.scroll_count / 20) * -1) - 1)
@@ -1717,11 +1746,14 @@ class WinMain(WahCade, threading.Thread):
             if len(self.sounds) != 0:
                 sound_file = self.sounds[random.randrange(0, len(self.sounds))]
                 if str(sound_file).endswith(".wav") or str(sound_file).endswith(".mp3") or str(sound_file).endswith(".mp4"):
-                    pygame.mixer.init() #Safe to call multiple times
-                    pygame.mixer.music.load(sound_file)
-                    pygame.mixer.music.play()
-                    self.portal_time_last_played = time.time()
-                    #pygame.mixer.quit #Use if you want to re-initialize mixer with different args
+                    try:
+                        pygame.mixer.init() #Safe to call multiple times
+                        pygame.mixer.music.load(sound_file)
+                        pygame.mixer.music.play()
+                        self.portal_time_last_played = time.time()
+                        #pygame.mixer.quit #Use if you want to re-initialize mixer with different args
+                    except:
+                        pass
         return True
             
     def on_scrsave_timer(self):
@@ -2734,7 +2766,6 @@ class WinMain(WahCade, threading.Thread):
         except:
             self.connected_to_server = False
             return False
-#        print "Checking for IP Addresses: " + str(len(data.getiterator('connection'))) + " found"
         
         #update the local list of feeds if it has changed
         feeds = [(info.find('ipAddress').text, info.find('port').text) for info in data.getiterator('connection')]
@@ -2791,7 +2822,6 @@ class WinMain(WahCade, threading.Thread):
                     found_local = True
                     break
             if not found_local:
-                print 'couldnt find local ip'
                 post_data = {"ipAddress":self.video_chat.localip, "port":self.video_chat.localport}
                 requests.post(self.connection_url, post_data, headers=self.authorization)
             return True
@@ -2819,7 +2849,8 @@ class WinMain(WahCade, threading.Thread):
             self.joystick_timer = gobject.timeout_add(50, self.joy.poll, self.on_winMain_key_press)
         # Login timer
         elif timer_type == 'login':
-            self.timeout = 5; # Number of seconds till recent_log times out
+            
+            self.timeout = 4; # Number of seconds till recent_log times out
             self.login_timer = gobject.timeout_add(self.timeout * 1000, self.reset_recent_log)
         elif timer_type == 'portal':
             if self.portal_time:
@@ -3078,7 +3109,6 @@ class WinMain(WahCade, threading.Thread):
         while(self.running):
             # Checks if there is an RFID waiting in the output buffer of the arduino
             if self.rfid_reader.inWaiting() >= 12:
-#                print "reading card"
                 self.scrsave_time = time.time()
                 if self.scrsaver.running:
                     self.scrsaver.stop_scrsaver()

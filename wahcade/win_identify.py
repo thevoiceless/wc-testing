@@ -90,9 +90,11 @@ class WinIdentify(WahCade):
 
     def Setup_IDs_list(self):
         """Generates the list of unregistered users"""
+        self.WinMain.player_info = self.WinMain.get_player_info()
         self.sclIDs.ls = [l for l in self.lsIDs]
         self.sclIDs.ls.sort()
         # Exclude IDs already matched to RFID values
+        print self.WinMain.player_info
         for v in self.WinMain.player_info:
             if v[1] != "1" and v[0] in self.sclIDs.ls:
                 self.sclIDs.ls.remove(v[0])
