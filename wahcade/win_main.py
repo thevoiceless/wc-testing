@@ -793,7 +793,7 @@ class WinMain(WahCade, threading.Thread):
                     self.log_in(self.log_in_queue.get())
                     self.main_log = False
             # If the game supports high scores run the HiToText executions
-            if self.current_rom in self.supported_games and len(self.current_players) != 0:
+            if self.current_rom in self.supported_games:
                 htt_command = self.htt_read
                 if not onWindows:
                     htt_command = "mono " + self.htt_read
@@ -946,15 +946,21 @@ class WinMain(WahCade, threading.Thread):
                         for column in line:
                             high_score_table[column] = '' # Initialize dictionary values of table (eg. Rank, Name, Score)
                     else: #not the first (formatting) line
-                        if len(self.current_players) == 1:
+                        if len(self.current_players) <= 1:
                             for i in range(0, len(line)): # Go to length of line rather than format because format can be wrong sometimes
                                 high_score_table[_format[i]] = line[i].rstrip() #remove whitespace
                             if 'SCORE' in high_score_table: # If high score table has score
                                 if high_score_table['SCORE'] is not '0': # and score is not 0, check if player exists in DB
                                     if 'NAME' in high_score_table:
-                                        post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": self.cabinet_name, "game":self.current_rom, "player":self.lblUsers.get_text()}                         
+                                        if len(self.current_players) == 0:
+                                            post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": self.cabinet_name, "game":self.current_rom, "player":"Anonymous Coward"}
+                                        else:
+                                            post_data = {"score": high_score_table['SCORE'], "arcadeName":high_score_table['NAME'], "cabinetID": self.cabinet_name, "game":self.current_rom, "player":self.current_players[0]}                         
                                     else:
-                                        post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": self.cabinet_name, "game":self.current_rom, "player":self.current_players[0]}
+                                        if len(self.current_players) == 0:
+                                            post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": self.cabinet_name, "game":self.current_rom, "player":"Anonymous Coward"}
+                                        else:
+                                            post_data = {"score": high_score_table['SCORE'], "arcadeName":"", "cabinetID": self.cabinet_name, "game":self.current_rom, "player":self.current_players[0]}
                                     try:
                                         requests.post(self.score_url, post_data, headers=self.authorization)
                                     except:
