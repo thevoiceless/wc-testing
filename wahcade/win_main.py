@@ -467,7 +467,6 @@ class WinMain(WahCade, threading.Thread):
         self.emu_ini = None
         self.layout_file = ''
         self.load_emulator()
-                
         # Get a list of games already on the server
         self.game_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/game/"
         self.player_url = self.props['host'] + ":" + self.props['port'] + "/" + self.props['db'] + "/rest/player/rcade/"
@@ -542,9 +541,9 @@ class WinMain(WahCade, threading.Thread):
             self.player_info = self.get_player_info()
             self.lblUsers.set_text("No Users Logged In")
             self.lblUsers.show()
-            
         # Generate unregistered user list
-        self.identify.Setup_IDs_list()
+        if self.player_info:
+            self.identify.Setup_IDs_list()
         pygame.init()
         sound_files = os.listdir(CONFIG_DIR + '/sounds/')
         self.sounds = []
@@ -651,11 +650,11 @@ class WinMain(WahCade, threading.Thread):
         players = []
         try:
             data = fromstring(requests.get(self.player_url, headers=self.authorization).text)
+            for player in data.getiterator('player'):
+                players.append((player.find('name').text, player.find('playerID').text)) # parse player name and RFID from xml
+            return players
         except:
             self.connected_to_server = False
-        for player in data.getiterator('player'):
-            players.append((player.find('name').text, player.find('playerID').text)) # parse player name and RFID from xml
-        return players
     
     def responseToDialog(self, entry, dialog, response):
         dialog.response(response)
