@@ -27,22 +27,16 @@ class video_chat():
         self.receivepipe = None
 
         self.video_width, self.video_height = 320, 240
-        #self.localip, self.localport = self.WinMain.local_IP, str(self.get_open_port())
         self.localip, self.localport = str(self.get_local_ip()), str(self.get_open_port())
         #self.localip = "127.0.0.1" #manual override for testing on one machine
         #self.localip = "localhost" #manual override for testing on one machine
-        #print self.localip + " " + self.localport 
         self.remoteip, self.remoteport = "", "" #self.localip, self.localport #do a video loopback initially
         
         self.enabled = self.camera_available() #disables video chat if no cameras are found
     
     def setup_video_streamer(self):
         #webm video pipeline, optimized for video conferencing
-#        device = self.get_camera_name()
-        #videosrc = "v4l2src device=" + device #specify a specific camera
         videoSrc = "autovideosrc" #auto detect the source
-        #videoSrc = "videotestsrc" #test source
-        #v4l2src device=" + device + "
         command = videoSrc + " ! video/x-raw-rgb, width=" + str(self.video_width) + ", height=" + str(self.video_height) + " "
         command += "! ffmpegcolorspace ! vp8enc speed=2 max-latency=2 quality=10.0 max-keyframe-distance=3 threads=5 " 
         command += "! queue2 ! mux. autoaudiosrc ! audioconvert ! vorbisenc " 
@@ -50,7 +44,8 @@ class video_chat():
         command += "! tcpserversink host=" + self.localip + " port=" + self.localport
         
         self.streampipe = gst.parse_launch(command)
-        self.streampipe.set_state(gst.STATE_PLAYING) #start the video stream
+        #start the video stream
+        self.streampipe.set_state(gst.STATE_PLAYING)
         bus = self.streampipe.get_bus()
         bus.add_signal_watch()
         bus.connect("message", self.on_stream_message)
@@ -153,7 +148,6 @@ class video_chat():
             self.stop_streamer()
         if self.receivepipe:
             self.stop_receiver()
-        
     
     def on_message(self, bus, message):
         t = message.type
@@ -257,11 +251,10 @@ class standalone_player():
         window.add(fixed)
         
         window.show_all()
-        
-        #print self.vc.camera_available()
     
     def OnStreamStart(self, widget):
         self.vc.setup_video_streamer()
+        
     def OnStreamStop(self, widget):
         self.vc.stop_streamer()
     

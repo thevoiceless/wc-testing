@@ -88,16 +88,25 @@ class WinIdentify(WahCade):
         """ID selected"""
         return
 
-    def Setup_IDs_list(self):
+    def Setup_IDs_list(self, login_type='automatic'):
         """Generates the list of unregistered users"""
-        self.WinMain.player_info = self.WinMain.get_player_info()
-        self.sclIDs.ls = [l for l in self.lsIDs]
-        self.sclIDs.ls.sort()
-        # Exclude IDs already matched to RFID values
-        print self.WinMain.player_info
-        for v in self.WinMain.player_info:
-            if v[1] != "1" and v[0] in self.sclIDs.ls:
-                self.sclIDs.ls.remove(v[0])
+        if login_type == 'automatic':
+            self.WinMain.player_info = self.WinMain.get_player_info()
+            self.sclIDs.ls = [l for l in self.lsIDs]
+            self.sclIDs.ls.sort()
+            # Exclude IDs already matched to RFID values
+            for v in self.WinMain.player_info:
+                if v[1] != "1" and v[0] in self.sclIDs.ls:
+                    self.sclIDs.ls.remove(v[0])
+        elif login_type == 'manual':
+            self.WinMain.player_info = self.WinMain.get_player_info()
+            self.sclIDs.ls = [l for l in self.lsIDs]
+            self.sclIDs.ls.sort()
+            # Exclude IDs already matched to RFID values
+            for v in self.WinMain.player_info:
+                if v[1] == "1" and v[0] in self.sclIDs.ls:
+                    self.sclIDs.ls.remove(v[0])
+            
 
     def set_lbls(self, lblPrompt = "Unknown RFID:", lblRFID = "____________", lblPromptText = "Select your name from the list."):
         self.lblPrompt.set_text(lblPrompt)

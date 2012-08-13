@@ -325,7 +325,7 @@ class WinMain(WahCade, threading.Thread):
         self.supported_game_file = open('supported_games.lst')
         for line in self.supported_game_file:
             self.supported_games.append(line.strip())
-
+        self.supported_game_file.close()
         # List
         self.sclGames.auto_update = False
         self.sclGames.display_limiters = self.display_limiters
@@ -497,7 +497,7 @@ class WinMain(WahCade, threading.Thread):
                 for rom in self.supported_games:
                     if rom not in games_on_server and rom in romToName:
                         post_data = {"romName":rom, "gameName":romToName[rom]}
-                        r = requests.post(self.game_url, post_data)
+                        r = requests.post(self.game_url, post_data, headers=self.authorization)
             except:
                 self.connected_to_server = False                    
 
@@ -522,9 +522,12 @@ class WinMain(WahCade, threading.Thread):
                 arduino_mount = result[len(result) - 1].strip()
                 # Create the final path
                 arduino_mount = '/dev' + arduino_mount[arduino_mount.rfind('/'):]
-                self.rfid_reader = serial.Serial(arduino_mount, 9600)
-                self.connected_to_arduino = True
-                print "Successfully connected to Arduino mounted at", arduino_mount
+                try:
+                    self.rfid_reader = serial.Serial(arduino_mount, 9600)
+                    self.connected_to_arduino = True
+                    print "Successfully connected to Arduino mounted at", arduino_mount
+                except:
+                    print "Could not connect to Arduino. Please restart and try again."
                 # Begin the thread for reading from arduino
                 threading.Thread.__init__(self)
                 self.start()
@@ -535,13 +538,13 @@ class WinMain(WahCade, threading.Thread):
             self.running = True
             if self.connected_to_arduino:
                 self.log_in_queue = Queue.Queue()
-                # Get players from server
+            # Get players from server
             self.player_info = self.get_player_info()
             self.lblUsers.set_text("No Users Logged In")
             self.lblUsers.show()
-       
+            
         # Generate unregistered user list
-        self.identify.Setup_IDs_list() #TODO: Pull from server
+        self.identify.Setup_IDs_list()
         pygame.init()
         sound_files = os.listdir(CONFIG_DIR + '/sounds/')
         self.sounds = []
@@ -868,7 +871,6 @@ class WinMain(WahCade, threading.Thread):
         self.imgArtwork1.show()
         self.video_chat.stop_receiver()
         
-    
     def valid_remote_ip(self, remoteip, remoteport):
         try:
             import urllib2
@@ -887,7 +889,6 @@ class WinMain(WahCade, threading.Thread):
             self.new_vc_feed_updated = False
             #find the current ip in the new list
             new_feed = self.find_in_new_feed_list(self.video_chat.remoteip)
-            
             #if the ip isn't in the new list, search for a reference ip that is in both lists
             if new_feed == -1:
                 for index in range(current - 1,0,-1):
@@ -895,15 +896,12 @@ class WinMain(WahCade, threading.Thread):
                     new_feed = self.find_in_new_feed_list(ip)
                     if new_feed != -1:
                         break
-            
             #all previous IPs were removed, show the first video on the list
             if new_feed == -1:
                 new_feed = 0 
-            
             #update the feed list
             self.vc_feeds = self.new_vc_feeds
             current = new_feed
-        
         #return the current video index and the one after it in a circular queue
         return current, ((current + 1) % len(self.vc_feeds))
                 
@@ -978,14 +976,12 @@ class WinMain(WahCade, threading.Thread):
         if len(self.current_players) > 1 and len(multiple_score_list) > 0:
             self.upload_queue = []
             self.score_processing_queue = []
-            
             for score in multiple_score_list:
                 self.score_processing_queue.append(score)
             # Set the labels for display
             self.player_select.lbl1.set_text(self.score_processing_queue[len(self.score_processing_queue)-1]['score'] + "   " + self.score_processing_queue[len(self.score_processing_queue)-1]['arcadeName'])               
             self.show_window('playerselect')
-            self.player_select.sclPlayers._update_display()
-                
+            self.player_select.sclPlayers._update_display()     
 
     def close_player_select(self, widget, data = None):
         """When the player select screen closes, this method starts"""
@@ -1029,13 +1025,13 @@ class WinMain(WahCade, threading.Thread):
             self.upload_queue = []
         except:
             self.connected_to_server = False
-
              
     def check_connection(self, status_code):
         if ((status_code - 200) < 100 and (status_code - 200) >= 0) or status_code == 500:
             self.connected_to_server = True
         else:
             self.connected_to_server = False
+            
     def log_user_in(self, player_name):
         self.current_players.append(player_name)
         if self.lblUsersLoggedOut.get_visible():
@@ -1047,10 +1043,11 @@ class WinMain(WahCade, threading.Thread):
     
     def log_in(self, player_rfid):
         """Logs a player in"""
-        self.identify.Setup_IDs_list()
+#        self.identify.Setup_IDs_list()
         self.selected_player = '' # resets self.selected_player for later use
         player_name = ''
         if player_rfid == "Manual Login": # If the player logs in with backslash
+            self.identify.Setup_IDs_list('manual')
             # Because we are using the identify window rather than creating a new one we have to temporariy overwrite this list
             old_list = self.identify.sclIDs.ls 
             self.identify.sclIDs.ls = []
@@ -1079,6 +1076,9 @@ class WinMain(WahCade, threading.Thread):
                 self.identify.set_lbls()
                 return
             player_name = self.selected_player
+            #If the user backs out of logging in exit function
+            if player_name == "":
+                return
             #Find ID for player
             player_rfid = next((v[1] for v in self.player_info if v[0] == self.selected_player), "")
             #Reset the items
@@ -1094,7 +1094,7 @@ class WinMain(WahCade, threading.Thread):
         #Prevent the reader from logging someone in and then out immediately
         if self.recent_log and self.last_log == player_rfid:
             return
-        if not self.timer_existing: #TODO: Back here
+        if not self.timer_existing:
             self.timer_existing = True
             self.start_timer('login')
         if player_name == "":
@@ -1144,7 +1144,7 @@ class WinMain(WahCade, threading.Thread):
             
     def register_new_player(self, player_rfid):
         """Add a new player to the database"""
-        self.show_window('identify')
+        self.show_window('identify') #TODO: Something here
         if self.selected_player != "Register New Player":
             self.identify.setRFIDlbl(player_rfid)
         self.identify.sclIDs._update_display()
@@ -1326,7 +1326,6 @@ class WinMain(WahCade, threading.Thread):
                 if mw_functions:
                     break
             for mw_func in mw_functions:
-#                print mw_func
                 # Which function?
                 if mw_func == 'ID_SHOW' and current_window == 'main' and self.identify.ldap.LDAP_connected and self.connected_to_server:  # Show identify window any time
 #                    if self.connected_to_arduino:
@@ -1741,7 +1740,7 @@ class WinMain(WahCade, threading.Thread):
         return score_string
     
     def portal_timer(self):
-        sound_time = random.randint((5*60), (15*60))
+        sound_time = random.randint((5*60), (20*60))
         if int(time.time() - self.portal_time_last_played) >= sound_time:
             if len(self.sounds) != 0:
                 sound_file = self.sounds[random.randrange(0, len(self.sounds))]
@@ -1994,13 +1993,11 @@ class WinMain(WahCade, threading.Thread):
         f = open(self.lock_filename, 'w')
         f.write(cmd)
         f.close()
-
         if not debug_mode and sys.platform != 'win32':
             self.log_msg('******** Command from Wah!Cade is:  %s ' % cmd)
             # Redirect output to log file
             self.log_msg('******** Begin command output')
             cmd = '%s >> %s 2>&1' % (cmd, self.log_filename)
-
         # Change to emu dir
         try:
             pwd = os.getcwd()
@@ -2012,7 +2009,6 @@ class WinMain(WahCade, threading.Thread):
             self.p = Popen(cmd, shell=False)
         else:
             self.p = Popen(cmd, shell=True)
-        
         # Begins video recording of rom
         if self.options.record:
             self.start_recording_video(rom)
@@ -2162,7 +2158,6 @@ class WinMain(WahCade, threading.Thread):
             # Append lists to both arrays
             self.game_lists.append([ini.get('list_title'), i, ini.getint('cycle_list'), ini.get('list_type')]) 
             self.game_lists_normal.append([ini.get('list_title'), i, ini.getint('cycle_list'), ini.get('list_type')])        
-
         # Load favorites list
         fav_name = os.path.join(CONFIG_DIR, 'files', '%s.fav' % (self.current_emu))
         if not os.path.isfile(fav_name):
@@ -2250,34 +2245,27 @@ class WinMain(WahCade, threading.Thread):
         layout_path = os.path.join(CONFIG_DIR, 'layouts', self.layout)
         # Store to member variable
         self.layout_path = layout_path
-        
         # Layout has not changed, but emulator has. Rebuild visibility for artwork, etc
         if layout_file == self.layout_file:
             self.rebuild_visible_lists()
-            return
-        
+            return  
         # Okay to setup
         self.layout_file = layout_file
-        layout_info = yaml.load(open(self.layout_file, 'r'))
-        
+        layout_info = yaml.load(open(self.layout_file, 'r'))        
         # Formatting for the high score labels
         hs_data_lay = layout_info['main']['HighScoreData']
         self.highScoreDataMarkupHead = ('<span color="%s" size="%s">' % (hs_data_lay['text-col'], hs_data_lay['font-size']))
         self.highScoreDataMarkupTail = '</span>'
-        self.highScoreDataLayout = hs_data_lay
-        
+        self.highScoreDataLayout = hs_data_lay        
         self.scroll_selected_color = layout_info['main']['GameList']['supported-col']
-        
         # Formatting for the games overlay letters
         overlay_lay = layout_info['main']['ScrollOverlay']
         self.gamesOverlayMarkupHead = ('<span color="%s" size="%s">' % (overlay_lay['text-col'], overlay_lay['font-size']))
         self.gamesOverlayMarkupTail = '</span>'
-        
         # Formatting for the IDs overlay letters
         overlay_lay = layout_info['identify']['ScrollOverlay']
         self.IDsOverlayMarkupHead = ('<span color="%s" size="%s">' % (overlay_lay['text-col'], overlay_lay['font-size']))
         self.IDsOverlayMarkupTail = '</span>'
-        
         # Set up main Fixd window
         main = self.winMain
         main_lay = layout_info['main']['fixdMain']
@@ -2291,8 +2279,7 @@ class WinMain(WahCade, threading.Thread):
         # append it to the end of the dirpath to the layouts file
         if not os.path.dirname(main_img):
             main_img = os.path.join(self.layout_path, main_img)
-        self.imgBackground.set_data('layout-image', main_img)    
-                
+        self.imgBackground.set_data('layout-image', main_img)        
         # Set up options Fixd window
         opt = self.options
         opt_lay = layout_info['options']['fixdOpt']
@@ -2313,7 +2300,6 @@ class WinMain(WahCade, threading.Thread):
         opt.lblHeading.set_text(_('Options'))
         opt.lblSettingHeading.set_text(_('Current Setting:'))
         opt.lblSettingValue.set_text('')
-        
         # Set up message Fixd window
         msg = self.message
         msg_lay = layout_info['message']['fixdMsg']
@@ -2329,15 +2315,13 @@ class WinMain(WahCade, threading.Thread):
         # append it to the end of the dirpath to the layouts file
         if not os.path.dirname(msg_img):
             msg_img = os.path.join(self.layout_path, msg_img)
-        msg.imgBackground.set_data('layout-image', msg_img)
-        
+        msg.imgBackground.set_data('layout-image', msg_img)       
         # Set up ScreenSaver Fixd window
         scr = self.scrsaver
         self.fixd.move(scr.winScrSaver, 0, 0)
         scr.winScrSaver.set_size_request(main_lay['width'], main_lay['height']) # Match main window
         scr.winScrSaver.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('black'))
         scr.drwVideo.set_size_request(main_lay['width'], main_lay['height'])
-        
         # Set up Identify window
         # Match sizes of main window
         idtfy = self.identify
@@ -2350,8 +2334,7 @@ class WinMain(WahCade, threading.Thread):
         idtfy_img = idtfy_lay['use-image']
         if not os.path.dirname(idtfy_img):
             idtfy_img = os.path.join(self.layout_path, idtfy_img)
-        idtfy.imgBackground.set_from_file(idtfy_img)
-            
+        idtfy.imgBackground.set_from_file(idtfy_img)            
         # Set up Player Select window
         plyr = self.player_select
         plyr_lay = layout_info['playerselect']['fixdSelect']
@@ -2363,8 +2346,7 @@ class WinMain(WahCade, threading.Thread):
         plyr_img = plyr_lay['use-image']
         if not os.path.dirname(plyr_img):
             plyr_img = os.path.join(self.layout_path, plyr_img)
-        plyr.imgBackground.set_from_file(plyr_img)
-        
+        plyr.imgBackground.set_from_file(plyr_img)        
         # Set up all Widgets
         for w_set_name in self._layout_items.keys():
             wset_layout_info = layout_info[w_set_name]
@@ -2423,8 +2405,7 @@ class WinMain(WahCade, threading.Thread):
                     widget.hide()
                 if 'show-count' in w_lay:
                     widget.charShowCount = w_lay['show-count']
-                    widget.hide()
-                    
+                    widget.hide()                   
                 # Position the video widget
                 if self.emu_ini.getint('movie_artwork_no') > 0:
                     self.video_artwork_widget = self._main_images[(self.emu_ini.getint('movie_artwork_no') - 1)]
@@ -2466,8 +2447,7 @@ class WinMain(WahCade, threading.Thread):
                     if isinstance(widget, gtk.Widget):
                         self.player_select.winPlayers.move(widget, w_lay['x'], w_lay['y'])
                 else:
-                    print "Orphaned widget detected. Did not belong to one of [main/options/message/screensaver/identify/playerselect]"
-        
+                    print "Orphaned widget detected. Did not belong to one of [main/options/message/screensaver/identify/playerselect]"   
         # Load histview and cpviewer layouts
         # Still in use?
         self.histview.load_layout(self.histview.layout_filename)
@@ -2479,8 +2459,7 @@ class WinMain(WahCade, threading.Thread):
         """Get list of visible images & paths"""
         self.visible_img_list = [img for img in self._main_images if img.get_property('visible')]
         self.visible_img_paths = [self.emu_ini.get('artwork_%s_image_path' % (i + 1)) for i, img in enumerate(self.visible_img_list)]
-        #self.buildartlist(self.visible_img_paths[0])
-        
+        #self.buildartlist(self.visible_img_paths[0])       
         # Check background images
         bg_files = (
             [self.imgBackground,
@@ -2660,8 +2639,7 @@ class WinMain(WahCade, threading.Thread):
             self.lsGames_len = len(gList)
         else:
             self.current_list_idx = self.get_next_list_in_cycle(+1)
-            self.load_list()
-            
+            self.load_list()           
         # Setup scroll list
         # "All Games" list is always the first list
         if self.current_list_idx == 0:
@@ -2697,8 +2675,7 @@ class WinMain(WahCade, threading.Thread):
             # Update displays
             self.hide_window('options')
             self.sclGames.set_selected(self.sclGames.get_selected() - 1)
-            self.sclGames.update()
-            
+            self.sclGames.update()  
 
     def check_music_settings(self):
         """If possible, set gstMusic and gstSound"""
@@ -2765,14 +2742,12 @@ class WinMain(WahCade, threading.Thread):
             data = fromstring(requests.get(self.connection_url, headers=self.authorization).text)
         except:
             self.connected_to_server = False
-            return False
-        
+            return False     
         #update the local list of feeds if it has changed
         feeds = [(info.find('ipAddress').text, info.find('port').text) for info in data.getiterator('connection')]
         if self.new_vc_feeds != feeds:
             self.new_vc_feeds = feeds
             self.new_vc_feed_updated = True
-        
         #switch to the first remote video that appears and back to the local video when no other videos are left
         for ipAddr in data.getiterator('connection'):
             if not (ipAddr.find('ipAddress').text == self.video_chat.remoteip and ipAddr.find('port').text == self.video_chat.remoteport):
@@ -2811,8 +2786,7 @@ class WinMain(WahCade, threading.Thread):
     
     def on_test_connect_timer(self):
         if self.stop_test_connection_timers:
-            return False
-        
+            return False 
         found_local = False
         try:
             data = fromstring(requests.get(self.connection_url, headers=self.authorization).text)
@@ -2848,8 +2822,7 @@ class WinMain(WahCade, threading.Thread):
         elif timer_type == 'joystick' and (self.joyint == 1):
             self.joystick_timer = gobject.timeout_add(50, self.joy.poll, self.on_winMain_key_press)
         # Login timer
-        elif timer_type == 'login':
-            
+        elif timer_type == 'login':      
             self.timeout = 4; # Number of seconds till recent_log times out
             self.login_timer = gobject.timeout_add(self.timeout * 1000, self.reset_recent_log)
         elif timer_type == 'portal':
