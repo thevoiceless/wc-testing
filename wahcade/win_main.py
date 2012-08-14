@@ -1194,16 +1194,16 @@ class WinMain(WahCade, threading.Thread):
         
     def get_logged_in_user_string(self, current_users):
         """Get string containing names of loged in users"""
-        s = ''
+        string = ''
         for index, user in enumerate(reversed(current_users)):
             if index == 0:
-                s += user
+                string += user
             elif index > 3:
-                s += ", ..."
+                string += ", ..."
                 break
             else:
-                s += ", " + user
-        return s
+                string += ", " + user
+        return string
 
     def reset_recent_log(self):
         """Reset's vars for preventing a user from rapidly logging in"""
